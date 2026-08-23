@@ -25,6 +25,20 @@ test.describe('mobile browser usability', () => {
       (element) => Number.parseFloat(getComputedStyle(element).fontSize),
     );
     expect(localeFontSize).toBeGreaterThanOrEqual(16);
+
+    const [bank, card, recommendations, savings] = await Promise.all([
+      homePage.bankUploadTrigger.boundingBox(),
+      homePage.cardUploadTrigger.boundingBox(),
+      homePage.recommendationsTrigger.boundingBox(),
+      homePage.savingsTrigger.boundingBox(),
+    ]);
+    expect(bank).not.toBeNull();
+    expect(card).not.toBeNull();
+    expect(recommendations).not.toBeNull();
+    expect(savings).not.toBeNull();
+    expect(bank!.width).toBeGreaterThan(card!.width * 1.8);
+    expect(Math.abs(recommendations!.y - savings!.y)).toBeLessThan(1);
+    expect(Math.abs(recommendations!.width - savings!.width)).toBeLessThan(1);
   });
 
   test('supports the complete import, recommendations, settings and directory journey', async ({ homePage }) => {

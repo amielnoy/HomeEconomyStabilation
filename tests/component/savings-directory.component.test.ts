@@ -10,16 +10,16 @@ describe('savings and investments directory component', () => {
   });
 
   it('exposes the directory from the primary actions', () => {
-    const button = document.querySelector<HTMLButtonElement>('#btn-savings');
+    const button = document.querySelector<HTMLButtonElement>('[data-testid="btn-savings"]');
 
     expect(button).not.toBeNull();
     expect(button?.dataset.i18n).toBe('savingsDirectory');
-    expect(document.querySelector('#savings-directory')).not.toBeNull();
+    expect(document.querySelector('[data-testid="savings-directory"]')).not.toBeNull();
   });
 
   it('places official comparison tools before management companies', () => {
-    const directory = document.querySelector('#savings-directory')!;
-    const links = [...directory.querySelectorAll<HTMLAnchorElement>('a.ds-link-card')];
+    const directory = document.querySelector('[data-testid="savings-directory"]')!;
+    const links = [...directory.querySelectorAll<HTMLAnchorElement>('[data-testid="savings-directory-link"]')];
 
     expect(links).toHaveLength(12);
     expect(links.slice(0, 4).map((link) => new URL(link.href).hostname)).toEqual([
@@ -32,7 +32,7 @@ describe('savings and investments directory component', () => {
   });
 
   it('opens every external destination safely in a new tab', () => {
-    const links = document.querySelectorAll<HTMLAnchorElement>('#savings-directory a[href]');
+    const links = document.querySelectorAll<HTMLAnchorElement>('[data-testid="savings-directory-link"]');
 
     for (const link of links) {
       expect(link.protocol).toBe('https:');

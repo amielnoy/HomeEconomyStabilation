@@ -10,7 +10,7 @@ describe('credit-card upload component', () => {
   });
 
   it('renders a multi-file card report input with spreadsheet formats', () => {
-    const input = document.querySelector<HTMLInputElement>('#card-file');
+    const input = document.querySelector<HTMLInputElement>('[data-testid="card-file"]');
 
     expect(input).not.toBeNull();
     expect(input?.type).toBe('file');

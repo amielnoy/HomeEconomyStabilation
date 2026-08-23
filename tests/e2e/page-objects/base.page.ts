@@ -2,9 +2,9 @@ import type { Locator, Page } from '@playwright/test';
 import { step } from './step';
 
 export abstract class BasePage {
-  readonly html = this.page.locator('html');
-  readonly body = this.page.locator('body');
-  readonly viewportMeta = this.page.locator('meta[name="viewport"]');
+  readonly html = this.page.getByTestId('app-document');
+  readonly body = this.page.getByTestId('app-body');
+  readonly viewportMeta = this.page.getByTestId('viewport-meta');
 
   protected constructor(
     public readonly page: Page,
@@ -46,12 +46,13 @@ export abstract class BasePage {
   }
 
   @step('Check that visible touch targets are large enough')
-  async touchTargetsBelow(locator: Locator, minimumSize = 44): Promise<Array<{
+  async touchTargetsBelow(locator: Locator | readonly Locator[], minimumSize = 44): Promise<Array<{
     label: string;
     width: number;
     height: number;
   }>> {
-    const targets = await locator.all();
+    const locators = Array.isArray(locator) ? locator : [locator];
+    const targets = (await Promise.all(locators.map((item) => item.all()))).flat();
     const undersized = [];
     for (const target of targets) {
       if (!await target.isVisible()) continue;

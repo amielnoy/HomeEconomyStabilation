@@ -12,13 +12,13 @@ export interface MarketingEvent {
 }
 
 export class MarketingComponent {
-  readonly root = this.page.locator('#empty');
-  readonly title = this.root.locator('h2').first();
-  readonly primaryUpload = this.page.locator('#marketing-upload');
-  readonly finalUpload = this.page.locator('#marketing-upload-final');
-  readonly trustItems = this.page.locator('.marketing-trust li');
-  readonly benefitCards = this.page.locator('.marketing-benefit-grid article');
-  readonly preview = this.page.locator('.marketing-preview');
+  readonly root = this.page.getByTestId('empty');
+  readonly title = this.page.getByTestId('marketing-title');
+  readonly primaryUpload = this.page.getByTestId('marketing-upload');
+  readonly finalUpload = this.page.getByTestId('marketing-upload-final');
+  readonly trustItems = this.page.getByTestId('marketing-trust-item');
+  readonly benefitCards = this.page.getByTestId('marketing-benefit-card');
+  readonly preview = this.page.getByTestId('marketing-preview');
 
   constructor(private readonly page: Page) {}
 
@@ -43,7 +43,7 @@ export class MarketingComponent {
 
   @step('Read the page background color')
   async bodyBackgroundColor(): Promise<string> {
-    return this.page.locator('body').evaluate((element) => getComputedStyle(element).backgroundColor);
+    return this.page.getByTestId('app-body').evaluate((element) => getComputedStyle(element).backgroundColor);
   }
 
   private async readStorage<T>(key: string, fallback: T): Promise<T> {

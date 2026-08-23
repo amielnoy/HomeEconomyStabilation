@@ -23,21 +23,25 @@ export class HomePage extends BasePage {
   readonly dashboard: DashboardComponent;
   readonly settings: SettingsDrawerComponent;
   readonly savingsDirectory: SavingsDirectoryComponent;
-  readonly emptyState = this.page.locator('#empty');
-  readonly toast = this.page.locator('#toast');
-  readonly mobilePrimaryControls = this.page.locator([
-    '.topbar .btn',
-    '#locale-select',
-    '#marketing-upload',
-    '#marketing-how',
-    '#marketing-upload-final',
-  ].join(','));
-  readonly mobileDashboardControls = this.page.locator([
-    '#months .mchip',
-    '#main button',
-    '#main select',
-    '#main input:not([type="hidden"])',
-  ].join(','));
+  readonly emptyState = this.page.getByTestId('empty');
+  readonly toast = this.page.getByTestId('toast');
+  readonly bankUploadTrigger = this.page.getByTestId('bank-upload-trigger');
+  readonly cardUploadTrigger = this.page.getByTestId('card-upload-trigger');
+  readonly recommendationsTrigger = this.page.getByTestId('btn-recommendations');
+  readonly savingsTrigger = this.page.getByTestId('btn-savings');
+  readonly mobilePrimaryControls = [
+    this.bankUploadTrigger, this.cardUploadTrigger, this.recommendationsTrigger, this.savingsTrigger,
+    this.page.getByTestId('locale-select'), this.page.getByTestId('btn-set'), this.page.getByTestId('btn-backup'),
+    this.page.getByTestId('marketing-upload'), this.page.getByTestId('marketing-how'),
+    this.page.getByTestId('marketing-upload-final'),
+  ];
+  readonly mobileDashboardControls = [
+    this.page.getByTestId('month-chip'), this.page.getByTestId('btn-dashboard'),
+    this.page.getByTestId('fc-horizon'), this.page.getByTestId('btn-bud'), this.page.getByTestId('btn-cattbl'),
+    this.page.getByTestId('q'), this.page.getByTestId('f-cat'), this.page.getByTestId('f-dir'),
+    this.page.getByTestId('f-scope'), this.page.getByTestId('transaction-category-select'),
+    this.page.getByTestId('approve-learning-rule'), this.page.getByTestId('apply-budget-suggestion'),
+  ];
 
   constructor(page: Page, components: HomePageComponents) {
     super(page, '/mazan-habait.html');

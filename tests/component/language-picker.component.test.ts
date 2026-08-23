@@ -10,7 +10,7 @@ describe('language picker component', () => {
   });
 
   it('renders one native-language option for every supported locale', () => {
-    const options = [...document.querySelectorAll<HTMLOptionElement>('#locale-select option')]
+    const options = [...document.querySelectorAll<HTMLOptionElement>('[data-testid="locale-select"] option')]
       .map((option) => ({ value: option.value, label: option.textContent }));
 
     expect(options).toEqual([
@@ -22,7 +22,7 @@ describe('language picker component', () => {
   });
 
   it('uses the shared field recipe and has an accessible label', () => {
-    const picker = document.querySelector<HTMLSelectElement>('#locale-select');
+    const picker = document.querySelector<HTMLSelectElement>('[data-testid="locale-select"]');
     const wrapper = picker?.closest('label');
 
     expect(picker?.classList.contains('ds-field')).toBe(true);
@@ -33,7 +33,7 @@ describe('language picker component', () => {
   });
 
   it('supports native keyboard-driven selection semantics', () => {
-    const picker = document.querySelector<HTMLSelectElement>('#locale-select')!;
+    const picker = document.querySelector<HTMLSelectElement>('[data-testid="locale-select"]')!;
 
     picker.value = 'am';
     picker.dispatchEvent(new Event('change', { bubbles: true }));

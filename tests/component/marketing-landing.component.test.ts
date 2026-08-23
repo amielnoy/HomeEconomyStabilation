@@ -10,8 +10,8 @@ describe('marketing landing component', () => {
   });
 
   it('offers a primary free-check CTA and a lower-page conversion CTA', () => {
-    const primary = document.querySelector<HTMLButtonElement>('#marketing-upload');
-    const final = document.querySelector<HTMLButtonElement>('#marketing-upload-final');
+    const primary = document.querySelector<HTMLButtonElement>('[data-testid="marketing-upload"]');
+    const final = document.querySelector<HTMLButtonElement>('[data-testid="marketing-upload-final"]');
 
     expect(primary?.dataset.i18n).toBe('startFreeCheck');
     expect(primary?.classList.contains('primary')).toBe(true);
@@ -19,7 +19,7 @@ describe('marketing landing component', () => {
   });
 
   it('explains value through three concrete benefits', () => {
-    expect(document.querySelectorAll('.marketing-benefit-grid article')).toHaveLength(3);
+    expect(document.querySelectorAll('[data-testid="marketing-benefit-card"]')).toHaveLength(3);
     expect(document.querySelector('[data-i18n="benefitClarityTitle"]')).not.toBeNull();
     expect(document.querySelector('[data-i18n="benefitActionTitle"]')).not.toBeNull();
     expect(document.querySelector('[data-i18n="benefitPrivacyTitle"]')).not.toBeNull();
@@ -31,7 +31,7 @@ describe('marketing landing component', () => {
   });
 
   it('does not copy unverifiable savings or scarcity claims from the reference page', () => {
-    const landingText = document.querySelector('#empty')?.textContent || '';
+    const landingText = document.querySelector('[data-testid="empty"]')?.textContent || '';
 
     expect(landingText).not.toMatch(/2,000|6,000|90 יום|מקומות אחרונים/);
   });

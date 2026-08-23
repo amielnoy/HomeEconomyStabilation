@@ -4,9 +4,9 @@ import { step } from '../step';
 export type SupportedLocale = 'he' | 'en' | 'am' | 'fr';
 
 export class LanguagePickerComponent {
-  readonly select = this.page.locator('#locale-select');
-  readonly document = this.page.locator('html');
-  readonly productHeading = this.page.locator('h1');
+  readonly select = this.page.getByTestId('locale-select');
+  readonly document = this.page.getByTestId('app-document');
+  readonly productHeading = this.page.getByTestId('product-title');
 
   constructor(private readonly page: Page) {}
 

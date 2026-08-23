@@ -38,7 +38,7 @@ test('keeps imported household amounts in shekels in French', async ({ homePage 
 
   await expect(homePage.dashboard.root).toBeVisible();
   await expect(homePage.dashboard.balance).toContainText('₪');
-  await expect(homePage.dashboard.transactionRows.first().locator('td.n').nth(1)).toContainText('₪');
+  await expect(homePage.dashboard.transactionBalances.first()).toContainText('₪');
 });
 
 test('does not introduce horizontal page overflow on mobile in any language', async ({ homePage }) => {

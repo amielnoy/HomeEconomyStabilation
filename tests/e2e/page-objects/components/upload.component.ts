@@ -3,8 +3,8 @@ import { resolve } from 'node:path';
 import { step } from '../step';
 
 export class UploadComponent {
-  readonly bankReportInput = this.page.locator('#file');
-  readonly creditCardInput = this.page.locator('#card-file');
+  readonly bankReportInput = this.page.getByTestId('file');
+  readonly creditCardInput = this.page.getByTestId('card-file');
 
   constructor(private readonly page: Page) {}
 

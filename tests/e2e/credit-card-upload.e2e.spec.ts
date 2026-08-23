@@ -28,5 +28,5 @@ test('shows prioritized customer recommendations', async ({ homePage }) => {
   await expect(homePage.dashboard.recommendations).toBeVisible();
   await expect(homePage.dashboard.recommendationNote).toContainText('חשבון 04-279-661711');
   await expect(homePage.dashboard.recommendationCards).not.toHaveCount(0);
-  await expect(homePage.dashboard.recommendationCards.locator('.btn').first()).toBeVisible();
+  await expect(homePage.dashboard.recommendationActions.first()).toBeVisible();
 });
