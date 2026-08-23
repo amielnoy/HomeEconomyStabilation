@@ -70,7 +70,7 @@ button{ cursor:pointer; }
 /* =========================================================== topbar ====== */
 .topbar{
   display:flex; flex-wrap:wrap; align-items:flex-end; gap:20px;
-  padding:30px 0 22px; border-bottom:1px solid var(--line);
+  position:relative; padding:30px 0 22px; border-bottom:1px solid var(--line); z-index:20;
 }
 .brand{ display:flex; align-items:center; gap:14px; margin-inline-end:auto; }
 .brand h1{ font-size:29px; letter-spacing:-.01em; line-height:1.1; }
@@ -80,6 +80,8 @@ button{ cursor:pointer; }
 }
 .mark{ flex:none; width:38px; height:38px; color:var(--accent); }
 .actions{ display:flex; gap:8px; flex-wrap:wrap; }
+.secondary-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+.mobile-menu-toggle{ display:none; }
 .btn{
   display:inline-flex; align-items:center; gap:7px; padding:8px 15px;
   border-radius:999px; border:1px solid var(--line-2); background:var(--surface);
@@ -364,10 +366,25 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
   border-inline-end:1px solid var(--line); padding:22px 24px 60px;
 }
 .drawer.on{ transform:none; }
-.drawer > header{ display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+.drawer > header{
+  display:flex; align-items:center; gap:12px; position:sticky; inset-block-start:-22px;
+  z-index:2; margin:-22px -24px 12px; padding:22px 24px 14px;
+  border-bottom:1px solid var(--line); background:var(--page);
+}
 .drawer h2{ font-size:22px; }
 .drawer h3{ font-size:15px; margin:26px 0 8px; font-family:var(--ds-font-body); font-weight:700; }
 .drawer .note{ font-size:12.5px; color:var(--muted); margin:0 0 12px; }
+.settings-section{ border-bottom:1px solid var(--line); padding:0; }
+.settings-section > summary{
+  display:flex; align-items:center; min-height:52px; padding:12px 2px;
+  cursor:pointer; color:var(--ink); font-weight:700; list-style:none;
+}
+.settings-section > summary::-webkit-details-marker{ display:none; }
+.settings-section > summary::after{ content:"⌄"; margin-inline-start:auto; color:var(--accent); font-size:20px; transition:transform .15s; }
+.settings-section[open] > summary::after{ transform:rotate(180deg); }
+.settings-section-content{ padding:0 2px 20px; }
+.settings-section-content > :first-child{ margin-top:2px; }
+body.drawer-open{ overflow:hidden; }
 .consent-card{ padding:16px; border:1px solid var(--accent-line); border-radius:12px; background:var(--surface); }
 .consent-card p{ margin:0 0 9px; color:var(--ink-2); font-size:13px; }
 .consent-card ul{ margin:8px 0 14px; padding-inline-start:22px; color:var(--ink-2); font-size:13px; }
@@ -442,21 +459,31 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
     padding-block-end:calc(72px + env(safe-area-inset-bottom));
   }
   .topbar{
-    align-items:stretch;
-    padding-block-start:calc(18px + env(safe-area-inset-top));
+    align-items:center; gap:12px;
+    padding-block:calc(12px + env(safe-area-inset-top)) 12px;
   }
-  .brand,.actions{ width:100%; }
-  .actions{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .actions > .btn,.actions > .locale-picker,.actions .ds-field{
-    width:100%;
-  }
-  .actions > [data-testid="bank-upload-trigger"]{ grid-column:1 / -1; }
-  .actions > [data-testid="card-upload-trigger"]{
-    grid-column:1 / -1;
-    width:calc(50% - 4px);
-  }
-  .actions > .locale-picker{ grid-column:1 / -1; }
+  .brand{ width:100%; }
+  .brand h1{ font-size:24px; }
+  .brand .sub{ margin-top:1px; }
+  .mark{ width:32px; height:32px; }
+  .actions{ width:100%; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 48px; gap:8px; }
+  .actions > .btn{ min-width:0; padding-inline:10px; font-size:13px; }
   .actions > .btn{ justify-content:center; }
+  .mobile-menu-toggle{ display:inline-grid!important; place-items:center; padding:0!important; font-size:22px!important; letter-spacing:2px; }
+  .secondary-actions{
+    display:none; position:absolute; inset-inline:0; inset-block-start:calc(100% - 1px);
+    grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:12px;
+    border:1px solid var(--line); border-radius:0 0 16px 16px;
+    background:var(--surface); box-shadow:var(--ds-shadow-2);
+  }
+  .secondary-actions.on{ display:grid; }
+  .secondary-actions > .btn,.secondary-actions > .locale-picker,.secondary-actions .ds-field{ width:100%; }
+  .secondary-actions > .btn{ justify-content:center; }
+  .secondary-actions > .locale-picker{ grid-column:1 / -1; }
+  #main > #spending-guide{ margin-top:14px; }
+  #main > #months{ padding-top:10px; }
+  .spending-guide{ grid-template-columns:1fr; gap:18px; padding:20px 18px; }
+  .spending-guide-amount{ font-size:44px; }
   .btn,.mchip,.ds-button,.ds-field,
   .filters input[type=search],.filters select,
   .rulerow input,.budrow input,.rulerow select{
@@ -471,6 +498,12 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
     padding-inline-start:max(16px,env(safe-area-inset-left));
     padding-inline-end:max(16px,env(safe-area-inset-right));
     padding-block-end:calc(48px + env(safe-area-inset-bottom));
+  }
+  .drawer > header{
+    inset-block-start:calc(-16px - env(safe-area-inset-top));
+    margin-block-start:calc(-16px - env(safe-area-inset-top));
+    margin-inline:-16px; padding-block-start:calc(16px + env(safe-area-inset-top));
+    padding-inline:16px;
   }
   .toast{ inset-block-end:calc(16px + env(safe-area-inset-bottom)); }
   .tblwrap,.chartwrap,.monthbar{
@@ -509,20 +542,23 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
         <span data-i18n="cardUpload">טעינת דוח כרטיס</span>
         <input type="file" id="card-file" accept=".xls,.xlsx,.csv" multiple hidden data-testid="card-file">
       </label>
-      <button class="btn" id="btn-recommendations" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
-      <button class="btn" id="btn-savings" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
-      <label class="locale-picker" data-testid="language-picker">
-        <span class="vh" data-i18n="languageLabel">שפת ממשק</span>
-        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M2.8 10h14.4M10 2.5c2 2.1 3 4.6 3 7.5s-1 5.4-3 7.5c-2-2.1-3-4.6-3-7.5s1-5.4 3-7.5Z" stroke="currentColor" stroke-width="1.5"/></svg>
-        <select id="locale-select" class="ds-field ds-field--compact" aria-label="שפת ממשק" data-testid="locale-select">
-          <option value="he">עברית</option>
-          <option value="en">English</option>
-          <option value="am">አማርኛ</option>
-          <option value="fr">Français</option>
-        </select>
-      </label>
-      <button class="btn" id="btn-set" data-i18n="settings" data-testid="btn-set">הגדרות</button>
-      <button class="btn" id="btn-backup" data-i18n="backup" data-testid="btn-backup">גיבוי</button>
+      <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
+      <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
+        <button class="btn" id="btn-recommendations" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
+        <button class="btn" id="btn-savings" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
+        <label class="locale-picker" data-testid="language-picker">
+          <span class="vh" data-i18n="languageLabel">שפת ממשק</span>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M2.8 10h14.4M10 2.5c2 2.1 3 4.6 3 7.5s-1 5.4-3 7.5c-2-2.1-3-4.6-3-7.5s1-5.4 3-7.5Z" stroke="currentColor" stroke-width="1.5"/></svg>
+          <select id="locale-select" class="ds-field ds-field--compact" aria-label="שפת ממשק" data-testid="locale-select">
+            <option value="he">עברית</option>
+            <option value="en">English</option>
+            <option value="am">አማርኛ</option>
+            <option value="fr">Français</option>
+          </select>
+        </label>
+        <button class="btn" id="btn-set" aria-haspopup="dialog" aria-controls="drawer" aria-expanded="false" data-i18n="settings" data-testid="btn-set">הגדרות</button>
+        <button class="btn" id="btn-backup" data-i18n="backup" data-testid="btn-backup">גיבוי</button>
+      </div>
     </div>
   </header>
 
@@ -646,9 +682,6 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
 
   <!-- ============================================================= main -->
   <main id="main" hidden data-testid="main">
-
-    <nav class="monthbar" id="months" aria-label="בחירת חודש" data-i18n-aria-label="chooseMonth" data-testid="months"></nav>
-
     <section class="spending-guide" id="spending-guide" aria-labelledby="spending-guide-h" data-testid="spending-guide">
       <div class="spending-guide-main">
         <p class="spending-guide-kicker" data-i18n="spendingGuideKicker">המספר שכדאי לדעת עכשיו</p>
@@ -671,6 +704,8 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
         </details>
       </div>
     </section>
+
+    <nav class="monthbar" id="months" aria-label="בחירת חודש" data-i18n-aria-label="chooseMonth" data-testid="months"></nav>
 
     <section class="recommendations" id="recommendations" hidden aria-labelledby="rec-screen-h" data-testid="recommendations">
       <header class="recommendations-head">
@@ -799,36 +834,45 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
 
 <!-- ============================================================= drawer -->
 <div class="scrim" id="scrim" data-testid="scrim"></div>
-<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-h" data-testid="drawer">
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="dr-h" inert data-testid="drawer">
   <header>
     <h2 id="dr-h" data-i18n="settings" data-testid="dr-h">הגדרות</h2>
     <button class="x" id="dr-close" aria-label="סגירה" data-i18n-aria-label="close" style="margin-inline-start:auto" data-testid="dr-close">✕</button>
   </header>
 
-  <h3 data-testid="settings-translated-content" data-i18n="monthlyBudgetLimits">תקרות תקציב חודשיות</h3>
-  <p data-testid="settings-translated-content" class="note" data-i18n="monthlyBudgetLimitsNote">תקרה ריקה = בלי מעקב. הסכום מושווה להוצאה בחודש הנבחר.</p>
-  <div id="dr-budgets" data-testid="dr-budgets"></div>
+  <details class="settings-section" data-testid="settings-section-budgets">
+    <summary data-i18n="monthlyBudgetLimits" data-testid="settings-translated-content">תקרות תקציב חודשיות</summary>
+    <div class="settings-section-content">
+      <p data-testid="settings-translated-content" class="note" data-i18n="monthlyBudgetLimitsNote">תקרה ריקה = בלי מעקב. הסכום מושווה להוצאה בחודש הנבחר.</p>
+      <div id="dr-budgets" data-testid="dr-budgets"></div>
+    </div>
+  </details>
 
-  <h3 data-testid="settings-translated-content" data-i18n="automaticRules">כללי שיוך אוטומטי</h3>
-  <p data-testid="settings-translated-content" class="note" data-i18n="automaticRulesNote">כל תנועה מקבלת את הקטגוריה של הכלל הראשון שהתיאור שלה מכיל. שינוי קטגוריה ידני בטבלת התנועות גובר על הכללים.</p>
-  <div id="dr-rules" data-testid="dr-rules"></div>
-  <button class="btn sm" id="dr-addrule" style="margin-top:10px" data-i18n="addRule" data-testid="dr-addrule">הוספת כלל</button>
+  <details class="settings-section" data-testid="settings-section-categories">
+    <summary data-i18n="categoriesAndRules" data-testid="settings-translated-content">קטגוריות וכללי שיוך</summary>
+    <div class="settings-section-content">
+      <h3 data-testid="settings-translated-content" data-i18n="automaticRules">כללי שיוך אוטומטי</h3>
+      <p data-testid="settings-translated-content" class="note" data-i18n="automaticRulesNote">כל תנועה מקבלת את הקטגוריה של הכלל הראשון שהתיאור שלה מכיל. שינוי קטגוריה ידני בטבלת התנועות גובר על הכללים.</p>
+      <div id="dr-rules" data-testid="dr-rules"></div>
+      <button class="btn sm" id="dr-addrule" style="margin-top:10px" data-i18n="addRule" data-testid="dr-addrule">הוספת כלל</button>
+      <h3 data-testid="settings-translated-content" data-i18n="categoryPlural">קטגוריות</h3>
+      <p data-testid="settings-translated-content" class="note" data-i18n="categoriesNote">שמונה הקטגוריות הראשונות נושאות צבע ייעודי בגרפים; קטגוריות נוספות מוצגות באפור.</p>
+      <div id="dr-cats" data-testid="dr-cats"></div>
+      <button class="btn sm" id="dr-addcat" style="margin-top:10px" data-i18n="addCategory" data-testid="dr-addcat">הוספת קטגוריה</button>
+    </div>
+  </details>
 
-  <h3 data-testid="settings-translated-content" data-i18n="categoryPlural">קטגוריות</h3>
-  <p data-testid="settings-translated-content" class="note" data-i18n="categoriesNote">שמונה הקטגוריות הראשונות נושאות צבע ייעודי בגרפים; קטגוריות נוספות מוצגות באפור.</p>
-  <div id="dr-cats" data-testid="dr-cats"></div>
-  <button class="btn sm" id="dr-addcat" style="margin-top:10px" data-i18n="addCategory" data-testid="dr-addcat">הוספת קטגוריה</button>
-
-  <h3 data-testid="settings-translated-content" data-i18n="data">נתונים</h3>
-  <p class="note" id="dr-stats" data-testid="dr-stats"></p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap" data-testid="settings-data-actions">
-    <button class="btn sm" id="dr-export" data-i18n="exportBackup" data-testid="dr-export">ייצוא גיבוי</button>
-    <label class="btn sm" data-testid="backup-import-trigger"><span data-i18n="importBackup">טעינת גיבוי</span><input type="file" id="dr-import" accept=".json,application/json" hidden data-testid="dr-import"></label>
-    <button class="btn sm" id="dr-wipe" style="color:var(--crit-text)" data-i18n="deleteAll" data-testid="dr-wipe">מחיקת הכל</button>
-  </div>
-
-  <h3 data-testid="settings-translated-content" data-i18n="cloudConsentTitle">הסכמה לסנכרון ענן אופציונלי</h3>
-  <section class="consent-card" aria-labelledby="cloud-consent-heading" data-testid="cloud-consent">
+  <details class="settings-section" data-testid="settings-section-data">
+    <summary data-i18n="dataAndPrivacy" data-testid="settings-translated-content">נתונים ופרטיות</summary>
+    <div class="settings-section-content">
+      <p class="note" id="dr-stats" data-testid="dr-stats"></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" data-testid="settings-data-actions">
+        <button class="btn sm" id="dr-export" data-i18n="exportBackup" data-testid="dr-export">ייצוא גיבוי</button>
+        <label class="btn sm" data-testid="backup-import-trigger"><span data-i18n="importBackup">טעינת גיבוי</span><input type="file" id="dr-import" accept=".json,application/json" hidden data-testid="dr-import"></label>
+        <button class="btn sm" id="dr-wipe" style="color:var(--crit-text)" data-i18n="deleteAll" data-testid="dr-wipe">מחיקת הכל</button>
+      </div>
+      <h3 data-testid="settings-translated-content" data-i18n="cloudConsentTitle">הסכמה לסנכרון ענן אופציונלי</h3>
+      <section class="consent-card" aria-labelledby="cloud-consent-heading" data-testid="cloud-consent">
     <h4 id="cloud-consent-heading" class="vh" data-i18n="cloudConsentTitle" data-testid="cloud-consent-heading">הסכמה לסנכרון ענן אופציונלי</h4>
     <p data-i18n="cloudConsentIntro">הסנכרון עדיין אינו פעיל. אישור זה מתעד את בחירתך בלבד ואינו מעלה מידע.</p>
     <ul>
@@ -846,15 +890,21 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
       <button class="btn primary sm" id="cloud-consent-accept" type="button" disabled data-i18n="cloudConsentAccept" data-testid="cloud-consent-accept">אישור ותיעוד ההסכמה</button>
       <button class="btn sm" id="cloud-consent-withdraw" type="button" hidden data-i18n="cloudConsentWithdraw" data-testid="cloud-consent-withdraw">ביטול ההסכמה</button>
     </div>
-  </section>
+      </section>
+    </div>
+  </details>
 
-  <h3 data-testid="settings-translated-content" data-i18n="addManualTransaction">הוספת תנועה ידנית</h3>
-  <p data-testid="settings-translated-content" class="note" data-i18n="addManualTransactionNote">להוספת מזומן, חיוב שטרם הופיע בדוח, או תיקון מהיר. התנועה נשמרת מקומית.</p>
-  <form id="manual-form" data-testid="manual-form">
+  <details class="settings-section" data-testid="settings-section-manual">
+    <summary data-i18n="addManualTransaction" data-testid="settings-translated-content">הוספת תנועה ידנית</summary>
+    <div class="settings-section-content">
+      <p data-testid="settings-translated-content" class="note" data-i18n="addManualTransactionNote">להוספת מזומן, חיוב שטרם הופיע בדוח, או תיקון מהיר. התנועה נשמרת מקומית.</p>
+      <form id="manual-form" data-testid="manual-form">
     <div class="rulerow"><input id="manual-date" type="date" required aria-label="תאריך" data-i18n-aria-label="date" data-testid="manual-date"><input id="manual-desc" type="text" placeholder="תיאור" data-i18n-placeholder="description" required aria-label="תיאור" data-i18n-aria-label="description" data-testid="manual-desc"></div>
     <div class="rulerow"><select id="manual-dir" aria-label="כיוון" data-i18n-aria-label="direction" data-testid="manual-dir"><option value="out" data-i18n="expenseSingular">הוצאה</option><option value="in" data-i18n="incomeSingular">הכנסה</option></select><input id="manual-amount" type="number" min="0.01" step="0.01" placeholder="סכום בשקלים" data-i18n-placeholder="amountInShekels" required aria-label="סכום" data-i18n-aria-label="amount" data-testid="manual-amount"><select id="manual-cat" aria-label="קטגוריה" data-i18n-aria-label="category" data-testid="manual-cat"></select></div>
     <button class="btn primary sm" type="submit" data-i18n="saveTransaction" data-testid="manual-submit">שמירת תנועה</button>
-  </form>
+      </form>
+    </div>
+  </details>
 </aside>
 
 <div class="toast" id="toast" role="status" aria-live="polite" data-testid="toast"></div>

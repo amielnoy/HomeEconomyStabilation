@@ -1,6 +1,9 @@
 {
   "lang": "עברית",
   "languageLabel": "שפת ממשק",
+  "moreActions": "פעולות נוספות",
+  "categoriesAndRules": "קטגוריות וכללי שיוך",
+  "dataAndPrivacy": "נתונים ופרטיות",
   "switchLanguage": "English",
   "title": "מאזן הבית",
   "subtitle": "כלכלת הבית, מדוח הבנק",

@@ -1,6 +1,9 @@
 {
   "lang": "Français",
   "languageLabel": "Langue de l’interface",
+  "moreActions": "Plus d’actions",
+  "categoriesAndRules": "Catégories et règles",
+  "dataAndPrivacy": "Données et confidentialité",
   "switchLanguage": "עברית",
   "title": "Budget du foyer",
   "subtitle": "Les finances du foyer, à partir de vos données bancaires",

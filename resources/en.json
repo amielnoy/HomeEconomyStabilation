@@ -1,6 +1,9 @@
 {
   "lang": "English",
   "languageLabel": "Interface language",
+  "moreActions": "More actions",
+  "categoriesAndRules": "Categories and rules",
+  "dataAndPrivacy": "Data and privacy",
   "switchLanguage": "עברית",
   "title": "Home Economy",
   "subtitle": "Household finances, from your bank data",

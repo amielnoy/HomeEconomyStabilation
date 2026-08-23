@@ -20,6 +20,7 @@ let locale: Locale = resolveLocale(localStorage.getItem('mazan-habait/locale'));
 let resources: Resources = {};
 let directoryOpen = window.location.hash === '#savings-directory';
 const consentRepository = new LocalConsentRepository(localStorage);
+let drawerReturnFocus: HTMLElement | null = null;
 
 /* sheetread.ts — minimal, dependency-free reader for legacy .xls (BIFF8 inside a
    CFB container), .xlsx (ZIP + SpreadsheetML) and .csv, returning
@@ -1304,6 +1305,7 @@ function renderRecommendations() {
 
 function showRecommendations() {
   if (!S.tx.length) return;
+  setMobileMenu(false);
   directoryOpen = false;
   if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
   $('#savings-directory').hidden = true;
@@ -1327,6 +1329,7 @@ function showDashboard() {
 }
 
 function showSavingsDirectory() {
+  setMobileMenu(false);
   directoryOpen = true;
   history.replaceState(null, '', '#savings-directory');
   $('#empty').hidden = true;
@@ -1863,8 +1866,60 @@ function prepareManualForm() {
   for (const c of S.cats) cat.append(el('option', { value: c.id, text: catById(c.id).name, selected: c.id === current || (!current && c.id === 'other') }));
   if (!$('#manual-date').value) $('#manual-date').value = S.month ? S.month + '-01' : iso(new Date());
 }
-function openDrawer() { renderDrawer(); prepareManualForm(); $('#drawer').classList.add('on'); $('#scrim').classList.add('on'); $('#dr-close').focus(); }
-function closeDrawer() { $('#drawer').classList.remove('on'); $('#scrim').classList.remove('on'); }
+function setMobileMenu(open: boolean) {
+  $('#secondary-actions').classList.toggle('on', open);
+  $('#mobile-menu-toggle').setAttribute('aria-expanded', String(open));
+}
+
+function openDrawer(opener: HTMLElement = $('#btn-set'), preferredSection?: string) {
+  renderDrawer();
+  prepareManualForm();
+  if (preferredSection) document.querySelector<HTMLDetailsElement>(preferredSection)!.open = true;
+  drawerReturnFocus = opener;
+  if ($('#secondary-actions').contains(drawerReturnFocus) && getComputedStyle($('#mobile-menu-toggle')).display !== 'none') {
+    drawerReturnFocus = $('#mobile-menu-toggle');
+  }
+  setMobileMenu(false);
+  const drawer = $('#drawer');
+  drawer.removeAttribute('inert');
+  drawer.setAttribute('aria-hidden', 'false');
+  drawer.classList.add('on');
+  $('#scrim').classList.add('on');
+  $('.app').setAttribute('inert', '');
+  document.body.classList.add('drawer-open');
+  $('#btn-set').setAttribute('aria-expanded', 'true');
+  $('#dr-close').focus();
+}
+
+function closeDrawer() {
+  const drawer = $('#drawer');
+  if (!drawer.classList.contains('on')) return;
+  drawer.classList.remove('on');
+  drawer.setAttribute('aria-hidden', 'true');
+  drawer.setAttribute('inert', '');
+  $('#scrim').classList.remove('on');
+  $('.app').removeAttribute('inert');
+  document.body.classList.remove('drawer-open');
+  $('#btn-set').setAttribute('aria-expanded', 'false');
+  drawerReturnFocus?.focus();
+  drawerReturnFocus = null;
+}
+
+function keepFocusInDrawer(event: KeyboardEvent) {
+  if (event.key !== 'Tab' || !$('#drawer').classList.contains('on')) return;
+  const focusable = $$('#drawer button:not([disabled]), #drawer input:not([disabled]), #drawer select:not([disabled]), #drawer summary, #drawer label[tabindex]')
+    .filter((node) => node.getClientRects().length > 0);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
 
 /* ===================================================================== */
 /* backup                                                                */
@@ -1955,8 +2010,11 @@ function wire() {
   }));
   document.addEventListener('drop', (e) => { if (e.dataTransfer && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
 
-  $('#btn-set').addEventListener('click', openDrawer);
-  $('#btn-bud').addEventListener('click', openDrawer);
+  $('#btn-set').addEventListener('click', (event) => openDrawer(event.currentTarget as HTMLElement));
+  $('#btn-bud').addEventListener('click', (event) => openDrawer(event.currentTarget as HTMLElement, '[data-testid="settings-section-budgets"]'));
+  $('#mobile-menu-toggle').addEventListener('click', () => {
+    setMobileMenu($('#mobile-menu-toggle').getAttribute('aria-expanded') !== 'true');
+  });
   $('#btn-recommendations').addEventListener('click', showRecommendations);
   $('#btn-dashboard').addEventListener('click', showDashboard);
   $('#btn-savings').addEventListener('click', showSavingsDirectory);
@@ -1982,7 +2040,19 @@ function wire() {
   });
   $('#dr-close').addEventListener('click', closeDrawer);
   $('#scrim').addEventListener('click', closeDrawer);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if ($('#drawer').classList.contains('on')) closeDrawer();
+      else setMobileMenu(false);
+      return;
+    }
+    keepFocusInDrawer(e);
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (!$('#secondary-actions').classList.contains('on')) return;
+    const target = event.target as Node;
+    if (!$('#secondary-actions').contains(target) && !$('#mobile-menu-toggle').contains(target)) setMobileMenu(false);
+  });
 
   $('#btn-backup').addEventListener('click', exportBackup);
   $('#dr-export').addEventListener('click', exportBackup);
