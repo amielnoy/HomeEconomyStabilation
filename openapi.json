@@ -9,9 +9,35 @@
     { "url": "/", "description": "Current origin" }
   ],
   "tags": [
+    { "name": "Health", "description": "Public deployment readiness" },
     { "name": "Snapshots", "description": "One versioned application snapshot per authenticated user" }
   ],
   "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Check API availability",
+        "operationId": "getHealth",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "API is available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "service"],
+                  "properties": {
+                    "status": { "type": "string", "const": "ok" },
+                    "service": { "type": "string", "const": "home-economy-api" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/snapshots": {
       "get": {
         "tags": ["Snapshots"],
