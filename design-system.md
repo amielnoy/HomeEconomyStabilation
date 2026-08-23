@@ -33,9 +33,32 @@ The seven financial agents use a page-level pattern built from the same tokens:
 - `.agent-card` is a compact derived-result surface. Its modifier communicates emphasis: `--quiet`, `--info`, `--action`, `--warning`, or `--critical`.
 - `.agent-dot` is a redundant visual cue; status meaning must remain present in the heading and sentence, never in color alone.
 - `.agent-body` contains short, plain-language findings. Lists are capped in the view while the pure engine may return more findings.
+
+## Safe-to-spend guide
+
+`.spending-guide` is the first derived surface after month selection. It turns the payday agent into one prominent decision number, followed by weekly and daily guides. The expandable native `details` element must always disclose the inputs—current balance, expected commitments and expected income date—so the recommendation stays understandable and auditable.
+
+- Positive allowance uses the normal ink color; a projected shortfall uses critical text and a plain-language recovery message, never color alone.
+- Missing balance or recurring-income history is an explicit state. The view uses an em dash for values that cannot be calculated and does not manufacture an allowance.
+- A projected shortfall displays zero as the actionable spending allowance and explains the actual gap in the adjacent sentence. `NaN`, `Infinity`, and negative recommended allowances must never reach the UI.
+- Expected dates on days 29–31 clamp to the last valid day of a shorter month; visual copy must show that resolved date.
+- The main result uses `aria-live="polite"`; explanation remains keyboard-operable through native `summary` behavior.
+- At 700px the guide becomes one column; at 420px the rate and breakdown grids also become one column.
+- Stable selectors use the `spending-guide-*` namespace.
+- Sanity coverage exercises missing balance, missing recurring income and shortfall states on desktop Chromium, Android Chromium and iOS WebKit.
 - Approval controls use the existing pill button recipe and the stable test IDs `approve-learning-rule` and `apply-budget-suggestion`.
 
 Agent cards do not perform remote calls. Findings are derived, while learned rules and suggested budgets require an explicit action before persistence. A quiet state is always rendered instead of leaving an empty card, so users can distinguish “checked and clear” from “not loaded”.
+
+## Consent pattern
+
+`.consent-card` presents optional cloud-sync disclosure inside settings. It is informative infrastructure, not a precondition for local use.
+
+- The checkbox is unchecked by default and the accept action remains disabled until a direct choice.
+- Purpose, data categories, voluntariness, withdrawal, forecast limitations and non-waivable rights appear before the control.
+- Accepting records a version, locale and timestamp only; it does not upload a report or collect a typed name, drawing, IP address or device fingerprint.
+- The status uses `role="status"` and `aria-live="polite"`. Acceptance and withdrawal remain reversible, keyboard accessible and covered by `cloud-consent-*` test IDs.
+- Copy must distinguish “consent recorded locally” from “cloud sync active”. Never imply that recording consent uploaded or protected data.
 
 ## Internationalization
 

@@ -56,8 +56,8 @@
   <div>
     <p class="eyebrow">Architecture · home-economy-stabilation</p>
     <h1 data-testid="architecture-title">Home Economy — how the application fits together</h1>
-    <p class="stand">A dependency-free browser application that turns bank and credit-card exports into a private household-finance workspace. Parsing, categorization, forecasting, localization and persistence all run on the user’s device; the published application has no backend and receives no financial data.</p>
-    <p><span class="pill on">TypeScript</span><span class="pill on">Static HTML</span><span class="pill">XLS · XLSX · CSV</span><span class="pill">Local-first</span><span class="pill">HE · EN · AM · FR</span><span class="pill">RTL + LTR</span><span class="pill">WCAG A/AA checks</span></p>
+    <p class="stand">A local-first browser application that turns bank and credit-card exports into a private household-finance workspace. Parsing, categorization and forecasting remain on the user’s device. A dormant first-party API and RLS-protected Supabase schema prepare optional authenticated backup without changing the default local path.</p>
+    <p><span class="pill on">TypeScript</span><span class="pill on">Static HTML</span><span class="pill">Vercel API</span><span class="pill">Supabase-ready</span><span class="pill">Local-first</span><span class="pill">HE · EN · AM · FR</span><span class="pill">RTL + LTR</span><span class="pill">WCAG A/AA checks</span></p>
   </div>
   <a class="app-link" data-testid="architecture-app-link" href="./mazan-habait.html">Open application ↗</a>
 </header>
@@ -77,7 +77,7 @@
   <div class="box"><span class="tag">input</span><b>Financial exports</b><span>Bank and card files are parsed in memory. Old BIFF8 workbooks, modern SpreadsheetML workbooks and CSV files share one normalized workbook shape.</span></div>
   <div class="box"><span class="tag">analysis</span><b>Household model</b><span>Transactions are deduplicated, categorized, grouped by month and converted into budgets, recurring charges, alerts and forecasts.</span></div>
   <div class="box"><span class="tag">agents</span><b>Seven independent checks</b><span>Learning, anomaly, missing-charge, duplicate, subscription, budget and payday engines derive typed findings from the same normalized state.</span></div>
-  <div class="box"><span class="tag">experience</span><b>One local workspace</b><span>The user switches language, filters transactions and adjusts rules directly in the browser. No account or remote database is required.</span></div>
+  <div class="box"><span class="tag">experience</span><b>One decision number first</b><span>A safe-to-spend guide turns the payday agent into a weekly and daily allowance, with an expandable calculation before the detailed dashboard. No account or remote database is required.</span></div>
   <div class="box"><span class="tag">guidance</span><b>Savings directory</b><span>Official comparison services and direct links to pension, provident, training-fund and portfolio-management companies live in a separate view.</span></div>
 </div>
 
@@ -85,7 +85,7 @@
 <figure class="diagram" data-testid="architecture-diagram-container" tabindex="0">
 <svg viewBox="0 0 920 400" role="img" aria-labelledby="diagram-title diagram-desc" data-testid="architecture-diagram">
   <title id="diagram-title">Home Economy runtime architecture</title>
-  <desc id="diagram-desc">Files selected by the user enter a browser-only application. Importers normalize them, seven independent financial agents derive findings, locale resources translate the interface, and local storage persists only user data and approved changes. External links open only after an explicit click.</desc>
+  <desc id="diagram-desc">Files selected by the user enter a local-first application. Importers normalize them, seven independent financial agents derive findings, locale resources translate the interface, and local storage remains the default. An optional future path sends a versioned snapshot through an authenticated first-party API to RLS-protected Supabase storage only after explicit consent.</desc>
   <defs><marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#929dac"/></marker></defs>
   <text class="group" x="20" y="22">User device</text>
   <rect x="20" y="34" width="170" height="70" rx="11" fill="#dbeafe" stroke="#8eafe0"/><text class="label" x="36" y="61" fill="#19395e">Bank / card files</text><text class="sub" x="36" y="82" fill="#19395e">.xls · .xlsx · .csv</text>
@@ -98,9 +98,9 @@
   <path class="edge" marker-end="url(#arrowhead)" d="M190 69H260"/><path class="edge" marker-end="url(#arrowhead)" d="M438 69H508"/><path class="edge" marker-end="url(#arrowhead)" d="M696 104H764"/>
   <path class="edge" marker-end="url(#arrowhead)" d="M438 286C470 286 470 150 508 150"/><path class="edge" marker-end="url(#arrowhead)" d="M602 182V248"/><path class="edge" marker-end="url(#arrowhead)" d="M832 104V248"/>
   <text class="edge-label" x="198" y="59">File API</text><text class="edge-label" x="450" y="59">normalized rows</text><text class="edge-label" x="706" y="94">render</text><text class="edge-label" x="610" y="220">save / load</text><text class="edge-label" x="839" y="194">explicit click</text>
-  <rect x="20" y="356" width="880" height="28" rx="9" fill="none" stroke="#a92f27" stroke-dasharray="6 5"/><text class="sub" x="36" y="375" fill="var(--critical)">Trust boundary: financial data does not cross the browser boundary</text>
+  <rect x="20" y="356" width="880" height="28" rx="9" fill="none" stroke="#a92f27" stroke-dasharray="6 5"/><text class="sub" x="36" y="375" fill="var(--critical)">Default boundary: cloud crossing requires sign-in, explicit consent, first-party API and RLS</text>
 </svg>
-<figcaption>The key architectural decision is local execution. The network is needed to serve static assets and to follow a directory link; it is not part of the import or analysis path.</figcaption>
+<figcaption>The key architectural decision remains local execution. The optional cloud layer is not part of import or analysis, is inactive by default, and cannot be reached without a verified user JWT.</figcaption>
 </figure>
 
 <h2 data-testid="architecture-section" id="pipeline">3 · Data pipeline</h2>
@@ -108,7 +108,7 @@
   <div class="stage"><span class="k">1 · Read</span><p>The File API supplies bytes. The workbook reader detects CFB/BIFF8, ZIP/SpreadsheetML or delimited text.</p></div><div class="arrow">→</div>
   <div class="stage"><span class="k">2 · Normalize</span><p>Bank and card adapters map heterogeneous headers and values into one transaction record.</p></div><div class="arrow">→</div>
   <div class="stage"><span class="k">3 · Decorate</span><p>Stable IDs remove duplicates; manual overrides win, then the first matching rule, then a safe fallback category.</p></div><div class="arrow">→</div>
-  <div class="stage"><span class="k">4 · Derive</span><p>Pure aggregations and seven agent engines produce totals, recurring patterns, typed findings, budget proposals, runway and forecast points.</p></div><div class="arrow">→</div>
+  <div class="stage"><span class="k">4 · Derive</span><p>Pure aggregations and seven agent engines produce totals, recurring patterns, typed findings, budget proposals, payday runway with daily/weekly guides, and forecast points.</p></div><div class="arrow">→</div>
   <div class="stage"><span class="k">5 · Render</span><p>The application updates semantic HTML, tables and SVG charts using locale-aware date and ILS formatters.</p></div>
 </div>
 <div class="callout"><b>Ordering and consent rule.</b> A manual category assignment always wins. Automatic rules are ordered and first-match-wins. The learning agent may propose a rule and the budget agent may propose a ceiling, but neither mutates state before explicit approval. Neutral transfers remain visible but do not inflate household income or spending totals.</div>
@@ -123,6 +123,10 @@
   <tr><td><code>src/localization.ts</code></td><td>Locale validation, direction, formatters and named-parameter interpolation.</td><td>Browser Intl APIs</td><td>Translated copy</td></tr>
   <tr><td><code>resources/*.json</code></td><td>Translated text and locale-specific sentence order.</td><td>Canonical key contract</td><td>Executable logic</td></tr>
   <tr><td><code>src/marketing.ts</code></td><td>Capture campaign attribution and local product events.</td><td>Session/local storage</td><td>Financial report content</td></tr>
+  <tr><td><code>src/cloud-sync.ts</code></td><td>Bounded cloud contract and <code>SupabaseSnapshotRepository</code>.</td><td>First-party API and access-token callback</td><td>Token persistence or consent UI</td></tr>
+  <tr><td><code>src/consent.ts</code></td><td>Versioned local consent acceptance and withdrawal.</td><td>Minimal storage port</td><td>Financial state or immunity claims</td></tr>
+  <tr><td><code>api/snapshots.ts</code></td><td>Verify JWT and mediate snapshot CRUD through RLS.</td><td>Supabase publishable key</td><td>Secret or service-role keys</td></tr>
+  <tr><td><code>supabase/migrations/*.sql</code></td><td>Tables, grants, constraints and owner-only RLS.</td><td>Supabase Auth identity</td><td>Application rendering</td></tr>
   <tr><td><code>design-system.css</code></td><td>Tokens and reusable component primitives.</td><td>Page semantic color variables</td><td>Feature-specific layout</td></tr>
 </tbody></table>
 </div>
@@ -133,7 +137,12 @@
     ├── financial-agents.ts      independent local financial agents
     ├── credit-card-importer.ts credit-card normalization
     ├── localization.ts         locale and message primitives
-    └── marketing.ts            local attribution and events
+    ├── marketing.ts            local attribution and events
+    ├── cloud-sync.ts           optional snapshot repository
+    └── consent.ts              versioned consent repository
+
+api/snapshots.ts               authenticated first-party boundary
+supabase/migrations/           profile, snapshot, consent + RLS
 
 resources/{he,en,am,fr}.json    copy loaded at runtime
 localStorage                    user-owned persistence boundary</code></pre>
@@ -150,6 +159,9 @@ localStorage                    user-owned persistence boundary</code></pre>
   <dt>month</dt><dd>Current view selection; reset safely when persisted state loads.</dd>
 </dl>
 <div class="grid"><div class="box"><span class="tag">automatic</span><b>Browser persistence</b><span>State is serialized to <code>mazan-habait/v1</code>. A blocked or corrupted store falls back to a clean in-memory session.</span></div><div class="box"><span class="tag">portable</span><b>Backup file</b><span>Export and import provide an explicit user-controlled path between browsers or computers.</span></div></div>
+<h3>Optional cloud data model</h3>
+<div class="grid"><div class="box"><span class="tag">identity</span><b><code>user_profiles</code></b><span>Only user ID and preferred locale; no financial payload.</span></div><div class="box"><span class="tag">state</span><b><code>app_snapshots</code></b><span>One bounded, schema-versioned JSON snapshot per authenticated owner.</span></div><div class="box"><span class="tag">consent</span><b><code>consent_acceptances</code></b><span>Purpose, statement version, locale and server timestamps for acceptance or withdrawal.</span></div></div>
+<div class="callout"><b>Not persisted.</b> Agent findings, forecasts, JWTs, typed names, signatures, IP addresses and device fingerprints are excluded. Derived values are recalculated after restore.</div>
 
 <h2 data-testid="architecture-section" id="i18n">6 · Localization architecture</h2>
 <p><code>he.json</code> is the canonical key set. English, Amharic and French must expose the same keys and the same named parameters, while remaining free to reorder parameters inside a sentence.</p>
@@ -166,12 +178,13 @@ t('recommendationsSummary', {
 <div class="grid"><div class="box"><span class="tag">document</span><b>Direction and language</b><span><code>lang</code>, <code>dir</code> and the application containers update together. Hebrew is RTL; English, Amharic and French are LTR.</span></div><div class="box"><span class="tag">formatting</span><b>One financial currency</b><span>Dates and number punctuation follow the locale, while monetary values remain ILS in every language.</span></div><div class="box"><span class="tag">accessibility</span><b>Attributes are localized too</b><span>Text, placeholders and accessible labels use separate data attributes backed by the same resource contract.</span></div></div>
 
 <h2 data-testid="architecture-section" id="privacy">7 · Privacy and trust boundary</h2>
-<ul class="notes"><li>Selected reports are read by browser APIs and parsed in memory.</li><li>All seven financial agents are deterministic local functions; there is no remote model call and no transaction leaves the device.</li><li>Agent findings are indicators, not financial advice. Duplicate, missing and anomalous charges require human verification before action.</li><li>Financial records and approved rules/budgets are stored only in the current browser unless the user exports a backup.</li><li>Marketing attribution records campaign parameters and local events, never bank report contents.</li><li>The savings directory contains ordinary external links with <code>noopener noreferrer</code>; opening one is an explicit user action.</li><li>No authentication, analytics SDK, database client or upload endpoint sits in the financial data path.</li></ul>
+<ul class="notes"><li>Selected reports are read by browser APIs and parsed in memory.</li><li>All seven financial agents are deterministic local functions; there is no remote model call.</li><li>Local use sends no transaction to a server. Future cloud backup is separate and requires sign-in plus explicit, versioned consent.</li><li>The API accepts only a publishable key, verifies the JWT with Supabase Auth and relies on grants plus owner-only RLS; no service-role key is present.</li><li>Agent findings are indicators, not financial advice and require human verification.</li><li>Consent may be declined or withdrawn without disabling local use; acknowledgement is not a waiver of non-waivable rights.</li><li>Marketing attribution records campaign parameters and local events, never bank report contents.</li><li>External directory links use <code>noopener noreferrer</code> and open only after an explicit action.</li></ul>
 <div class="callout good"><b>Failure mode.</b> If local storage is unavailable, the app warns the user and keeps working in memory until the tab closes. A storage failure does not redirect data elsewhere.</div>
 
 <h2 data-testid="architecture-section" id="testing">8 · Testing strategy</h2>
 <p>The suite is layered by speed. Cheap structural failures surface before a browser is launched; end-to-end and accessibility checks cover the composed product last.</p>
 <div class="flow"><div class="stage"><span class="k">Fast</span><p>Unit tests cover every agent algorithm, import and message formatting.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Contracts</span><p>Key parity, named parameters, HTML hooks and design-system rules.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Components</span><p>JSDOM checks agents, language controls, uploads, marketing and directory behavior.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Browser</span><p>Playwright checks agent approvals, real imports, RTL/LTR, mobile layout, dynamic copy and axe WCAG A/AA rules.</p></div></div>
+<div class="callout good"><b>Safe-to-spend sanity matrix.</b> Unit tests cover the formula, negative runway and month-end date clamping. Browser tests cover missing balance, missing recurring income and projected shortfall in desktop Chromium, Android Chromium and iOS WebKit, and reject <code>NaN</code>, <code>Infinity</code> or a negative allowance as user guidance.</div>
 <pre tabindex="0"><code>npm run build      # TypeScript compilation
 npm test           # unit + API + contract + component
 npm run test:e2e   # Chromium journeys + accessibility
@@ -179,7 +192,8 @@ npm run test:all   # complete verification</code></pre>
 
 <h2 data-testid="architecture-section" id="extend">9 · Extension points</h2>
 <div class="grid"><div class="box"><span class="tag">new locale</span><b>Extend the locale contract</b><span>Add the locale configuration and a complete resource file. Parameter-parity tests make sentence drift visible immediately.</span></div><div class="box"><span class="tag">new institution</span><b>Add an adapter</b><span>Recognize its header vocabulary and map it to the normalized transaction shape; keep institution-specific rules outside rendering.</span></div><div class="box"><span class="tag">new agent</span><b>Derive, explain, approve</b><span>Add a pure typed engine to <code>financial-agents.ts</code>, a localized plain-language card, stable test IDs and independent unit/API/component/browser coverage. Any mutation requires an explicit approval action.</span></div><div class="box"><span class="tag">future split</span><b>Reduce the composition root</b><span><code>app.ts</code> deliberately owns orchestration today. As the product grows, workbook reading, forecast calculation and DOM views are the clearest extraction seams.</span></div></div>
-<div class="callout"><b>Architecture guardrail.</b> A future server may serve static assets or optional services, but financial-file upload should remain absent unless the privacy model, consent copy, threat model and retention policy are intentionally redesigned.</div>
+<div class="callout"><b>Architecture guardrail.</b> Do not enable cloud upload until authentication, server-side consent recording, deletion and recovery journeys, controller contact details, retention policy, threat model and legal review are complete. Local use must remain available after refusal.</div>
+<p class="small"><b>Activation status:</b> account-level work for automated Vercel deployment and the Supabase project is tracked in <code>TODO.md</code>. “Supabase-ready” means the boundary and schema exist; it does not mean cloud storage is enabled.</p>
 </main>
 
 <footer>Home Economy architecture · generated from the current repository structure · <a href="https://github.com/amielnoy/HomeEconomyStabilation#readme" target="_blank" rel="noopener noreferrer">README source ↗</a></footer>
