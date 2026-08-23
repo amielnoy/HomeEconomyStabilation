@@ -1,4 +1,8 @@
 .vercel
+node_modules/
 *.legacy-backup.html
 playwright-report/
 test-results/
+.env
+.env.*
+!.env.example
