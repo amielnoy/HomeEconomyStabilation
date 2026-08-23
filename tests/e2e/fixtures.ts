@@ -1,5 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 import { ArchitecturePage } from './page-objects/architecture.page';
+import { ApiDocsPage } from './page-objects/api-docs.page';
 import { DashboardComponent } from './page-objects/components/dashboard.component';
 import { LanguagePickerComponent } from './page-objects/components/language-picker.component';
 import { MarketingComponent } from './page-objects/components/marketing.component';
@@ -17,6 +18,7 @@ interface PageFixtures {
   savingsDirectory: SavingsDirectoryComponent;
   homePage: HomePage;
   architecturePage: ArchitecturePage;
+  apiDocsPage: ApiDocsPage;
 }
 
 export const test = base.extend<PageFixtures>({
@@ -58,6 +60,9 @@ export const test = base.extend<PageFixtures>({
   },
   architecturePage: async ({ page }, use) => {
     await use(new ArchitecturePage(page));
+  },
+  apiDocsPage: async ({ page }, use) => {
+    await use(new ApiDocsPage(page));
   },
 });
 

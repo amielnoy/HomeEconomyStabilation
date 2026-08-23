@@ -1,3 +1,5 @@
+import { HttpStatus } from './http-status.js';
+
 export const CLOUD_SNAPSHOT_SCHEMA_VERSION = 1;
 export const CLOUD_SNAPSHOT_MAX_BYTES = 1_000_000;
 
@@ -61,9 +63,9 @@ export class SupabaseSnapshotRepository implements CloudSnapshotClient {
 
   private async request(method: 'GET' | 'PUT' | 'DELETE', payload?: CloudStatePayload) {
     const token = await this.input.accessToken();
-    if (!token) throw new CloudSyncError('authentication_required', 'Sign in before using cloud sync.', 401);
+    if (!token) throw new CloudSyncError('authentication_required', 'Sign in before using cloud sync.', HttpStatus.UNAUTHORIZED);
     if (payload && (!isCloudStatePayload(payload) || snapshotBytes(payload) > CLOUD_SNAPSHOT_MAX_BYTES)) {
-      throw new CloudSyncError('invalid_snapshot', 'The snapshot is invalid or too large.', 400);
+      throw new CloudSyncError('invalid_snapshot', 'The snapshot is invalid or too large.', HttpStatus.BAD_REQUEST);
     }
     const response = await this.fetchImpl(this.endpoint, {
       method,
@@ -74,7 +76,7 @@ export class SupabaseSnapshotRepository implements CloudSnapshotClient {
       },
       body: payload ? JSON.stringify({ schemaVersion: CLOUD_SNAPSHOT_SCHEMA_VERSION, payload }) : undefined,
     });
-    const body = response.status === 204 ? null : await response.json().catch(() => null) as Record<string, unknown> | null;
+    const body = response.status === HttpStatus.NO_CONTENT ? null : await response.json().catch(() => null) as Record<string, unknown> | null;
     if (!response.ok) {
       const code = typeof body?.code === 'string' ? body.code : 'cloud_request_failed';
       throw new CloudSyncError(code, 'Cloud sync is currently unavailable.', response.status);
@@ -87,7 +89,7 @@ export class SupabaseSnapshotRepository implements CloudSnapshotClient {
     if (!body?.snapshot) return null;
     const snapshot = body.snapshot as CloudSnapshot;
     if (snapshot.schemaVersion !== CLOUD_SNAPSHOT_SCHEMA_VERSION || !isCloudStatePayload(snapshot.payload)) {
-      throw new CloudSyncError('invalid_server_snapshot', 'The cloud snapshot format is not supported.', 502);
+      throw new CloudSyncError('invalid_server_snapshot', 'The cloud snapshot format is not supported.', HttpStatus.BAD_GATEWAY);
     }
     return snapshot;
   }
@@ -96,7 +98,7 @@ export class SupabaseSnapshotRepository implements CloudSnapshotClient {
     const body = await this.request('PUT', payload);
     const snapshot = body?.snapshot as CloudSnapshot | undefined;
     if (!snapshot || snapshot.schemaVersion !== CLOUD_SNAPSHOT_SCHEMA_VERSION || !isCloudStatePayload(snapshot.payload)) {
-      throw new CloudSyncError('invalid_server_snapshot', 'The cloud snapshot format is not supported.', 502);
+      throw new CloudSyncError('invalid_server_snapshot', 'The cloud snapshot format is not supported.', HttpStatus.BAD_GATEWAY);
     }
     return snapshot;
   }

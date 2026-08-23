@@ -1,0 +1,36 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { HttpStatus } from '../../src/http-status';
+
+const root = resolve(__dirname, '../..');
+const spec = JSON.parse(readFileSync(resolve(root, 'openapi.json'), 'utf8'));
+const docs = readFileSync(resolve(root, 'api-docs.html'), 'utf8');
+
+describe('Swagger/OpenAPI contract', () => {
+  it('documents every supported snapshot operation with bearer authentication', () => {
+    const route = spec.paths['/api/snapshots'];
+    expect(Object.keys(route).sort()).toEqual(['delete', 'get', 'put']);
+    for (const method of ['get', 'put', 'delete']) {
+      expect(route[method].security).toEqual([{ bearerAuth: [] }]);
+      expect(route[method].operationId).toBeTruthy();
+    }
+  });
+
+  it('keeps the manual explorer self-hosted and pointed at the checked-in specification', () => {
+    expect(docs).toContain('/openapi.json');
+    expect(docs).toContain('/dist/swagger-ui/swagger-ui-bundle.js');
+    expect(docs).not.toMatch(/https?:\/\//);
+  });
+
+  it('documents the shared success and failure response codes', () => {
+    const operations = spec.paths['/api/snapshots'];
+    expect(operations.get.responses).toHaveProperty(String(HttpStatus.OK));
+    expect(operations.put.responses).toHaveProperty(String(HttpStatus.BAD_REQUEST));
+    expect(operations.delete.responses).toHaveProperty(String(HttpStatus.NO_CONTENT));
+    for (const operation of Object.values(operations) as Array<{ responses: Record<string, unknown> }>) {
+      expect(operation.responses).toHaveProperty(String(HttpStatus.UNAUTHORIZED));
+      expect(operation.responses).toHaveProperty(String(HttpStatus.SERVICE_UNAVAILABLE));
+    }
+  });
+});

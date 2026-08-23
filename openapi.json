@@ -1,0 +1,132 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Home Economy Cloud Snapshot API",
+    "version": "1.0.0",
+    "description": "Authenticated, optional cloud backup boundary. Local use does not call this API. Configure Supabase and authorize with a real user JWT before testing successful operations."
+  },
+  "servers": [
+    { "url": "/", "description": "Current origin" }
+  ],
+  "tags": [
+    { "name": "Snapshots", "description": "One versioned application snapshot per authenticated user" }
+  ],
+  "paths": {
+    "/api/snapshots": {
+      "get": {
+        "tags": ["Snapshots"],
+        "summary": "Load the current user's snapshot",
+        "operationId": "loadSnapshot",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Snapshot found, or null when none is stored",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SnapshotResponse" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      },
+      "put": {
+        "tags": ["Snapshots"],
+        "summary": "Create or replace the current user's snapshot",
+        "operationId": "saveSnapshot",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SnapshotInput" },
+              "example": {
+                "schemaVersion": 1,
+                "payload": { "tx": [], "overrides": {}, "rules": [], "cats": [], "budgets": {}, "accounts": [] }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored snapshot",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SnapshotResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/InvalidSnapshot" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      },
+      "delete": {
+        "tags": ["Snapshots"],
+        "summary": "Delete the current user's cloud snapshot",
+        "operationId": "deleteSnapshot",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "204": { "description": "Snapshot deleted" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "CloudStatePayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tx", "overrides", "rules", "cats", "budgets", "accounts"],
+        "properties": {
+          "tx": { "type": "array", "maxItems": 50000, "items": {} },
+          "overrides": { "type": "object", "additionalProperties": true },
+          "rules": { "type": "array", "maxItems": 1000, "items": {} },
+          "cats": { "type": "array", "maxItems": 1000, "items": {} },
+          "budgets": { "type": "object", "additionalProperties": true },
+          "accounts": { "type": "array", "maxItems": 100, "items": {} }
+        }
+      },
+      "SnapshotInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schemaVersion", "payload"],
+        "properties": {
+          "schemaVersion": { "type": "integer", "const": 1 },
+          "payload": { "$ref": "#/components/schemas/CloudStatePayload" }
+        }
+      },
+      "Snapshot": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SnapshotInput" },
+          {
+            "type": "object",
+            "properties": { "updatedAt": { "type": "string", "format": "date-time" } }
+          }
+        ]
+      },
+      "SnapshotResponse": {
+        "type": "object",
+        "required": ["snapshot"],
+        "properties": { "snapshot": { "oneOf": [{ "$ref": "#/components/schemas/Snapshot" }, { "type": "null" }] } }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["code"],
+        "properties": { "code": { "type": "string" } }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid user JWT",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "InvalidSnapshot": {
+        "description": "Invalid, unsupported or oversized snapshot",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "NotConfigured": {
+        "description": "Supabase environment variables are not configured",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    }
+  }
+}

@@ -1,7 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { bearerToken, readSupabaseConfig } from '../../api/snapshots';
+import { HttpStatus } from '../../src/http-status';
 
 describe('Supabase API boundary', () => {
+  it('centralizes the REST response codes used by the API boundary', () => {
+    expect(HttpStatus.OK).toBe(200);
+    expect(HttpStatus.NO_CONTENT).toBe(204);
+    expect(HttpStatus.BAD_REQUEST).toBe(400);
+    expect(HttpStatus.UNAUTHORIZED).toBe(401);
+    expect(HttpStatus.NOT_FOUND).toBe(404);
+    expect(HttpStatus.METHOD_NOT_ALLOWED).toBe(405);
+    expect(HttpStatus.CONTENT_TOO_LARGE).toBe(413);
+    expect(HttpStatus.INTERNAL_SERVER_ERROR).toBe(500);
+    expect(HttpStatus.BAD_GATEWAY).toBe(502);
+    expect(HttpStatus.SERVICE_UNAVAILABLE).toBe(503);
+  });
+
   it('fails closed for missing, privileged-looking or insecure configuration', () => {
     expect(readSupabaseConfig({})).toBeNull();
     expect(readSupabaseConfig({ SUPABASE_URL: 'http://example.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_x' })).toBeNull();
