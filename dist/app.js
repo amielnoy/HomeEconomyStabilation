@@ -1,6 +1,7 @@
 import { creditCardImporter } from './credit-card-importer.js';
 import { createLocaleFormatters, formatMessage, getLocaleConfig, isSupportedLocale, resolveLocale } from './localization.js';
 import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js';
+import { runFinancialAgents } from './financial-agents.js';
 let locale = resolveLocale(localStorage.getItem('mazan-habait/locale'));
 let resources = {};
 let directoryOpen = window.location.hash === '#savings-directory';
@@ -953,11 +954,11 @@ async function readWorkbook(arrayBuffer, filename = '') {
     function autoCat(t) {
         if (S.overrides[t.id])
             return S.overrides[t.id];
-        const d = t.desc;
+        const d = t.desc.toLocaleLowerCase();
         for (const r of S.rules) {
             if (!r.match)
                 continue;
-            if (d.indexOf(r.match) !== -1)
+            if (d.includes(r.match.toLocaleLowerCase()))
                 return r.cat;
         }
         return t.in > 0 ? 'income' : 'other';
@@ -1150,6 +1151,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
         renderMonths(months);
         renderHero(months);
         renderAttention();
+        renderAgents();
         renderRecommendations();
         renderForecast();
         renderBudgets();
@@ -1160,6 +1162,66 @@ async function readWorkbook(arrayBuffer, filename = '') {
         $('#acct').textContent = S.accounts.length
             ? t('accountLabel', { accounts: S.accounts.join(' · ') })
             : t('subtitle');
+    }
+    function renderAgents() {
+        const grid = $('#agent-grid');
+        grid.textContent = '';
+        const results = runFinancialAgents({
+            transactions: S.tx, overrides: S.overrides, rules: S.rules, categories: S.cats,
+        });
+        const addCard = (id, titleKey, content, tone = 'info') => {
+            grid.append(el('article', { class: `agent-card agent-card--${tone}`, 'data-testid': `agent-${id}` }, [
+                el('header', {}, [el('span', { class: 'agent-dot', 'aria-hidden': 'true' }), el('h3', { text: t(titleKey) })]),
+                el('div', { class: 'agent-body' }, content),
+            ]));
+        };
+        const messages = (items, emptyKey) => items.length
+            ? items.slice(0, 3).map((text) => el('p', { text }))
+            : [el('p', { class: 'agent-clear', text: t(emptyKey) })];
+        const learning = results.learning;
+        const learningContent = learning
+            ? [el('p', { text: t('agentLearningProposal', { match: learning.match, category: catById(learning.categoryId).name }) })]
+            : [el('p', { class: 'agent-clear', text: t('agentNoLearning') })];
+        if (learning) {
+            learningContent.push(el('button', {
+                class: 'btn sm', type: 'button', text: t('approveRule'), 'data-testid': 'approve-learning-rule',
+                onclick: () => {
+                    S.rules.unshift({ id: 'learned-' + Date.now(), match: learning.match, cat: learning.categoryId });
+                    save();
+                    render();
+                    toast(t('ruleApproved'));
+                },
+            }));
+        }
+        addCard('learning', 'agentLearningTitle', learningContent, learning ? 'action' : 'quiet');
+        addCard('anomalies', 'agentAnomalyTitle', messages(results.anomalies.map((item) => t('agentAnomalyResult', {
+            merchant: item.merchant, percent: item.percent, latest: money(item.latest), baseline: money(item.baseline),
+        })), 'agentNoAnomalies'), results.anomalies.length ? 'warning' : 'quiet');
+        addCard('missing', 'agentMissingTitle', messages(results.missing.map((item) => t(item.direction === 'in' ? 'agentMissingIncomeResult' : 'agentMissingExpenseResult', { merchant: item.merchant, amount: money(item.amount), day: item.expectedDay })), 'agentNoMissing'), results.missing.length ? 'warning' : 'quiet');
+        addCard('duplicates', 'agentDuplicateTitle', messages(results.duplicates.map((item) => t('agentDuplicateResult', {
+            merchant: item.merchant, amount: money(item.amount), first: DDMMYY.format(dOf(item.firstDate)), second: DDMMYY.format(dOf(item.secondDate)),
+        })), 'agentNoDuplicates'), results.duplicates.length ? 'critical' : 'quiet');
+        addCard('subscriptions', 'agentSubscriptionTitle', messages(results.subscriptions.map((item) => {
+            const base = t('agentSubscriptionResult', { merchant: item.merchant, monthly: money(item.monthly), annual: money(item.annual) });
+            return item.increasePercent >= 5 ? `${base} ${t('agentSubscriptionIncrease', { percent: item.increasePercent })}` : base;
+        }), 'agentNoSubscriptions'), results.subscriptions.some((item) => item.increasePercent >= 5) ? 'warning' : 'info');
+        const budgetContent = results.budgetSuggestions.length
+            ? results.budgetSuggestions.slice(0, 3).flatMap((item) => [
+                el('p', { text: t('agentBudgetResult', { category: catById(item.categoryId).name, amount: money(item.suggested), months: item.months }) }),
+                el('button', {
+                    class: 'btn sm', type: 'button', text: t('applyBudget'), 'data-testid': 'apply-budget-suggestion',
+                    onclick: () => { S.budgets[item.categoryId] = item.suggested; save(); render(); toast(t('budgetApplied')); },
+                }),
+            ])
+            : [el('p', { class: 'agent-clear', text: t('agentNoBudgetSuggestions') })];
+        addCard('budget', 'agentBudgetTitle', budgetContent, results.budgetSuggestions.length ? 'action' : 'quiet');
+        const payday = results.payday;
+        const paydayText = !payday ? t('agentPaydayNoBalance')
+            : !payday.nextIncomeDate ? t('agentPaydayNoIncome', { balance: money(payday.balance) })
+                : t('agentPaydayResult', {
+                    balance: money(payday.balance), committed: money(payday.committed), date: DDMMYY.format(dOf(payday.nextIncomeDate)), free: money(payday.freeToSpend),
+                });
+        addCard('payday', 'agentPaydayTitle', [el('p', { text: paydayText })], payday && payday.freeToSpend < 0 ? 'critical' : 'info');
     }
     function renderAttention() {
         const box = $('#attention');
@@ -1185,7 +1247,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
         if (!items.length)
             items.push({ title: t('noUrgentAlerts'), text: t('dataLooksBalanced') });
         for (const item of items.slice(0, 4)) {
-            box.append(el('div', { class: 'attention-item ' + (item.kind || '') }, [
+            box.append(el('div', { class: 'attention-item ' + (item.kind || ''), 'data-testid': 'attention-item' }, [
                 el('span', { class: 'ai-dot', 'aria-hidden': 'true' }),
                 el('div', {}, [el('strong', { text: item.title }), el('span', { text: item.text })]),
             ]));
@@ -1224,7 +1286,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
             recommendations.push({ level: 'info', title: t('recContinueTitle'), detail: t('recContinueDetail'), impact: t('recContinueImpact'), action: t('backToDashboard'), target: '#hero-h' });
         note.textContent = t('recommendationsSummary', { count: recommendations.length, account: accountLabel, month: monthLabel(S.month) });
         recommendations.slice(0, 8).forEach((recommendation, index) => {
-            const button = el('button', { class: 'btn sm', type: 'button', text: recommendation.action });
+            const button = el('button', { class: 'btn sm', type: 'button', text: recommendation.action, 'data-testid': 'recommendation-action' });
             button.addEventListener('click', () => {
                 showDashboard();
                 const target = $(recommendation.target);
@@ -1234,7 +1296,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
                 if (recommendation.target === '#tx-h')
                     renderTx();
             });
-            box.append(el('article', { class: 'recommendation ' + recommendation.level }, [
+            box.append(el('article', { class: 'recommendation ' + recommendation.level, 'data-testid': 'recommendation-card' }, [
                 el('div', { class: 'priority', text: String(index + 1), 'aria-label': t('priorityNumber', { number: index + 1 }) }),
                 el('div', {}, [el('h3', { text: recommendation.title }), el('p', { text: recommendation.detail }), el('div', { class: 'impact', text: recommendation.impact })]),
                 button,
@@ -1283,7 +1345,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
         nav.textContent = '';
         for (const mk of months) {
             nav.append(el('button', {
-                class: 'mchip', type: 'button',
+                class: 'mchip', type: 'button', 'data-testid': 'month-chip',
                 'aria-pressed': mk === S.month ? 'true' : 'false',
                 text: monthLabel(mk),
                 onclick: () => { S.month = mk; render(); },
@@ -1536,7 +1598,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
             const pct = used / cap;
             const state = pct > 1 ? 'over' : pct > 0.8 ? 'warn' : 'ok';
             const label = pct > 1 ? t('overByAmount', { amount: money(used - cap) }) : t('remainingAmount', { amount: money(cap - used) });
-            box.append(el('div', { class: 'catrow' }, [
+            box.append(el('div', { class: 'catrow', 'data-testid': 'budget-row' }, [
                 el('div', { class: 'top' }, [
                     el('span', { class: 'dot', style: `background:${catColor(S.cats, c.id)}` }),
                     el('span', { class: 'nm', text: catById(c.id).name }),
@@ -1574,7 +1636,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
         });
         const max = rows[0][1];
         for (const [cid, v] of rows) {
-            box.append(el('div', { class: 'catrow' }, [
+            box.append(el('div', { class: 'catrow', 'data-testid': 'category-row' }, [
                 el('div', { class: 'top' }, [
                     el('span', { class: 'dot', style: `background:${catColor(S.cats, cid)}` }),
                     el('span', { class: 'nm', text: catById(cid).name }),
@@ -1593,7 +1655,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
         ])));
         const tb = el('tbody');
         for (const [cid, v] of rows) {
-            tb.append(el('tr', {}, [
+            tb.append(el('tr', { 'data-testid': 'category-table-row' }, [
                 el('td', { text: catById(cid).name }),
                 el('td', { class: 'n', text: money2(v) }),
                 el('td', { class: 'n', text: Math.round((v / total) * 100) + '%' }),
@@ -1623,7 +1685,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
         ])));
         const tb = el('tbody');
         for (const r of rec.slice(0, 14)) {
-            tb.append(el('tr', {}, [
+            tb.append(el('tr', { 'data-testid': 'recurring-row' }, [
                 el('td', { class: 'desc', text: r.label }),
                 el('td', {}, [el('span', { class: 'dot', style: `background:${catColor(S.cats, r.cat)}` }), catById(r.cat).name]),
                 el('td', { class: 'n', text: money2S(r.dir === 'in' ? r.amount : -r.amount) }),
@@ -1660,7 +1722,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
             return;
         }
         for (const transaction of list.slice(0, 400)) {
-            const sel = el('select', { class: 'catsel', 'aria-label': t('categoryForTransaction', { description: transaction.desc }) });
+            const sel = el('select', { class: 'catsel', 'aria-label': t('categoryForTransaction', { description: transaction.desc }), 'data-testid': 'transaction-category-select' });
             for (const c of S.cats)
                 sel.append(el('option', { value: c.id, text: catById(c.id).name, selected: c.id === transaction.cat }));
             sel.addEventListener('change', () => {
@@ -1670,12 +1732,12 @@ async function readWorkbook(arrayBuffer, filename = '') {
                 toast(t('categoryUpdatedToast'));
             });
             const amt = money2S(transaction.in > 0 ? transaction.in : -transaction.out);
-            body.append(el('tr', {}, [
+            body.append(el('tr', { 'data-testid': 'transaction-row' }, [
                 el('td', { class: 'n', text: DDMMYY.format(dOf(transaction.date)) }),
                 el('td', { class: 'desc', text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
                 el('td', { class: 'catcell' }, [el('span', { class: 'dot', style: `background:${catColor(S.cats, transaction.cat)}` }), sel]),
                 el('td', { class: 'n ' + (transaction.in > 0 ? 'pos' : 'neg'), text: amt }),
-                el('td', { class: 'n', text: transaction.bal != null ? money2(transaction.bal) : '' }),
+                el('td', { class: 'n', text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
                 el('td', { class: 'n', style: 'color:var(--muted);font-size:12.5px', text: transaction.ref }),
             ]));
         }
@@ -1701,7 +1763,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
             const inp = el('input', {
                 type: 'number', min: '0', step: '50', inputmode: 'numeric',
                 value: S.budgets[c.id] || '', placeholder: t('none'),
-                'aria-label': t('monthlyLimitForCategory', { category: catById(c.id).name }),
+                'aria-label': t('monthlyLimitForCategory', { category: catById(c.id).name }), 'data-testid': 'budget-limit-input',
             });
             inp.addEventListener('change', () => {
                 const v = parseFloat(inp.value);
@@ -1712,7 +1774,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
                 save();
                 render();
             });
-            b.append(el('div', { class: 'budrow' }, [
+            b.append(el('div', { class: 'budrow', 'data-testid': 'settings-budget-row' }, [
                 el('span', { class: 'nm' }, [el('span', { class: 'dot', style: `background:${catColor(S.cats, c.id)}` }), catById(c.id).name]),
                 inp, el('span', { style: 'color:var(--muted);font-size:13px', text: t('ilsPerMonth') }),
             ]));
@@ -1720,16 +1782,16 @@ async function readWorkbook(arrayBuffer, filename = '') {
         const r = $('#dr-rules');
         r.textContent = '';
         S.rules.forEach((rule, i) => {
-            const m = el('input', { type: 'text', value: rule.match, 'aria-label': t('matchingText') });
+            const m = el('input', { type: 'text', value: rule.match, 'aria-label': t('matchingText'), 'data-testid': 'rule-match-input' });
             m.addEventListener('change', () => { S.rules[i].match = clean(m.value); save(); render(); });
-            const sel = el('select', { 'aria-label': t('category') });
+            const sel = el('select', { 'aria-label': t('category'), 'data-testid': 'rule-category-select' });
             for (const c of S.cats)
                 sel.append(el('option', { value: c.id, text: catById(c.id).name, selected: c.id === rule.cat }));
             sel.addEventListener('change', () => { S.rules[i].cat = sel.value; save(); render(); });
-            r.append(el('div', { class: 'rulerow' }, [
+            r.append(el('div', { class: 'rulerow', 'data-testid': 'settings-rule-row' }, [
                 m, el('span', { style: 'color:var(--muted)', text: '←' }), sel,
                 el('button', {
-                    class: 'x', 'aria-label': t('deleteRule'), text: '✕',
+                    class: 'x', 'aria-label': t('deleteRule'), text: '✕', 'data-testid': 'delete-rule-button',
                     onclick: () => { S.rules.splice(i, 1); save(); renderDrawer(); render(); },
                 }),
             ]));
@@ -1737,17 +1799,17 @@ async function readWorkbook(arrayBuffer, filename = '') {
         const cbox = $('#dr-cats');
         cbox.textContent = '';
         S.cats.forEach((c, i) => {
-            const nm = el('input', { type: 'text', value: catById(c.id).name, 'aria-label': t('categoryName') });
+            const nm = el('input', { type: 'text', value: catById(c.id).name, 'aria-label': t('categoryName'), 'data-testid': 'category-name-input' });
             nm.addEventListener('change', () => { S.cats[i].name = clean(nm.value) || c.id; save(); renderDrawer(); render(); });
-            const kind = el('select', { 'aria-label': t('type') });
+            const kind = el('select', { 'aria-label': t('type'), 'data-testid': 'category-type-select' });
             for (const [v, labelKey] of [['expense', 'expenseSingular'], ['income', 'incomeSingular'], ['neutral', 'transfer']])
                 kind.append(el('option', { value: v, text: t(labelKey), selected: c.kind === v }));
             kind.addEventListener('change', () => { S.cats[i].kind = kind.value; save(); renderDrawer(); render(); });
-            cbox.append(el('div', { class: 'rulerow' }, [
+            cbox.append(el('div', { class: 'rulerow', 'data-testid': 'settings-category-row' }, [
                 el('span', { class: 'dot', style: `background:${catColor(S.cats, c.id)};margin-inline-end:2px` }),
                 nm, kind,
                 c.id === 'other' || c.id === 'income' ? el('span', { style: 'width:29px' }) : el('button', {
-                    class: 'x', 'aria-label': t('deleteCategory'), text: '✕',
+                    class: 'x', 'aria-label': t('deleteCategory'), text: '✕', 'data-testid': 'delete-category-button',
                     onclick: () => {
                         for (const k in S.overrides)
                             if (S.overrides[k] === c.id)
