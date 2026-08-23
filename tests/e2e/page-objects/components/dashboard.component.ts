@@ -32,6 +32,10 @@ export class DashboardComponent {
   readonly duplicateAgent = this.page.getByTestId('agent-duplicates');
   readonly subscriptionAgent = this.page.getByTestId('agent-subscriptions');
   readonly budgetAgent = this.page.getByTestId('agent-budget');
+  readonly savingsAgent = this.page.getByTestId('agent-savings');
+  readonly savingsOpportunitySummary = this.page.getByTestId('savings-opportunity-summary');
+  readonly savingsOpportunities = this.page.getByTestId('savings-opportunity');
+  readonly savingsOpportunityDetails = this.page.getByTestId('savings-opportunity-details');
   readonly paydayAgent = this.page.getByTestId('agent-payday');
   readonly approveLearningRule = this.page.getByTestId('approve-learning-rule');
   readonly applyBudgetSuggestion = this.page.getByTestId('apply-budget-suggestion');

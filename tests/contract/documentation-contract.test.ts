@@ -10,7 +10,7 @@ describe('project documentation contract', () => {
     const readme = read('README.md');
     for (const name of [
       'סוכן שיוך לומד', 'סוכן חריגות', 'סוכן חיובים חסרים', 'סוכן כפילויות',
-      'סוכן מנויים', 'סוכן תקציב מציע', 'סוכן עד המשכורת הבאה',
+      'סוכן מנויים', 'סוכן תקציב מציע', 'סוכן הזדמנויות לחיסכון', 'סוכן עד המשכורת הבאה',
     ]) expect(readme).toContain(name);
     expect(readme).toContain('אישור הכלל');
     expect(readme).toContain('התקרה נשמרת רק לאחר אישור');
@@ -24,7 +24,7 @@ describe('project documentation contract', () => {
   it('keeps the architecture aligned with the independent agent module and local trust boundary', () => {
     const architecture = read('Architecture.html');
     expect(architecture).toContain('src/financial-agents.ts');
-    expect(architecture).toContain('seven independent financial agents');
+    expect(architecture).toContain('eight independent financial agents');
     expect(architecture).toContain('no remote model call');
     expect(architecture).toContain('explicit approval');
     expect(architecture).toContain('Safe-to-spend sanity matrix');

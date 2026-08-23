@@ -5,19 +5,30 @@ test.beforeEach(async ({ homePage }) => {
   await homePage.dashboard.loadAgentScenario();
 });
 
-test('shows seven independent agents with findings from their own histories', async ({ homePage }) => {
+test('shows eight independent agents with findings from their own histories', async ({ homePage }) => {
   await expect(homePage.dashboard.agents).toBeVisible();
   for (const agent of [
     homePage.dashboard.learningAgent, homePage.dashboard.anomalyAgent, homePage.dashboard.missingAgent,
     homePage.dashboard.duplicateAgent, homePage.dashboard.subscriptionAgent,
-    homePage.dashboard.budgetAgent, homePage.dashboard.paydayAgent,
+    homePage.dashboard.budgetAgent, homePage.dashboard.savingsAgent, homePage.dashboard.paydayAgent,
   ]) await expect(agent).toBeVisible();
 
   await expect(homePage.dashboard.anomalyAgent).toContainText('electric company');
   await expect(homePage.dashboard.missingAgent).toContainText('salary employer');
   await expect(homePage.dashboard.duplicateAgent).toContainText('local store');
   await expect(homePage.dashboard.subscriptionAgent).toContainText('streaming service');
+  await expect(homePage.dashboard.savingsAgent).toContainText('streaming service');
+  await expect(homePage.dashboard.savingsOpportunitySummary).toContainText('120');
+  await expect(homePage.dashboard.savingsOpportunities).toHaveCount(2);
   await expect(homePage.dashboard.paydayAgent).toContainText('2,000');
+});
+
+test('explains savings estimates with transaction evidence', async ({ homePage }) => {
+  await homePage.language.choose('en');
+  await homePage.dashboard.savingsOpportunityDetails.first().locator('summary').click();
+
+  await expect(homePage.dashboard.savingsOpportunityDetails.first()).toContainText('transactions');
+  await expect(homePage.dashboard.savingsAgent).toContainText('not a promise');
 });
 
 test('leads with a transparent safe-to-spend guide', async ({ homePage }) => {

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   anomalyAgent, budgetAgent, duplicateAgent, learningAgent, missingChargeAgent,
-  paydayAgent, subscriptionAgent, type AgentTransaction,
+  FinancialAgentsOrchestrator, paydayAgent, savingsOpportunityAgent, subscriptionAgent,
+  type AgentTransaction, type FinancialAgentContext, type FinancialAgentStrategy,
 } from '../../src/financial-agents';
 
 const tx = (date: string, desc: string, amount: number, options: Partial<AgentTransaction> = {}): AgentTransaction => ({
@@ -62,6 +63,53 @@ describe('independent financial agents', () => {
     ], [{ id: 'food', kind: 'expense' }]);
 
     expect(result).toEqual([{ categoryId: 'food', suggested: 750, months: 3 }]);
+  });
+
+  it('turns a quiet subscription price increase into a measured annual saving opportunity', () => {
+    const result = savingsOpportunityAgent([
+      tx('2026-01-05', 'Streaming Service', 40), tx('2026-02-05', 'Streaming Service', 40),
+      tx('2026-03-05', 'Streaming Service', 50),
+    ]);
+
+    expect(result).toEqual([expect.objectContaining({
+      type: 'price-increase', merchant: 'streaming service', estimatedSaving: 120,
+      cadence: 'annual', increasePercent: 25,
+    })]);
+    expect(result[0].evidenceTransactionIds).toHaveLength(3);
+  });
+
+  it('finds recurring fees, reviewable subscriptions and one-time duplicate savings', () => {
+    const result = savingsOpportunityAgent([
+      tx('2026-01-02', 'Bank Account Fee', 15), tx('2026-02-02', 'Bank Account Fee', 15),
+      tx('2026-01-05', 'Music Plan', 30), tx('2026-02-05', 'Music Plan', 30), tx('2026-03-05', 'Music Plan', 30),
+      tx('2026-03-10', 'Local Store 123', 200), tx('2026-03-12', 'Local Store 456', 200),
+    ]);
+
+    expect(result).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'fee-review', estimatedSaving: 180, cadence: 'annual' }),
+      expect.objectContaining({ type: 'subscription-review', estimatedSaving: 360, cadence: 'annual' }),
+      expect.objectContaining({ type: 'duplicate-review', estimatedSaving: 200, cadence: 'one-time' }),
+    ]));
+  });
+
+  it('does not invent opportunities from one ordinary charge', () => {
+    expect(savingsOpportunityAgent([tx('2026-03-05', 'Local Shop', 50)])).toEqual([]);
+  });
+
+  it('allows agent strategies to be replaced through dependency injection', () => {
+    const constant = <T>(value: T): FinancialAgentStrategy<T> => ({ analyze: () => value });
+    const injectedSavings = [{
+      id: 'test-opportunity', type: 'fee-review' as const, merchant: 'test fee',
+      estimatedSaving: 120, cadence: 'annual' as const, confidence: 1, evidenceTransactionIds: [],
+    }];
+    const orchestrator = new FinancialAgentsOrchestrator({
+      learning: constant(null), anomalies: constant([]), missing: constant([]), duplicates: constant([]),
+      subscriptions: constant([]), budgetSuggestions: constant([]), savingsOpportunities: constant(injectedSavings),
+      payday: constant(null),
+    });
+    const context: FinancialAgentContext = { transactions: [], overrides: {}, rules: [], categories: [] };
+
+    expect(orchestrator.run(context).savingsOpportunities).toBe(injectedSavings);
   });
 
   it('subtracts recurring commitments due before the next salary', () => {

@@ -6,7 +6,7 @@ describe('financial agents API', () => {
     const result = runFinancialAgents({ transactions: [], overrides: {}, rules: [], categories: [] });
 
     expect(Object.keys(result)).toEqual([
-      'learning', 'anomalies', 'missing', 'duplicates', 'subscriptions', 'budgetSuggestions', 'payday',
+      'learning', 'anomalies', 'missing', 'duplicates', 'subscriptions', 'budgetSuggestions', 'savingsOpportunities', 'payday',
     ]);
   });
 });

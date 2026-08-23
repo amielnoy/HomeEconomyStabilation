@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 
 describe('financial agents component', () => {
-  it('publishes an accessible translated host for seven independent agents', () => {
+  it('publishes an accessible translated host for eight independent agents', () => {
     const html = readFileSync(resolve(__dirname, '../../mazan-habait.html'), 'utf8');
     const document = new JSDOM(html).window.document;
     const root = document.querySelector('[data-testid="agents"]');
