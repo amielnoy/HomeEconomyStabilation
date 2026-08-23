@@ -46,6 +46,8 @@ describe('monitoring contract', () => {
     expect(runner).toContain('$PRODUCTION_URL/api/health');
     expect(runner).toContain('Local Docker services (available on this computer only)');
     expect(runner).toContain('npm run test:docker:stop');
+    expect(runner).toContain('compose down --remove-orphans');
+    expect(runner).toContain('compose up --detach --force-recreate --wait allure');
     expect(containerRunner).toContain('VITEST_SCRIPT=test:allure sh scripts/run-tests-in-parallel.sh');
     expect(containerRunner).toContain('npx allure generate');
   });

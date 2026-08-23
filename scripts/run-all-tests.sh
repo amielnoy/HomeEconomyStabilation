@@ -32,6 +32,9 @@ compose() {
     "$@"
 }
 
+echo "Cleaning stale containers from the isolated test stack"
+compose down --remove-orphans || exit $?
+
 echo "Building the API, web and test images"
 compose build api web scalar tests || exit $?
 
@@ -44,7 +47,7 @@ compose run --rm tests || test_status=$?
 
 echo "Publishing the generated Allure report"
 report_status=0
-compose up --detach --wait allure || report_status=$?
+compose up --detach --force-recreate --wait allure || report_status=$?
 
 echo
 echo "Published on Vercel"
