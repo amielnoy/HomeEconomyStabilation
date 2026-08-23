@@ -426,6 +426,10 @@ body.drawer-open{ overflow:hidden; }
 .directory-section header p{ margin:3px 0 0; color:var(--muted); font-size:13px; }
 .directory-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
 .directory-grid--featured .ds-link-card{ min-height:190px; }
+.advisor-checklist{ margin-top:12px; padding:16px 18px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); }
+.advisor-checklist h4{ margin:0; font-size:15px; }
+.advisor-checklist p{ margin:3px 0 8px; color:var(--muted); font-size:13px; }
+.advisor-checklist ul{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px 24px; margin:0; padding-inline-start:20px; color:var(--ink-2); font-size:13px; }
 @media (max-width:920px){ .directory-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:560px){
   .directory{ padding-top:28px; }
@@ -434,6 +438,7 @@ body.drawer-open{ overflow:hidden; }
   .directory-notice{ flex-direction:column; }
   .directory-grid{ grid-template-columns:1fr; }
   .directory-grid .ds-link-card{ min-height:0; }
+  .advisor-checklist ul{ grid-template-columns:1fr; }
 }
 
 /* =========================================================== toast ======= */
@@ -649,6 +654,33 @@ body.drawer-open{ overflow:hidden; }
           <span class="ds-status" data-tone="positive" data-i18n="official">רשמי</span><h4 data-i18n="capitalMarketAuthority">רשות שוק ההון</h4><p data-i18n="authorityDescription">מידע לציבור, מחשבוני דמי ניהול ואיתור בעלי רישיון.</p><span class="link-cta" data-i18n="openOfficialTool">פתיחת הכלי הרשמי ↗</span>
         </a>
       </div>
+    </section>
+
+    <section class="directory-section" aria-labelledby="independent-advisors-h" data-testid="independent-advisors-section">
+      <header>
+        <h3 id="independent-advisors-h" data-i18n="independentAdvisors" data-testid="independent-advisors-h">איתור יועצים פיננסיים בלתי תלויים</h3>
+        <p data-i18n="independentAdvisorsNote">אין כאן דירוג או רשימת מומלצים. חפשו במאגר הרשמי, אמתו רישיון בתוקף ובדקו בנפרד זיקות ואופן תגמול.</p>
+      </header>
+      <div class="directory-grid directory-grid--featured">
+        <a class="ds-link-card" data-testid="advisor-pension-registry-link" href="https://www.gov.il/he/service/agents_and_consultants_search" target="_blank" rel="noopener noreferrer">
+          <span class="ds-status" data-tone="positive" data-i18n="official">רשמי</span><h4 data-i18n="licensedPensionAdvisors">יועצים פנסיוניים בעלי רישיון</h4><p data-i18n="licensedPensionAdvisorsDescription">חיפוש של רשות שוק ההון לפי סוג רישיון, שם ועיר. בחרו «יועץ פנסיוני» והבדילו בינו לבין סוכן או משווק.</p><span class="link-cta" data-i18n="searchOfficialRegistry">חיפוש במאגר הרשמי ↗</span>
+        </a>
+        <a class="ds-link-card" data-testid="advisor-investment-registry-link" href="https://www.new.isa.gov.il/tax_licensing_advisors_tree/page/magar" target="_blank" rel="noopener noreferrer">
+          <span class="ds-status" data-tone="positive" data-i18n="official">רשמי</span><h4 data-i18n="licensedInvestmentAdvisors">יועצי השקעות בעלי רישיון</h4><p data-i18n="licensedInvestmentAdvisorsDescription">מאגר רשות ניירות ערך לבדיקת בעלי רישיון. אמתו את סוג הרישיון ואת מצבו לפני התקשרות.</p><span class="link-cta" data-i18n="searchOfficialRegistry">חיפוש במאגר הרשמי ↗</span>
+        </a>
+        <a class="ds-link-card" data-testid="advisor-dorit-gov-ari-link" href="https://www.hon.co.il/professional/%D7%92%D7%95%D7%91-%D7%90%D7%A8%D7%99-%D7%93%D7%95%D7%A8%D7%99%D7%AA/" target="_blank" rel="noopener noreferrer">
+          <span class="ds-status" data-tone="neutral" data-i18n="userRequestedListing">נוסף לבקשת המשתמש</span><h4 data-i18n="doritGovAri">דורית גוב ארי</h4><p data-i18n="doritGovAriDescription">עמוד מקצועי חיצוני של מתכננת פיננסית. הופעה ברשימה אינה המלצה או אימות עצמאות; בדקו רישיון, זיקות ותגמול לפני התקשרות.</p><span class="link-cta" data-i18n="openProfessionalProfile">פתיחת העמוד המקצועי ↗</span>
+        </a>
+      </div>
+      <aside class="advisor-checklist" aria-labelledby="advisor-checklist-h" data-testid="advisor-checklist">
+        <h4 id="advisor-checklist-h" data-testid="advisor-checklist-heading" data-i18n="verifyIndependence">איך בודקים עצמאות?</h4>
+        <p data-i18n="verifyIndependenceIntro">בקשו תשובות בכתב לפני שמוסרים מידע או משלמים.</p>
+        <ul>
+          <li data-i18n="verifyLicenseType">אמתו רישיון פעיל וסוג רישיון שמתאים לשירות המבוקש.</li>
+          <li data-i18n="verifyCompensation">שאלו מי משלם ליועץ, אילו עמלות מתקבלות והאם קיימת זיקה למוצר או לגוף פיננסי.</li>
+          <li data-i18n="verifyScope">קבלו מראש מחיר, היקף שירות, תוצרים ומדיניות ביטול בכתב.</li>
+        </ul>
+      </aside>
     </section>
 
     <section class="directory-section" aria-labelledby="support-organizations-h" data-testid="support-organizations-section">
