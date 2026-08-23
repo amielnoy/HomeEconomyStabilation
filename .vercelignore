@@ -1,10 +1,12 @@
 home_economy.xls
 .github/
+.playwright-mcp/
 node_modules/
 src/
 tests/
 test-results/
 playwright-report/
+*.legacy-backup.html
 coverage/
 package.json
 package-lock.json

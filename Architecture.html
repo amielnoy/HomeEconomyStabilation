@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-testid="app-document">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Architecture guide for the Home Economy browser application.">
+<meta data-testid="viewport-meta" name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Architecture guide for the private Home Economy browser application, its seven local financial agents, localization, testing and trust boundaries.">
 <title>Home Economy — Architecture</title>
 <style>
   :root{
@@ -49,17 +49,17 @@
   @media(max-width:760px){.top{display:block}.app-link{display:inline-block;margin-bottom:18px}.flow{flex-direction:column}.arrow{transform:rotate(90deg);padding:4px 0;align-self:flex-start;margin-inline-start:22px}.wrap{padding-top:24px}}
 </style>
 </head>
-<body>
+<body data-testid="app-body">
 <a class="skip" href="#content">Skip to architecture</a>
 <div class="wrap">
 <header class="top">
   <div>
     <p class="eyebrow">Architecture · home-economy-stabilation</p>
-    <h1>Home Economy — how the application fits together</h1>
+    <h1 data-testid="architecture-title">Home Economy — how the application fits together</h1>
     <p class="stand">A dependency-free browser application that turns bank and credit-card exports into a private household-finance workspace. Parsing, categorization, forecasting, localization and persistence all run on the user’s device; the published application has no backend and receives no financial data.</p>
     <p><span class="pill on">TypeScript</span><span class="pill on">Static HTML</span><span class="pill">XLS · XLSX · CSV</span><span class="pill">Local-first</span><span class="pill">HE · EN · AM · FR</span><span class="pill">RTL + LTR</span><span class="pill">WCAG A/AA checks</span></p>
   </div>
-  <a class="app-link" href="./mazan-habait.html">Open application ↗</a>
+  <a class="app-link" data-testid="architecture-app-link" href="./mazan-habait.html">Open application ↗</a>
 </header>
 
 <nav class="toc" aria-label="Page contents">
@@ -70,26 +70,27 @@
   <a href="#overview"><span class="n">1</span><span>What it is</span></a><a href="#runtime"><span class="n">2</span><span>Runtime shape</span></a><a href="#pipeline"><span class="n">3</span><span>Data pipeline</span></a><a href="#modules"><span class="n">4</span><span>Modules</span></a><a href="#state"><span class="n">5</span><span>State</span></a><a href="#i18n"><span class="n">6</span><span>Localization</span></a><a href="#privacy"><span class="n">7</span><span>Trust boundary</span></a><a href="#testing"><span class="n">8</span><span>Testing</span></a><a href="#extend"><span class="n">9</span><span>Extension points</span></a>
 </nav>
 
-<main id="content">
-<h2 id="overview">1 · What it is</h2>
-<p class="lead">The product is one static page with three user-facing views: the marketing/import state, the financial dashboard and recommendations, and the savings directory. A settings drawer edits budgets, rules, categories, backups and manual entries without leaving the page.</p>
+<main id="content" data-testid="architecture-content">
+<h2 data-testid="architecture-section" id="overview">1 · What it is</h2>
+<p class="lead">The product is one static page with three user-facing views: the marketing/import state, the financial dashboard with recommendations and seven independent agents, and the savings directory. A settings drawer edits budgets, rules, categories, backups and manual entries without leaving the page.</p>
 <div class="grid">
   <div class="box"><span class="tag">input</span><b>Financial exports</b><span>Bank and card files are parsed in memory. Old BIFF8 workbooks, modern SpreadsheetML workbooks and CSV files share one normalized workbook shape.</span></div>
   <div class="box"><span class="tag">analysis</span><b>Household model</b><span>Transactions are deduplicated, categorized, grouped by month and converted into budgets, recurring charges, alerts and forecasts.</span></div>
+  <div class="box"><span class="tag">agents</span><b>Seven independent checks</b><span>Learning, anomaly, missing-charge, duplicate, subscription, budget and payday engines derive typed findings from the same normalized state.</span></div>
   <div class="box"><span class="tag">experience</span><b>One local workspace</b><span>The user switches language, filters transactions and adjusts rules directly in the browser. No account or remote database is required.</span></div>
   <div class="box"><span class="tag">guidance</span><b>Savings directory</b><span>Official comparison services and direct links to pension, provident, training-fund and portfolio-management companies live in a separate view.</span></div>
 </div>
 
-<h2 id="runtime">2 · Runtime shape</h2>
-<figure class="diagram" tabindex="0">
-<svg viewBox="0 0 920 400" role="img" aria-labelledby="diagram-title diagram-desc">
+<h2 data-testid="architecture-section" id="runtime">2 · Runtime shape</h2>
+<figure class="diagram" data-testid="architecture-diagram-container" tabindex="0">
+<svg viewBox="0 0 920 400" role="img" aria-labelledby="diagram-title diagram-desc" data-testid="architecture-diagram">
   <title id="diagram-title">Home Economy runtime architecture</title>
-  <desc id="diagram-desc">Files selected by the user enter a browser-only application. Importers normalize them, application logic analyzes them, locale resources translate the interface, and local storage persists state. External links open only after an explicit click.</desc>
+  <desc id="diagram-desc">Files selected by the user enter a browser-only application. Importers normalize them, seven independent financial agents derive findings, locale resources translate the interface, and local storage persists only user data and approved changes. External links open only after an explicit click.</desc>
   <defs><marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#929dac"/></marker></defs>
   <text class="group" x="20" y="22">User device</text>
   <rect x="20" y="34" width="170" height="70" rx="11" fill="#dbeafe" stroke="#8eafe0"/><text class="label" x="36" y="61" fill="#19395e">Bank / card files</text><text class="sub" x="36" y="82" fill="#19395e">.xls · .xlsx · .csv</text>
   <rect x="260" y="34" width="178" height="70" rx="11" fill="#dcf3e8" stroke="#85c8a5"/><text class="label" x="276" y="61" fill="#14532d">Import boundary</text><text class="sub" x="276" y="82" fill="#14532d">Workbook → rows</text>
-  <rect x="508" y="34" width="188" height="148" rx="11" fill="#f3e8ff" stroke="#bea0df"/><text class="label" x="524" y="61" fill="#4c1d78">Application core</text><text class="sub" x="524" y="84" fill="#4c1d78">state · rules · totals</text><text class="sub" x="524" y="104" fill="#4c1d78">recurring · forecast</text><text class="sub" x="524" y="124" fill="#4c1d78">render · interactions</text><text class="sub" x="524" y="154" fill="#4c1d78">src/app.ts</text>
+  <rect x="508" y="34" width="188" height="148" rx="11" fill="#f3e8ff" stroke="#bea0df"/><text class="label" x="524" y="61" fill="#4c1d78">Application core</text><text class="sub" x="524" y="84" fill="#4c1d78">state · rules · totals</text><text class="sub" x="524" y="104" fill="#4c1d78">seven agents · forecast</text><text class="sub" x="524" y="124" fill="#4c1d78">render · approvals</text><text class="sub" x="524" y="154" fill="#4c1d78">app.ts + financial-agents.ts</text>
   <rect x="764" y="34" width="136" height="70" rx="11" fill="#ffe9d6" stroke="#e7b681"/><text class="label" x="780" y="61" fill="#723703">DOM views</text><text class="sub" x="780" y="82" fill="#723703">HTML + SVG</text>
   <rect x="260" y="248" width="178" height="76" rx="11" fill="#e7eefc" stroke="#9ab0dc"/><text class="label" x="276" y="276" fill="#243f73">Locale resources</text><text class="sub" x="276" y="298" fill="#243f73">he · en · am · fr</text>
   <rect x="508" y="248" width="188" height="76" rx="11" fill="#e5f4ed" stroke="#92c4aa"/><text class="label" x="524" y="276" fill="#165336">Browser storage</text><text class="sub" x="524" y="298" fill="#165336">state + attribution</text>
@@ -102,21 +103,22 @@
 <figcaption>The key architectural decision is local execution. The network is needed to serve static assets and to follow a directory link; it is not part of the import or analysis path.</figcaption>
 </figure>
 
-<h2 id="pipeline">3 · Data pipeline</h2>
+<h2 data-testid="architecture-section" id="pipeline">3 · Data pipeline</h2>
 <div class="flow">
   <div class="stage"><span class="k">1 · Read</span><p>The File API supplies bytes. The workbook reader detects CFB/BIFF8, ZIP/SpreadsheetML or delimited text.</p></div><div class="arrow">→</div>
   <div class="stage"><span class="k">2 · Normalize</span><p>Bank and card adapters map heterogeneous headers and values into one transaction record.</p></div><div class="arrow">→</div>
   <div class="stage"><span class="k">3 · Decorate</span><p>Stable IDs remove duplicates; manual overrides win, then the first matching rule, then a safe fallback category.</p></div><div class="arrow">→</div>
-  <div class="stage"><span class="k">4 · Derive</span><p>Pure aggregations produce month totals, budgets, recurring merchants, warnings and forecast points.</p></div><div class="arrow">→</div>
+  <div class="stage"><span class="k">4 · Derive</span><p>Pure aggregations and seven agent engines produce totals, recurring patterns, typed findings, budget proposals, runway and forecast points.</p></div><div class="arrow">→</div>
   <div class="stage"><span class="k">5 · Render</span><p>The application updates semantic HTML, tables and SVG charts using locale-aware date and ILS formatters.</p></div>
 </div>
-<div class="callout"><b>Ordering rule.</b> A manual category assignment always wins. Automatic rules are ordered and first-match-wins. Neutral transfers remain visible but do not inflate household income or spending totals.</div>
+<div class="callout"><b>Ordering and consent rule.</b> A manual category assignment always wins. Automatic rules are ordered and first-match-wins. The learning agent may propose a rule and the budget agent may propose a ceiling, but neither mutates state before explicit approval. Neutral transfers remain visible but do not inflate household income or spending totals.</div>
 
-<h2 id="modules">4 · Module boundaries</h2>
+<h2 data-testid="architecture-section" id="modules">4 · Module boundaries</h2>
 <div class="scroll" tabindex="0">
 <table><thead><tr><th>Artifact</th><th>Responsibility</th><th>May depend on</th><th>Must not own</th></tr></thead><tbody>
   <tr><td><code>mazan-habait.html</code></td><td>Semantic structure, page-specific CSS and static copy hooks.</td><td><code>design-system.css</code>, compiled scripts</td><td>Financial parsing rules</td></tr>
   <tr><td><code>src/app.ts</code></td><td>Workbook reading, bank ingestion, state, analysis, rendering and interaction orchestration.</td><td>Importer, localization, marketing</td><td>Remote persistence</td></tr>
+  <tr><td><code>src/financial-agents.ts</code></td><td>Seven pure, independent financial-pattern engines and their typed findings.</td><td>Normalized transaction and category values</td><td>DOM, translations or persistence</td></tr>
   <tr><td><code>src/credit-card-importer.ts</code></td><td>Recognize and normalize credit-card workbook variants.</td><td>Workbook interfaces</td><td>DOM rendering</td></tr>
   <tr><td><code>src/localization.ts</code></td><td>Locale validation, direction, formatters and named-parameter interpolation.</td><td>Browser Intl APIs</td><td>Translated copy</td></tr>
   <tr><td><code>resources/*.json</code></td><td>Translated text and locale-specific sentence order.</td><td>Canonical key contract</td><td>Executable logic</td></tr>
@@ -128,6 +130,7 @@
 ├── design-system.css
 └── dist/app.js
     ├── app.ts                   composition root + financial domain
+    ├── financial-agents.ts      independent local financial agents
     ├── credit-card-importer.ts credit-card normalization
     ├── localization.ts         locale and message primitives
     └── marketing.ts            local attribution and events
@@ -135,8 +138,8 @@
 resources/{he,en,am,fr}.json    copy loaded at runtime
 localStorage                    user-owned persistence boundary</code></pre>
 
-<h2 id="state">5 · State and persistence</h2>
-<p>The application keeps one serializable <code>AppState</code>. Derived charts and summaries are recalculated rather than stored, which avoids synchronization bugs when the month, locale, budget or category changes.</p>
+<h2 data-testid="architecture-section" id="state">5 · State and persistence</h2>
+<p>The application keeps one serializable <code>AppState</code>. Derived charts, summaries and agent findings are recalculated rather than stored, which avoids synchronization bugs when transactions, locale, budget or category changes. Only an approved learned rule or approved budget ceiling joins persisted state.</p>
 <dl class="kv">
   <dt>tx</dt><dd>Normalized transactions, including source, pending state and stable identity.</dd>
   <dt>overrides</dt><dd>Transaction ID → category ID. This is the highest-precedence categorization layer.</dd>
@@ -148,7 +151,7 @@ localStorage                    user-owned persistence boundary</code></pre>
 </dl>
 <div class="grid"><div class="box"><span class="tag">automatic</span><b>Browser persistence</b><span>State is serialized to <code>mazan-habait/v1</code>. A blocked or corrupted store falls back to a clean in-memory session.</span></div><div class="box"><span class="tag">portable</span><b>Backup file</b><span>Export and import provide an explicit user-controlled path between browsers or computers.</span></div></div>
 
-<h2 id="i18n">6 · Localization architecture</h2>
+<h2 data-testid="architecture-section" id="i18n">6 · Localization architecture</h2>
 <p><code>he.json</code> is the canonical key set. English, Amharic and French must expose the same keys and the same named parameters, while remaining free to reorder parameters inside a sentence.</p>
 <pre tabindex="0"><code>// Resource
 "recommendationsSummary":
@@ -162,24 +165,24 @@ t('recommendationsSummary', {
 })</code></pre>
 <div class="grid"><div class="box"><span class="tag">document</span><b>Direction and language</b><span><code>lang</code>, <code>dir</code> and the application containers update together. Hebrew is RTL; English, Amharic and French are LTR.</span></div><div class="box"><span class="tag">formatting</span><b>One financial currency</b><span>Dates and number punctuation follow the locale, while monetary values remain ILS in every language.</span></div><div class="box"><span class="tag">accessibility</span><b>Attributes are localized too</b><span>Text, placeholders and accessible labels use separate data attributes backed by the same resource contract.</span></div></div>
 
-<h2 id="privacy">7 · Privacy and trust boundary</h2>
-<ul class="notes"><li>Selected reports are read by browser APIs and parsed in memory.</li><li>Financial records are stored only in the current browser unless the user exports a backup.</li><li>Marketing attribution records campaign parameters and local events, never bank report contents.</li><li>The savings directory contains ordinary external links with <code>noopener noreferrer</code>; opening one is an explicit user action.</li><li>No authentication, analytics SDK, database client or upload endpoint sits in the financial data path.</li></ul>
+<h2 data-testid="architecture-section" id="privacy">7 · Privacy and trust boundary</h2>
+<ul class="notes"><li>Selected reports are read by browser APIs and parsed in memory.</li><li>All seven financial agents are deterministic local functions; there is no remote model call and no transaction leaves the device.</li><li>Agent findings are indicators, not financial advice. Duplicate, missing and anomalous charges require human verification before action.</li><li>Financial records and approved rules/budgets are stored only in the current browser unless the user exports a backup.</li><li>Marketing attribution records campaign parameters and local events, never bank report contents.</li><li>The savings directory contains ordinary external links with <code>noopener noreferrer</code>; opening one is an explicit user action.</li><li>No authentication, analytics SDK, database client or upload endpoint sits in the financial data path.</li></ul>
 <div class="callout good"><b>Failure mode.</b> If local storage is unavailable, the app warns the user and keeps working in memory until the tab closes. A storage failure does not redirect data elsewhere.</div>
 
-<h2 id="testing">8 · Testing strategy</h2>
+<h2 data-testid="architecture-section" id="testing">8 · Testing strategy</h2>
 <p>The suite is layered by speed. Cheap structural failures surface before a browser is launched; end-to-end and accessibility checks cover the composed product last.</p>
-<div class="flow"><div class="stage"><span class="k">Fast</span><p>Unit tests cover import and message formatting.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Contracts</span><p>Key parity, named parameters, HTML hooks and design-system rules.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Components</span><p>JSDOM checks language controls, uploads, marketing and directory behavior.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Browser</span><p>Playwright checks real imports, RTL/LTR, mobile layout, dynamic copy and axe WCAG A/AA rules.</p></div></div>
+<div class="flow"><div class="stage"><span class="k">Fast</span><p>Unit tests cover every agent algorithm, import and message formatting.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Contracts</span><p>Key parity, named parameters, HTML hooks and design-system rules.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Components</span><p>JSDOM checks agents, language controls, uploads, marketing and directory behavior.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Browser</span><p>Playwright checks agent approvals, real imports, RTL/LTR, mobile layout, dynamic copy and axe WCAG A/AA rules.</p></div></div>
 <pre tabindex="0"><code>npm run build      # TypeScript compilation
 npm test           # unit + API + contract + component
 npm run test:e2e   # Chromium journeys + accessibility
 npm run test:all   # complete verification</code></pre>
 
-<h2 id="extend">9 · Extension points</h2>
-<div class="grid"><div class="box"><span class="tag">new locale</span><b>Extend the locale contract</b><span>Add the locale configuration and a complete resource file. Parameter-parity tests make sentence drift visible immediately.</span></div><div class="box"><span class="tag">new institution</span><b>Add an adapter</b><span>Recognize its header vocabulary and map it to the normalized transaction shape; keep institution-specific rules outside rendering.</span></div><div class="box"><span class="tag">new analysis</span><b>Derive, then render</b><span>Implement a deterministic calculation over state, expose a translation-keyed explanation, then add the view and tests.</span></div><div class="box"><span class="tag">future split</span><b>Reduce the composition root</b><span><code>app.ts</code> deliberately owns orchestration today. As the product grows, workbook reading, forecast calculation and DOM views are the clearest extraction seams.</span></div></div>
+<h2 data-testid="architecture-section" id="extend">9 · Extension points</h2>
+<div class="grid"><div class="box"><span class="tag">new locale</span><b>Extend the locale contract</b><span>Add the locale configuration and a complete resource file. Parameter-parity tests make sentence drift visible immediately.</span></div><div class="box"><span class="tag">new institution</span><b>Add an adapter</b><span>Recognize its header vocabulary and map it to the normalized transaction shape; keep institution-specific rules outside rendering.</span></div><div class="box"><span class="tag">new agent</span><b>Derive, explain, approve</b><span>Add a pure typed engine to <code>financial-agents.ts</code>, a localized plain-language card, stable test IDs and independent unit/API/component/browser coverage. Any mutation requires an explicit approval action.</span></div><div class="box"><span class="tag">future split</span><b>Reduce the composition root</b><span><code>app.ts</code> deliberately owns orchestration today. As the product grows, workbook reading, forecast calculation and DOM views are the clearest extraction seams.</span></div></div>
 <div class="callout"><b>Architecture guardrail.</b> A future server may serve static assets or optional services, but financial-file upload should remain absent unless the privacy model, consent copy, threat model and retention policy are intentionally redesigned.</div>
 </main>
 
-<footer>Home Economy architecture · generated from the current repository structure · <a href="./README.md">README</a></footer>
+<footer>Home Economy architecture · generated from the current repository structure · <a href="https://github.com/amielnoy/HomeEconomyStabilation#readme" target="_blank" rel="noopener noreferrer">README source ↗</a></footer>
 </div>
 <script>
   const links = [...document.querySelectorAll('.rail a')];

@@ -2,10 +2,10 @@ import type { Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
 export class ArchitecturePage extends BasePage {
-  readonly title = this.page.getByRole('heading', { level: 1 });
-  readonly sections = this.page.locator('main > h2');
-  readonly diagram = this.page.locator('.diagram svg');
-  readonly applicationLink = this.page.getByRole('link', { name: /Open application/ });
+  readonly title = this.page.getByTestId('architecture-title');
+  readonly sections = this.page.getByTestId('architecture-section');
+  readonly diagram = this.page.getByTestId('architecture-diagram');
+  readonly applicationLink = this.page.getByTestId('architecture-app-link');
 
   constructor(page: Page) {
     super(page, '/Architecture.html');

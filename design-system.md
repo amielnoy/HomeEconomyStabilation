@@ -24,6 +24,19 @@ The system is implemented in `design-system.css` and is intentionally small enou
 - `.ds-focus`: focus ring utility for custom interactive controls.
 - `.locale-picker`: accessible language selector with a leading globe icon.
 
+## Financial agent pattern
+
+The seven financial agents use a page-level pattern built from the same tokens:
+
+- `.agents` is the section surface and owns the translated heading and privacy/approval note.
+- `.agent-grid` uses two equal columns on wider screens and one column below 700px.
+- `.agent-card` is a compact derived-result surface. Its modifier communicates emphasis: `--quiet`, `--info`, `--action`, `--warning`, or `--critical`.
+- `.agent-dot` is a redundant visual cue; status meaning must remain present in the heading and sentence, never in color alone.
+- `.agent-body` contains short, plain-language findings. Lists are capped in the view while the pure engine may return more findings.
+- Approval controls use the existing pill button recipe and the stable test IDs `approve-learning-rule` and `apply-budget-suggestion`.
+
+Agent cards do not perform remote calls. Findings are derived, while learned rules and suggested budgets require an explicit action before persistence. A quiet state is always rendered instead of leaving an empty card, so users can distinguish “checked and clear” from “not loaded”.
+
 ## Internationalization
 
 - Supported locales are Hebrew (`he`), English (`en`), Amharic (`am`), and French (`fr`).
@@ -42,3 +55,7 @@ The system is implemented in `design-system.css` and is intentionally small enou
 4. Every interactive control must retain a visible `:focus-visible` state.
 5. Keep layout recipes in the page stylesheet; keep reusable visual language here.
 6. Respect `prefers-reduced-motion` for transitions and animation.
+7. Every named region and interactive control exposes a semantic `data-testid`; repeated results use a stable collection ID and Page Objects consume them with `getByTestId`.
+8. Do not use color as the only carrier of warning, critical, clear, or approval state.
+9. On mobile, keep every visible approval control at least 44×44 CSS pixels and preserve a single-column reading order for agent cards.
+10. Dynamic financial sentences use translation keys with named parameters; merchant names and amounts remain user data and must be inserted as text, never executable markup.

@@ -1,0 +1,4 @@
+.vercel
+*.legacy-backup.html
+playwright-report/
+test-results/
