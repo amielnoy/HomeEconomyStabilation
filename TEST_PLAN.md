@@ -55,6 +55,7 @@ Artifacts:
 |---|---|
 | `tests/api/credit-card-importer.api.test.ts` | Stable importer output and unsupported workbook rejection |
 | `tests/api/financial-agents.api.test.ts` | Stable result slot for every agent |
+| `tests/api/health.api.test.ts` | Public Vercel health response, HEAD support and method rejection |
 | `tests/api/localization.api.test.ts` | Public locale configuration and formatter factory |
 | `tests/api/marketing.api.test.ts` | Stable attribution payload and callable analytics boundary |
 | `tests/api/supabase-infrastructure.api.test.ts` | Shared HTTP statuses, configuration fail-closed behavior and bearer parsing |

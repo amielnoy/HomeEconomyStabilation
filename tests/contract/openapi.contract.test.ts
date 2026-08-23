@@ -8,6 +8,13 @@ const spec = JSON.parse(readFileSync(resolve(root, 'openapi.json'), 'utf8'));
 const docs = readFileSync(resolve(root, 'api-docs.html'), 'utf8');
 
 describe('Swagger/OpenAPI contract', () => {
+  it('documents the public Vercel health operation without authentication', () => {
+    const health = spec.paths['/api/health'].get;
+    expect(health.operationId).toBe('getHealth');
+    expect(health.security).toEqual([]);
+    expect(health.responses).toHaveProperty(String(HttpStatus.OK));
+  });
+
   it('documents every supported snapshot operation with bearer authentication', () => {
     const route = spec.paths['/api/snapshots'];
     expect(Object.keys(route).sort()).toEqual(['delete', 'get', 'put']);

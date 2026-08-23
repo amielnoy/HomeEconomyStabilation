@@ -41,6 +41,9 @@ describe('monitoring contract', () => {
     expect(compose).toContain('allure-report:/usr/share/nginx/html:ro');
     expect(compose).toContain('allure-results:/workspace/allure-results');
     expect(runner).toContain('http://127.0.0.1:$ALLURE_PORT');
+    expect(runner).toContain('Published on Vercel');
+    expect(runner).toContain('$PRODUCTION_URL/api/health');
+    expect(runner).toContain('Local Docker services (available on this computer only)');
     expect(runner).toContain('npm run test:docker:stop');
     expect(containerRunner).toContain('npm run test:allure');
     expect(containerRunner).toContain('npm run test:e2e');
