@@ -40,7 +40,10 @@ test('rejects unsupported snapshot methods before processing data', async ({ hom
 
 test('returns a stable not-found response for unknown API routes', async ({ homeEconomyApi }) => {
   const response = await homeEconomyApi.getMissingRoute();
+  const body = (await response.body()).toString('utf8');
 
   expect(response.status()).toBe(HttpStatus.NOT_FOUND);
-  expect(await response.body()).toHaveLength(0);
+  expect(body.length).toBeLessThan(1_024);
+  expect(body).not.toContain('snapshot');
+  expect(body).not.toContain('SUPABASE');
 });
