@@ -10,6 +10,7 @@
   "bankUpload": "Importer un relevé bancaire",
   "cardUpload": "Importer un relevé de carte",
   "recommendations": "Recommandations",
+  "recommendationsNeedData": "Importez d’abord un relevé bancaire pour recevoir des recommandations.",
   "savingsDirectory": "Épargne et placements",
   "directoryKicker": "Liens utiles",
   "directoryTitle": "Retraite, fonds de formation et placements",

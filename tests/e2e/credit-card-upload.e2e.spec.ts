@@ -30,3 +30,11 @@ test('shows prioritized customer recommendations', async ({ homePage }) => {
   await expect(homePage.dashboard.recommendationCards).not.toHaveCount(0);
   await expect(homePage.dashboard.recommendationActions.first()).toBeVisible();
 });
+
+test('guides the customer to import data when recommendations are not ready yet', async ({ homePage }) => {
+  await homePage.dashboard.openRecommendations();
+
+  await expect(homePage.toast).toContainText('כדי לקבל המלצות, טענו תחילה דוח בנק');
+  await expect(homePage.marketing.primaryUpload).toBeFocused();
+  await expect(homePage.emptyState).toBeVisible();
+});

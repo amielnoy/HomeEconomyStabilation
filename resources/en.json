@@ -10,6 +10,7 @@
   "bankUpload": "Upload bank report",
   "cardUpload": "Upload card report",
   "recommendations": "Action recommendations",
+  "recommendationsNeedData": "Upload a bank report first to receive recommendations.",
   "savingsDirectory": "Savings & investments",
   "directoryKicker": "Useful links",
   "directoryTitle": "Pensions, study funds & investments",

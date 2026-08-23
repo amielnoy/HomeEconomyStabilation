@@ -10,6 +10,7 @@
   "bankUpload": "የባንክ ሪፖርት ያስገቡ",
   "cardUpload": "የካርድ ሪፖርት ያስገቡ",
   "recommendations": "የድርጊት ምክሮች",
+  "recommendationsNeedData": "ምክሮችን ለማግኘት መጀመሪያ የባንክ ሪፖርት ያስገቡ።",
   "savingsDirectory": "ቁጠባና ኢንቨስትመንት",
   "directoryKicker": "ጠቃሚ አገናኞች",
   "directoryTitle": "ጡረታ፣ የስልጠና ፈንድና ኢንቨስትመንት",

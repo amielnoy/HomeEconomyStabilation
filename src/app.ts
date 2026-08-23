@@ -1304,7 +1304,18 @@ function renderRecommendations() {
 }
 
 function showRecommendations() {
-  if (!S.tx.length) return;
+  if (!S.tx.length) {
+    setMobileMenu(false);
+    directoryOpen = false;
+    if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
+    $('#savings-directory').hidden = true;
+    $('#empty').hidden = false;
+    const uploadCallToAction = $('#marketing-upload');
+    uploadCallToAction.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    uploadCallToAction.focus({ preventScroll: true });
+    toast(t('recommendationsNeedData'));
+    return;
+  }
   setMobileMenu(false);
   directoryOpen = false;
   if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
