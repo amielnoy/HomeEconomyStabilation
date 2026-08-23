@@ -1208,6 +1208,45 @@ function renderAgents() {
     : [el('p', { class: 'agent-clear', text: t('agentNoBudgetSuggestions') })];
   addCard('budget', 'agentBudgetTitle', budgetContent, results.budgetSuggestions.length ? 'action' : 'quiet');
 
+  const savings = results.savingsOpportunities;
+  const annualSaving = savings.filter((item) => item.cadence === 'annual')
+    .reduce((sum, item) => sum + item.estimatedSaving, 0);
+  const oneTimeSaving = savings.filter((item) => item.cadence === 'one-time')
+    .reduce((sum, item) => sum + item.estimatedSaving, 0);
+  const savingsSummaryKey = annualSaving > 0 && oneTimeSaving > 0 ? 'agentSavingsSummaryCombined'
+    : annualSaving > 0 ? 'agentSavingsSummaryAnnual' : 'agentSavingsSummaryOneTime';
+  const savingsContent: Array<HTMLElement | string> = savings.length
+    ? [
+      el('p', {
+        class: 'agent-savings-summary',
+        text: t(savingsSummaryKey, {
+          count: savings.length, annual: money(annualSaving), oneTime: money(oneTimeSaving),
+        }),
+        'data-testid': 'savings-opportunity-summary',
+      }),
+      ...savings.slice(0, 3).map((item) => {
+        const messageKey = item.type === 'subscription-review' ? 'agentSavingsSubscription'
+          : item.type === 'price-increase' ? 'agentSavingsPriceIncrease'
+            : item.type === 'fee-review' ? 'agentSavingsFee' : 'agentSavingsDuplicate';
+        const estimateKey = item.cadence === 'annual' ? 'agentSavingsAnnualEstimate' : 'agentSavingsOneTimeEstimate';
+        return el('div', { class: 'agent-opportunity', 'data-testid': 'savings-opportunity' }, [
+          el('p', { text: t(messageKey, {
+            merchant: item.merchant, amount: money(item.estimatedSaving), percent: item.increasePercent || 0,
+          }) }),
+          el('p', { class: 'agent-opportunity-estimate', text: t(estimateKey, { amount: money(item.estimatedSaving) }) }),
+          el('details', { 'data-testid': 'savings-opportunity-details' }, [
+            el('summary', { text: t('howCalculated') }),
+            el('p', { text: t('agentSavingsEvidence', {
+              count: item.evidenceTransactionIds.length, confidence: Math.round(item.confidence * 100),
+            }) }),
+          ]),
+        ]);
+      }),
+      el('p', { class: 'agent-clear', text: t('agentSavingsDisclaimer') }),
+    ]
+    : [el('p', { class: 'agent-clear', text: t('agentNoSavingsOpportunities') })];
+  addCard('savings', 'agentSavingsTitle', savingsContent, savings.length ? 'action' : 'quiet');
+
   const payday = results.payday;
   const paydayText = !payday ? t('agentPaydayNoBalance')
     : !payday.nextIncomeDate ? t('agentPaydayNoIncome', { balance: money(payday.balance) })
