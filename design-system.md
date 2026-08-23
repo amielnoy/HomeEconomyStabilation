@@ -74,6 +74,14 @@ The savings directory separates official tools, nonprofit household-finance supp
 ## Internationalization
 
 - Supported locales are Hebrew (`he`), English (`en`), Amharic (`am`), and French (`fr`).
+
+## Mobile navigation and settings
+
+- Below 600px, bank and card import remain visible in the compact header. Recommendations, savings, language, settings and backup live behind the translated `mobile-menu-toggle` control.
+- On a populated dashboard, the safe-to-spend guide precedes the month selector so the primary decision number stays in the first viewport.
+- Settings use four native, keyboard-operable disclosure groups: budgets, categories and rules, data and privacy, and manual transactions. The dashboard budget action opens its relevant group directly.
+- The drawer header stays visible while scrolling. The dialog makes the background inert, traps keyboard focus, closes with Escape or the scrim, and restores focus to the visible opener.
+- Stable automation selectors include `mobile-menu-toggle`, `secondary-actions`, and `settings-section-*`.
 - Locale resources live in `resources/<locale>.json`; every locale must expose all keys in `he.json`.
 - Components use logical CSS properties (`inline-start`, `inline-end`) so layouts mirror automatically.
 - Hebrew uses RTL. English, Amharic, and French use LTR.
