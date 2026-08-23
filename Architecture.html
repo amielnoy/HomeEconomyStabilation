@@ -126,6 +126,9 @@
   <tr><td><code>src/cloud-sync.ts</code></td><td>Bounded cloud contract and <code>SupabaseSnapshotRepository</code>.</td><td>First-party API and access-token callback</td><td>Token persistence or consent UI</td></tr>
   <tr><td><code>src/consent.ts</code></td><td>Versioned local consent acceptance and withdrawal.</td><td>Minimal storage port</td><td>Financial state or immunity claims</td></tr>
   <tr><td><code>api/snapshots.ts</code></td><td>Verify JWT and mediate snapshot CRUD through RLS.</td><td>Supabase publishable key</td><td>Secret or service-role keys</td></tr>
+  <tr><td><code>src/http-status.ts</code></td><td>Single static vocabulary for REST response codes.</td><td>HTTP semantics</td><td>Response bodies or routing</td></tr>
+  <tr><td><code>docker-compose.yml</code></td><td>Isolate web, API, tests and monitoring services on one local network.</td><td>Health checks and runtime environment</td><td>Production secrets</td></tr>
+  <tr><td><code>monitoring/</code></td><td>Provision Prometheus collection and the Grafana health dashboard.</td><td>Internal metadata-only <code>/metrics</code></td><td>Financial payloads or JWTs</td></tr>
   <tr><td><code>supabase/migrations/*.sql</code></td><td>Tables, grants, constraints and owner-only RLS.</td><td>Supabase Auth identity</td><td>Application rendering</td></tr>
   <tr><td><code>design-system.css</code></td><td>Tokens and reusable component primitives.</td><td>Page semantic color variables</td><td>Feature-specific layout</td></tr>
 </tbody></table>
@@ -143,6 +146,7 @@
 
 api/snapshots.ts               authenticated first-party boundary
 supabase/migrations/           profile, snapshot, consent + RLS
+docker compose                 web → API ← Prometheus → Grafana
 
 resources/{he,en,am,fr}.json    copy loaded at runtime
 localStorage                    user-owned persistence boundary</code></pre>
@@ -178,17 +182,20 @@ t('recommendationsSummary', {
 <div class="grid"><div class="box"><span class="tag">document</span><b>Direction and language</b><span><code>lang</code>, <code>dir</code> and the application containers update together. Hebrew is RTL; English, Amharic and French are LTR.</span></div><div class="box"><span class="tag">formatting</span><b>One financial currency</b><span>Dates and number punctuation follow the locale, while monetary values remain ILS in every language.</span></div><div class="box"><span class="tag">accessibility</span><b>Attributes are localized too</b><span>Text, placeholders and accessible labels use separate data attributes backed by the same resource contract.</span></div></div>
 
 <h2 data-testid="architecture-section" id="privacy">7 · Privacy and trust boundary</h2>
-<ul class="notes"><li>Selected reports are read by browser APIs and parsed in memory.</li><li>All seven financial agents are deterministic local functions; there is no remote model call.</li><li>Local use sends no transaction to a server. Future cloud backup is separate and requires sign-in plus explicit, versioned consent.</li><li>The API accepts only a publishable key, verifies the JWT with Supabase Auth and relies on grants plus owner-only RLS; no service-role key is present.</li><li>Agent findings are indicators, not financial advice and require human verification.</li><li>Consent may be declined or withdrawn without disabling local use; acknowledgement is not a waiver of non-waivable rights.</li><li>Marketing attribution records campaign parameters and local events, never bank report contents.</li><li>External directory links use <code>noopener noreferrer</code> and open only after an explicit action.</li></ul>
+<ul class="notes"><li>Selected reports are read by browser APIs and parsed in memory.</li><li>All seven financial agents are deterministic local functions; there is no remote model call.</li><li>Local use sends no transaction to a server. Future cloud backup is separate and requires sign-in plus explicit, versioned consent.</li><li>The API accepts only a publishable key, verifies the JWT with Supabase Auth and relies on grants plus owner-only RLS; no service-role key is present.</li><li>Local Prometheus metrics contain availability, latency, method and status only; JWTs and financial payloads are excluded.</li><li>Agent findings are indicators, not financial advice and require human verification.</li><li>Consent may be declined or withdrawn without disabling local use; acknowledgement is not a waiver of non-waivable rights.</li><li>Marketing attribution records campaign parameters and local events, never bank report contents.</li><li>External directory links use <code>noopener noreferrer</code> and open only after an explicit action.</li></ul>
 <div class="callout good"><b>Failure mode.</b> If local storage is unavailable, the app warns the user and keeps working in memory until the tab closes. A storage failure does not redirect data elsewhere.</div>
 
 <h2 data-testid="architecture-section" id="testing">8 · Testing strategy</h2>
-<p>The suite is layered by speed. Cheap structural failures surface before a browser is launched; end-to-end and accessibility checks cover the composed product last.</p>
+<p>The suite is layered by speed. Cheap structural failures surface before a browser is launched; end-to-end and accessibility checks cover the composed product last. The Docker runner merges Vitest and Playwright events into a static Allure report served on localhost.</p>
 <div class="flow"><div class="stage"><span class="k">Fast</span><p>Unit tests cover every agent algorithm, import and message formatting.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Contracts</span><p>Key parity, named parameters, HTML hooks and design-system rules.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Components</span><p>JSDOM checks agents, language controls, uploads, marketing and directory behavior.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Browser</span><p>Playwright checks agent approvals, real imports, RTL/LTR, mobile layout, dynamic copy and axe WCAG A/AA rules.</p></div></div>
 <div class="callout good"><b>Safe-to-spend sanity matrix.</b> Unit tests cover the formula, negative runway and month-end date clamping. Browser tests cover missing balance, missing recurring income and projected shortfall in desktop Chromium, Android Chromium and iOS WebKit, and reject <code>NaN</code>, <code>Infinity</code> or a negative allowance as user guidance.</div>
 <pre tabindex="0"><code>npm run build      # TypeScript compilation
 npm test           # unit + API + contract + component
 npm run test:e2e   # Chromium journeys + accessibility
-npm run test:all   # complete verification</code></pre>
+npm run test:all   # complete verification
+npm run test:docker # Compose verification + localhost Allure report
+npm run test:docker:stop # stop the test and report servers
+npm run stack:start # application + Prometheus + Grafana</code></pre>
 
 <h2 data-testid="architecture-section" id="extend">9 · Extension points</h2>
 <div class="grid"><div class="box"><span class="tag">new locale</span><b>Extend the locale contract</b><span>Add the locale configuration and a complete resource file. Parameter-parity tests make sentence drift visible immediately.</span></div><div class="box"><span class="tag">new institution</span><b>Add an adapter</b><span>Recognize its header vocabulary and map it to the normalized transaction shape; keep institution-specific rules outside rendering.</span></div><div class="box"><span class="tag">new agent</span><b>Derive, explain, approve</b><span>Add a pure typed engine to <code>financial-agents.ts</code>, a localized plain-language card, stable test IDs and independent unit/API/component/browser coverage. Any mutation requires an explicit approval action.</span></div><div class="box"><span class="tag">future split</span><b>Reduce the composition root</b><span><code>app.ts</code> deliberately owns orchestration today. As the product grows, workbook reading, forecast calculation and DOM views are the clearest extraction seams.</span></div></div>

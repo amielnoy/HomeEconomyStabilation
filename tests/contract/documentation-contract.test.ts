@@ -60,4 +60,17 @@ describe('project documentation contract', () => {
     ]) expect(todo).toContain(requirement);
     expect(todo).toContain('- [ ]');
   });
+
+  it('documents the isolated Docker services and privacy-safe monitoring boundary', () => {
+    const readme = read('README.md');
+    const monitoring = read('MONITORING.md');
+    const architecture = read('Architecture.html');
+    for (const requirement of ['web', 'api', 'tests', 'Prometheus', 'Grafana', 'Allure', 'npm run stack:start']) {
+      expect(readme).toContain(requirement);
+    }
+    for (const requirement of ['home_economy_endpoint_up', 'JWT', 'payload', '127.0.0.1']) {
+      expect(monitoring).toContain(requirement);
+    }
+    expect(architecture).toContain('web → API ← Prometheus → Grafana');
+  });
 });

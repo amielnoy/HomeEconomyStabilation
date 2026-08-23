@@ -32,6 +32,7 @@
 - ה־API מוגש מאותו origin, אינו משתמש ב־cookies ומחזיר `Cache-Control: no-store`.
 - payload לא תקין או גדול מדי נדחה לפני כתיבה. שגיאת ספק מוחזרת כקוד כללי.
 - אין רישום token, תוכן דוח, דוא״ל או כתובת IP בלוגי האפליקציה.
+- מדדי Prometheus כוללים health, latency, method וקוד תגובה בלבד; הם אינם כוללים JWT או payload פיננסי ואינם נחשפים דרך Nginx.
 
 ## הסכמה ופרטיות
 
@@ -46,6 +47,8 @@ npm run build
 ```
 
 מריצים את קובץ ה־migration בפרויקט Supabase, ומגדירים את שני המשתנים גם ב־Vercel. אפשר לבדוק את ה־API רק עם JWT אמיתי של משתמש מאומת. בהיעדר configuration הנתיב נכשל סגור עם `cloud_not_configured`; הדבר אינו פוגע בשימוש המקומי.
+
+לבדיקה ידנית פותחים את `/api-docs.html`, לוחצים **Authorize** ומזינים Bearer JWT של משתמש בדיקה. Swagger UI נטען מנכסים מקומיים ומכסה את `GET`,‏ `PUT` ו־`DELETE /api/snapshots`; החוזה הניתן גם לייבוא לכלי API אחרים נמצא ב־`openapi.json`.
 
 ## הפעלה עתידית
 

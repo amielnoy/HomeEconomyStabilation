@@ -80,13 +80,47 @@ npm test                 # יחידה, API, חוזה ורכיבים
 npm run test:e2e         # תרחישי דפדפן, שפות ונגישות
 npm run test:e2e:report  # פתיחת דוח ה־HTML האחרון
 npm run test:all         # כל הבדיקות
+npm run verify           # build ולאחריו כל הבדיקות
+npm run test:docker      # כל הבדיקות ב־Compose + פרסום Allure מקומי
+npm run test:docker:stop # כיבוי שרתי הבדיקות והדוח
 ```
+
+### הרצת כל הבדיקות ב־Docker
+
+נדרשים Docker ו־Docker Compose v2 בלבד. הפקודה הבאה בונה את השירותים, מריצה את כל שכבות הבדיקה ומפרסמת דוח Allure מאוחד:
+
+```bash
+./scripts/run-all-tests.sh
+```
+
+אפשר גם להריץ `npm run test:docker`.
+
+- `web` מגיש את היישום ואת Swagger UI באמצעות Nginx.
+- `api` מריץ את `/api/snapshots` ב־Node; Nginx מעביר אליו את נתיבי `/api/`.
+- `tests` מכיל את Chromium ו־WebKit, מריץ build,‏ Vitest ו־Playwright, וכותב את תוצאות שתי המסגרות לאותו volume של Allure.
+- `allure` מגיש באמצעות Nginx את דוח ה־HTML שנוצר לאחר סיום הבדיקות.
+
+בסוף הריצה ה־CLI מדפיס קישורים לאפליקציה, Architecture,‏ Swagger,‏ API health,‏ Prometheus,‏ Grafana ו־Allure. השרתים נשארים פעילים כדי שאפשר יהיה לבדוק את התוצאה; `npm run test:docker:stop` מכבה אותם. גם אם בדיקה נכשלת, הסקריפט מנסה ליצור ולפרסם את הדוח, מדפיס את הקישורים ומחזיר קוד יציאה שגוי. סביבת הבדיקות משתמשת בפורטים נפרדים מסביבת הפיתוח: אפליקציה `18766`,‏ API‏ `13002`,‏ Prometheus‏ `19091`,‏ Grafana‏ `13001` ו־Allure‏ `15050`. אפשר לשנות כל אחד באמצעות `APP_PORT`,‏ `API_PORT`,‏ `PROMETHEUS_PORT`,‏ `GRAFANA_PORT` ו־`ALLURE_PORT`.
+
+משתני Supabase מועברים בזמן הריצה בלבד באמצעות `SUPABASE_URL` ו־`SUPABASE_PUBLISHABLE_KEY`; הם אינם נארזים בתמונה. קובצי environment,‏ `node_modules` ודוחות קודמים אינם נכנסים ל־build context.
+
+להפעלה ידנית של השרתים, Swagger וכלי הניטור עם גישה מהמחשב:
+
+```bash
+npm run stack:start
+```
+
+לאחר מכן האתר זמין ב־`http://127.0.0.1:8765` ו־Swagger ב־`http://127.0.0.1:8765/api-docs.html`. אפשר לבחור פורטים אחרים, למשל `APP_PORT=8080 GRAFANA_PORT=3100 npm run stack:start`. מכבים את כל השירותים של הסביבה המקומית באמצעות `npm run stack:stop`.
+
+### ניטור באמצעות Grafana
+
+`npm run stack:start` מפעיל את היישום, ה־API,‏ Prometheus ו־Grafana. ה־dashboard ‏**Home Economy Health** מותקן אוטומטית ומציג זמינות, זמן תגובה, uptime ותגובות API לפי קוד סטטוס. Grafana זמין ב־`http://127.0.0.1:3000`, ו־`npm run stack:stop` מכבה את כל השירותים. פירוט מדדים, פורטים, credentials וגבולות פרטיות נמצא ב־[MONITORING.md](MONITORING.md).
 
 בדיקות הנגישות משתמשות ב־axe ובודקות כללי WCAG 2 ברמות A ו־AA במצב הריק, בלוח עם נתונים ובשבעת כרטיסי הסוכנים, במגירת ההגדרות ובמסך החיסכון וההשקעות. מטריצת Playwright מריצה את התרחישים ב־Desktop Chrome, בפרופיל Android של Pixel 7 וב־WebKit עם פרופיל iPhone 13. בדיקות המובייל הייעודיות מאמתות יעדי מגע, safe areas, מניעת auto-zoom בשדות, overflow, פעולות אישור ואת מסע הייבוא המלא. האמולציה מספקת כיסוי regression עקבי, אך אינה תחליף לבדיקה ידנית על מכשיר פיזי עם VoiceOver ו־TalkBack לפני פרסום מהותי.
 
 בדיקות ה־sanity של מצפן ההוצאה נמצאות ב־`tests/e2e/spending-guide.sanity.e2e.spec.ts` ורצות בכל שלושת פרופילי הדפדפן. הן מכסות יתרה חסרה, הכנסה קבועה שלא זוהתה, התחייבויות הגבוהות מהיתרה, מניעת `NaN`/`Infinity` ומניעת הצגת יעד שלילי כהמלצה להוצאה. בדיקות היחידה מכסות גם חישוב יומי ושבועי, תזרים שלילי והצמדת תאריך סוף־חודש ליום חוקי.
 
-בדיקות ה־E2E משתמשות ב־Page Object Model. המחלקה `BasePage` מרכזת ניווט, איפוס מצב, viewport ובדיקות overflow; העמודים `HomePage` ו־`ArchitecturePage` מרכיבים רכיבי משנה ייעודיים לשפה, העלאות, שיווק, דשבורד, סוכנים, הגדרות וספריית החיסכון. כל העמודים ורכיבי המשנה מאותחלים כ־fixtures טיפוסיים בקובץ `tests/e2e/fixtures.ts`; ה־fixture של `HomePage` מקבל את רכיביו בהזרקה, והבדיקות אינן יוצרות Page Objects בעצמן. הסלקטורים הציבוריים מבוססים על `data-testid` סמנטי בלבד; גם רכיבים דינמיים כגון שורות תנועה, ממצאי סוכנים, פעולות אישור, המלצות ושדות הגדרות מקבלים מזהים יציבים. בדיקת החוזה `tests/contract/test-id-contract.test.ts` מונעת הוספת רכיב אינטראקטיבי ללא מזהה וחזרה ל־CSS selectors שבירים בתוך Page Objects. בדיקת `tests/contract/documentation-contract.test.ts` שומרת את שלושת מסמכי הפרויקט מסונכרנים עם רשימת הסוכנים, מנגנוני האישור ומבנה המודולים. פעולות Page Object מסומנות ב־`@step('Simple action description')`; ה־decorator עוטף אותן ב־`test.step`, כך שהדוח מתעד פעולות משתמש בשפה פשוטה במקום שמות מחלקות ומתודות. דוח ה־HTML המובנה נוצר כברירת מחדל בתיקייה `playwright-report/`.
+בדיקות ה־E2E משתמשות ב־Page Object Model. המחלקה `BasePage` מרכזת ניווט, איפוס מצב, viewport ובדיקות overflow; העמודים `HomePage` ו־`ArchitecturePage` מרכיבים רכיבי משנה ייעודיים לשפה, העלאות, שיווק, דשבורד, סוכנים, הגדרות וספריית החיסכון. כל העמודים ורכיבי המשנה מאותחלים כ־fixtures טיפוסיים בקובץ `tests/e2e/fixtures.ts`; ה־fixture של `HomePage` מקבל את רכיביו בהזרקה, והבדיקות אינן יוצרות Page Objects בעצמן. הסלקטורים הציבוריים מבוססים על `data-testid` סמנטי בלבד; גם רכיבים דינמיים כגון שורות תנועה, ממצאי סוכנים, פעולות אישור, המלצות ושדות הגדרות מקבלים מזהים יציבים. בדיקת החוזה `tests/contract/test-id-contract.test.ts` מונעת הוספת רכיב אינטראקטיבי ללא מזהה וחזרה ל־CSS selectors שבירים בתוך Page Objects. בדיקת `tests/contract/documentation-contract.test.ts` שומרת את שלושת מסמכי הפרויקט מסונכרנים עם רשימת הסוכנים, מנגנוני האישור ומבנה המודולים. פעולות Page Object מסומנות ב־`@step('Simple action description')`; ה־decorator עוטף אותן ב־`test.step`, כך שגם דוח Playwright וגם Allure מתעדים פעולות משתמש בשפה פשוטה. דוח ה־HTML המובנה של Playwright עדיין נוצר בתיקייה `playwright-report/`.
 
 ## פריסה אוטומטית ל־Vercel
 
@@ -118,6 +152,12 @@ npm run test:all         # כל הבדיקות
 
 פירוט מלא נמצא ב־[SUPABASE.md](SUPABASE.md).
 
+### בדיקה ידנית דרך Swagger
+
+לאחר `npm run build` מפעילים שרת מקומי ופותחים את `http://127.0.0.1:8765/api-docs.html`. מסך Swagger UI מציג ומריץ את כל פעולות `GET`,‏ `PUT` ו־`DELETE` של `/api/snapshots`. לבדיקת תוצאה מוצלחת יש ללחוץ **Authorize** ולהזין JWT אמיתי של משתמש Supabase; אין להדביק secret או `service_role`. בהיעדר הגדרת Supabase אפשר לבדוק שכשל התשתית מוחזר סגור כ־`503 cloud_not_configured`.
+
+החוזה נמצא ב־`openapi.json`, ונכסי Swagger UI מועתקים מקומית בזמן build כך שהמסך אינו תלוי ב־CDN חיצוני.
+
 הקמת הפרויקט בפועל, Auth, משתני Vercel ובדיקות integration מסומנים כרשימת עבודה מפורשת ב־[TODO.md](TODO.md); תשתית מוכנה אינה מוצגת בטעות כשירות ענן פעיל.
 
 ## מבנה הפרויקט
@@ -137,6 +177,15 @@ src/                    לוגיקת היישום, מנועי הסוכנים, י
 resources/              משאבי ארבע השפות
 tests/e2e/page-objects/ עמודי בסיס ורכיבי Page Object לבדיקות הדפדפן
 tests/                  בדיקות יחידה, חוזה, רכיבים ו־E2E
+Dockerfile.web          image של שרת היישום ו־Swagger
+Dockerfile.api          image של גבול ה־API
+Dockerfile.test         image של build ודפדפני הבדיקות
+docker-compose.yml      חיבור web,‏ API,‏ tests,‏ Prometheus ו־Grafana ברשת פנימית
+docker-compose.manual.yml חשיפת ממשקי הפיתוח ל־localhost בלבד
+monitoring/             Prometheus ו־Grafana provisioning
+MONITORING.md           הפעלה, מדדים, אבטחה וגבולות הניטור
+vitest.allure.config.ts  דיווח בדיקות unit/API/contract/component ל־Allure
+scripts/                הרצת בדיקות, יצירת Allure, סביבת Compose והעתקת Swagger
 ```
 
 ## פרטיות והבהרה פיננסית
