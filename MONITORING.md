@@ -46,4 +46,6 @@ npm run stack:start
 
 הניטור המקומי אינו מנטר אוטומטית את Vercel production. לפני הפעלה תפעולית יש לבחור שירות ניטור חיצוני, להגדיר התראות, הרשאות, TLS, שמירה וגיבוי, ולהימנע מחשיפת Prometheus או Grafana לאינטרנט ללא שכבת אימות.
 
+Vercel חושף בדיקת זמינות ציבורית ומינימלית ב־`https://home-economy-stabilation.vercel.app/api/health`. היא מחזירה סטטוס שירות בלבד, ללא Supabase, נתונים פיננסיים או פרטי משתמש. היא אינה תחליף ל־Prometheus או Grafana המקומיים ואינה מעידה ש־Supabase הוגדר בהצלחה.
+
 בדיקות החוזה של provisioning, מדדי הבריאות ופרסום Allure, יחד עם בדיקות השחרור הידניות, מתועדות ב־[TEST_PLAN.md](TEST_PLAN.md).
