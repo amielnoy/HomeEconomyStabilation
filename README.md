@@ -74,13 +74,13 @@ t('amountAsOfDate', { amount: '₪1,250', date: '23.08.2026' });
 
 ## בדיקות
 
-הבדיקות מסודרות לפי עלות הרצה: יחידה, API וחוזה רצות תחילה; בדיקות רכיבים משתמשות ב־JSDOM; בדיקות דפדפן ונגישות רצות בסוף עם Playwright.
+הבדיקות מחולקות לשני מסלולים מקבילים: Vitest מריץ יחידה, API, חוזה ורכיבים; במקביל Playwright מריץ API אמיתי, דפדפן ונגישות. גם כל מסגרת מפזרת את קובצי הבדיקות שלה בין workers. כך מתקבל משוב מהיר בלי לוותר על אף שכבת כיסוי.
 
 ```bash
 npm test                 # יחידה, API, חוזה ורכיבים
 npm run test:e2e         # תרחישי דפדפן, שפות ונגישות
 npm run test:e2e:report  # פתיחת דוח ה־HTML האחרון
-npm run test:all         # כל הבדיקות
+npm run test:all         # Vitest ו־Playwright במקביל
 npm run verify           # build ולאחריו כל הבדיקות
 npm run test:docker      # כל הבדיקות ב־Compose + פרסום Allure מקומי
 npm run test:docker:stop # כיבוי שרתי הבדיקות והדוח
@@ -98,10 +98,10 @@ npm run test:docker:stop # כיבוי שרתי הבדיקות והדוח
 
 - `web` מגיש את היישום ואת Swagger UI באמצעות Nginx.
 - `api` מריץ את `/api/snapshots` ב־Node; Nginx מעביר אליו את נתיבי `/api/`.
-- `tests` מכיל את Chromium ו־WebKit, מריץ build,‏ Vitest ו־Playwright, וכותב את תוצאות שתי המסגרות לאותו volume של Allure.
+- `tests` מכיל את Chromium ו־WebKit, מריץ build,‏ Vitest ו־Playwright במקביל, ממתין לשניהם וכותב את תוצאות שתי המסגרות לאותו volume של Allure.
 - `allure` מגיש באמצעות Nginx את דוח ה־HTML שנוצר לאחר סיום הבדיקות.
 
-בסוף הריצה ה־CLI מפריד בין כתובות ה־Production האמיתיות ב־Vercel — האפליקציה, Architecture,‏ Swagger,‏ `/api/health` ו־Snapshot API — לבין שירותי Docker שזמינים רק במחשב המקומי. Prometheus,‏ Grafana ו־Allure אינם מוצגים כשירותים ציבוריים. ברירת המחדל היא `https://home-economy-stabilation.vercel.app`, ואפשר לבדוק deployment אחר באמצעות `PRODUCTION_URL`. השרתים המקומיים נשארים פעילים כדי שאפשר יהיה לבדוק את התוצאה; `npm run test:docker:stop` מכבה אותם. גם אם בדיקה נכשלת, הסקריפט מנסה ליצור ולפרסם את הדוח, מדפיס את הקישורים ומחזיר קוד יציאה שגוי. סביבת הבדיקות משתמשת בפורטים נפרדים מסביבת הפיתוח: אפליקציה `18766`,‏ API‏ `13002`,‏ Prometheus‏ `19091`,‏ Grafana‏ `13001` ו־Allure‏ `15050`. אפשר לשנות כל אחד באמצעות `APP_PORT`,‏ `API_PORT`,‏ `PROMETHEUS_PORT`,‏ `GRAFANA_PORT` ו־`ALLURE_PORT`.
+בסוף הריצה ה־CLI מפריד בין כתובות ה־Production האמיתיות ב־Vercel — האפליקציה, Architecture,‏ Swagger,‏ `/api/health` ו־Snapshot API — לבין שירותי Docker שזמינים רק במחשב המקומי. Prometheus,‏ Grafana ו־Allure אינם מוצגים כשירותים ציבוריים. ברירת המחדל היא `https://home-economy-stabilation.vercel.app`, ואפשר לבדוק deployment אחר באמצעות `PRODUCTION_URL`. השרתים המקומיים נשארים פעילים כדי שאפשר יהיה לבדוק את התוצאה; `npm run test:docker:stop` מכבה אותם. גם אם אחת ממסגרות הבדיקה נכשלת, הסקריפט ממתין למסגרת השנייה, מנסה ליצור ולפרסם את הדוח המאוחד, מדפיס את הקישורים ומחזיר קוד יציאה שגוי. סביבת הבדיקות משתמשת בפורטים נפרדים מסביבת הפיתוח: אפליקציה `18766`,‏ API‏ `13002`,‏ Prometheus‏ `19091`,‏ Grafana‏ `13001` ו־Allure‏ `15050`. אפשר לשנות כל אחד באמצעות `APP_PORT`,‏ `API_PORT`,‏ `PROMETHEUS_PORT`,‏ `GRAFANA_PORT` ו־`ALLURE_PORT`.
 
 משתני Supabase מועברים בזמן הריצה בלבד באמצעות `SUPABASE_URL` ו־`SUPABASE_PUBLISHABLE_KEY`; הם אינם נארזים בתמונה. קובצי environment,‏ `node_modules` ודוחות קודמים אינם נכנסים ל־build context.
 

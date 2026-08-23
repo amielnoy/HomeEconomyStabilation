@@ -38,7 +38,7 @@ GRAFANA_ADMIN_USER=local-admin GRAFANA_ADMIN_PASSWORD='choose-a-local-password' 
 npm run stack:start
 ```
 
-`npm run test:docker` משתמש ב־Compose project נפרד בשם `home-economy-tests`, משאיר את אותם שרתים פעילים לאחר הבדיקות ומוסיף דוח Allure ב־`http://127.0.0.1:15050`. סביבת הבדיקות מקבלת פורטים נפרדים כדי שתוכל לפעול לצד סביבת הפיתוח; מכבים אותה באמצעות `npm run test:docker:stop`.
+`npm run test:docker` משתמש ב־Compose project נפרד בשם `home-economy-tests`, מריץ את Vitest ואת Playwright במקביל, ממתין לתוצאה של שניהם ורק אז יוצר את דוח Allure ב־`http://127.0.0.1:15050`. הוא משאיר את השרתים פעילים לאחר הבדיקות. סביבת הבדיקות מקבלת פורטים נפרדים כדי שתוכל לפעול לצד סביבת הפיתוח; מכבים אותה באמצעות `npm run test:docker:stop`.
 
 ## גבול פרטיות
 

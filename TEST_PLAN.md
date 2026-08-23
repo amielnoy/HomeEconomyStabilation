@@ -27,8 +27,8 @@ Playwright device profiles are repeatable emulations, not a substitute for final
 | `npm run build` | Application and API TypeScript compile; local Swagger assets are copied |
 | `npm test` | All Vitest unit, API, contract and component suites pass |
 | `npm run test:e2e` | All applicable Playwright scenarios pass in one API and three browser projects |
-| `npm run test:all` | Vitest followed by Playwright |
-| `npm run verify` | Build followed by the complete local suite |
+| `npm run test:all` | Vitest and Playwright start together, both complete, and either failure fails the command |
+| `npm run verify` | Build followed by both test frameworks in parallel |
 | `npm run test:docker` | Compose services start, every test runs, and Allure is published at the printed localhost URL |
 | `npm run test:docker:stop` | The isolated test and report stack stops without affecting the development stack |
 
@@ -38,6 +38,8 @@ Artifacts:
 - `allure-results/` — raw Vitest and Playwright Allure events inside the Compose volume.
 - `allure-report/` — generated combined report, served by the `allure` service.
 - Retained Playwright traces are attached only for failures.
+
+The shared POSIX runner tracks both child process IDs, waits for both exit codes and stops both on interruption. Playwright uses its normal local worker count and two workers in CI; Vitest retains its own file-level parallelism. Build and Allure generation remain ordering barriers because the tests need compiled assets and the report needs complete result files.
 
 ## Unit suites
 
