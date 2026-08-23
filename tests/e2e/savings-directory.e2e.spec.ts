@@ -11,8 +11,12 @@ test('opens the savings directory before any bank report is loaded', async ({ ho
   await expect(homePage.page).toHaveURL(/#savings-directory$/);
   await expect(homePage.emptyState).toBeHidden();
   await expect(homePage.savingsDirectory.root).toBeVisible();
-  await expect(homePage.savingsDirectory.cards).toHaveCount(12);
+  await expect(homePage.savingsDirectory.cards).toHaveCount(15);
   await expect(homePage.savingsDirectory.officialToolsHeading).toBeVisible();
+  await expect(homePage.savingsDirectory.supportOrganizationsHeading).toBeVisible();
+  await expect(homePage.savingsDirectory.paamonimLink).toBeVisible();
+  await expect(homePage.savingsDirectory.mekimiLink).toBeVisible();
+  await expect(homePage.savingsDirectory.paamonimWhatsAppLink).toBeVisible();
   await expect(homePage.savingsDirectory.companiesHeading).toBeVisible();
 });
 
@@ -24,6 +28,8 @@ test('preserves the directory while switching to French', async ({ homePage }) =
   await expect(homePage.savingsDirectory.root).toBeVisible();
   await expect(homePage.savingsDirectory.title).toHaveText('Retraite, fonds de formation et placements');
   await expect(homePage.savingsDirectory.disclaimer).toContainText('ni un classement ni une recommandation');
+  await expect(homePage.savingsDirectory.supportOrganizationsHeading)
+    .toHaveText('Organismes d’aide à la gestion du budget familial');
 });
 
 test('returns from the directory to the correct empty state', async ({ homePage }) => {
