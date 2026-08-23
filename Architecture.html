@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Architecture guide for the Home Economy browser application.">
+<title>Home Economy — Architecture</title>
+<style>
+  :root{
+    --bg:#f4f5f7;--panel:#fff;--sunk:#eef0f4;--fg:#161a20;--muted:#56616e;--line:#dde1e8;
+    --accent:#2f5fe0;--accent2:#8a4fd8;--ok:#1d7a4c;--warn:#8b5a0b;--critical:#a92f27;
+    --code:#f1f3f7;--shadow:0 1px 2px rgba(16,20,28,.05),0 14px 34px -24px rgba(16,20,28,.5);
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --bg:#0d1015;--panel:#151a21;--sunk:#1b212a;--fg:#e6eaf1;--muted:#aab4c2;--line:#303846;
+    --accent:#8aafff;--accent2:#c7a3ff;--ok:#67d69b;--warn:#edbd64;--critical:#ff8377;
+    --code:#11161d;--shadow:0 1px 2px rgba(0,0,0,.5),0 16px 36px -24px rgba(0,0,0,.9);
+  }}
+  *{box-sizing:border-box}
+  @media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .skip{position:fixed;inset-block-start:8px;inset-inline-start:8px;z-index:100;padding:8px 12px;background:var(--fg);color:var(--bg);border-radius:8px;transform:translateY(-150%)}
+  .skip:focus{transform:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:36px 20px 90px}
+  .top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+  .eyebrow{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 12px}
+  h1{font-size:clamp(1.9rem,4.6vw,2.65rem);line-height:1.08;letter-spacing:-.025em;margin:0 0 10px}
+  .stand{color:var(--muted);max-width:73ch;margin:0 0 18px;font-size:1.03rem}
+  .app-link{white-space:nowrap;padding:8px 13px;border:1px solid var(--line);border-radius:22px;background:var(--panel);box-shadow:var(--shadow);font-size:13px;font-weight:650}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px;background:var(--sunk);border:1px solid var(--line);color:var(--muted);margin:0 6px 6px 0}
+  .pill.on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+  h2{font-size:1.32rem;letter-spacing:-.015em;margin:52px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);scroll-margin-top:18px}
+  h3{font-size:1.02rem;margin:26px 0 6px}p{margin:0 0 12px}.lead{color:var(--muted)}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 4px}.toc a{font-size:13px;padding:5px 12px;border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--muted)}.toc a:hover{color:var(--accent);text-decoration:none}
+  .rail{position:fixed;top:50%;transform:translateY(-50%);inset-inline-start:max(12px,calc((100vw - 1080px)/2 - 210px));width:196px;max-height:82vh;overflow:auto;padding:14px 12px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(8px);box-shadow:var(--shadow);z-index:40;display:none}
+  .rail h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;padding:0 8px;border:0}.rail a{display:flex;gap:8px;align-items:baseline;font-size:12.5px;line-height:1.35;padding:6px 8px;border-radius:8px;color:var(--muted);border-inline-start:2px solid transparent}.rail a:hover{color:var(--fg);background:var(--sunk);text-decoration:none}.rail a[aria-current="true"]{color:var(--accent);background:var(--sunk);border-inline-start-color:var(--accent);font-weight:650}.rail .n{font-variant-numeric:tabular-nums;opacity:.75;min-width:1.3em}
+  @media(min-width:1320px){.rail{display:block}}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:14px 0}.box,.card{border:1px solid var(--line);border-radius:12px;padding:15px 17px;background:var(--panel);box-shadow:var(--shadow)}.box .tag{font:600 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--accent2)}.box b{display:block;margin:7px 0 4px}.box span:last-child{color:var(--muted);font-size:13px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.87em;background:var(--code);border:1px solid var(--line);border-radius:5px;padding:1px 5px}pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;font-size:13px;line-height:1.55}pre code{background:none;border:0;padding:0;font-size:inherit}
+  .flow{display:flex;align-items:stretch;gap:0;margin:15px 0}.stage{flex:1 1 160px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow)}.stage .k{font:600 10.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2);display:block;margin-bottom:7px}.stage p{margin:0;color:var(--muted);font-size:12.8px}.arrow{align-self:center;padding:0 9px;color:var(--accent);font-size:20px;font-weight:700}
+  .diagram{margin:26px 0 8px;overflow:auto}.diagram svg{width:100%;min-width:720px;height:auto;display:block}.diagram figcaption{color:var(--muted);font-size:.9rem;margin-top:10px;max-width:80ch}.diagram .group{font:700 11px ui-sans-serif,system-ui;letter-spacing:.09em;text-transform:uppercase;fill:var(--muted)}.diagram .label{font:650 13px ui-sans-serif,system-ui}.diagram .sub{font:11px ui-monospace,SFMono-Regular,Menlo,monospace}.diagram .edge{stroke:#929dac;stroke-width:1.5;fill:none}.diagram .edge-label{font:10.5px ui-sans-serif,system-ui;fill:var(--muted)}
+  .scroll{overflow:auto}.scroll:focus-visible{border-radius:8px}table{width:100%;min-width:620px;border-collapse:collapse;font-size:14px;margin:8px 0}th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}th{font:600 11.5px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .callout{border-inline-start:3px solid var(--warn);background:var(--sunk);border-radius:0 10px 10px 0;padding:12px 15px;margin:14px 0;font-size:14px}.callout b{color:var(--warn)}.callout.good{border-inline-start-color:var(--ok)}.callout.good b{color:var(--ok)}
+  ul.notes{margin:8px 0 12px;padding-inline-start:20px}ul.notes li{margin-bottom:7px}ul.notes li::marker{color:var(--accent)}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13.6px}.kv dt{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent)}.kv dd{margin:0;color:var(--muted)}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}footer a{text-decoration:underline;text-underline-offset:2px}
+  @media(max-width:760px){.top{display:block}.app-link{display:inline-block;margin-bottom:18px}.flow{flex-direction:column}.arrow{transform:rotate(90deg);padding:4px 0;align-self:flex-start;margin-inline-start:22px}.wrap{padding-top:24px}}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to architecture</a>
+<div class="wrap">
+<header class="top">
+  <div>
+    <p class="eyebrow">Architecture · home-economy-stabilation</p>
+    <h1>Home Economy — how the application fits together</h1>
+    <p class="stand">A dependency-free browser application that turns bank and credit-card exports into a private household-finance workspace. Parsing, categorization, forecasting, localization and persistence all run on the user’s device; the published application has no backend and receives no financial data.</p>
+    <p><span class="pill on">TypeScript</span><span class="pill on">Static HTML</span><span class="pill">XLS · XLSX · CSV</span><span class="pill">Local-first</span><span class="pill">HE · EN · AM · FR</span><span class="pill">RTL + LTR</span><span class="pill">WCAG A/AA checks</span></p>
+  </div>
+  <a class="app-link" href="./mazan-habait.html">Open application ↗</a>
+</header>
+
+<nav class="toc" aria-label="Page contents">
+  <a href="#overview">1 · What it is</a><a href="#runtime">2 · Runtime shape</a><a href="#pipeline">3 · Data pipeline</a><a href="#modules">4 · Modules</a><a href="#state">5 · State</a><a href="#i18n">6 · Localization</a><a href="#privacy">7 · Trust boundary</a><a href="#testing">8 · Testing</a><a href="#extend">9 · Extension points</a>
+</nav>
+<nav class="rail" aria-label="Architecture sections">
+  <h2>Contents</h2>
+  <a href="#overview"><span class="n">1</span><span>What it is</span></a><a href="#runtime"><span class="n">2</span><span>Runtime shape</span></a><a href="#pipeline"><span class="n">3</span><span>Data pipeline</span></a><a href="#modules"><span class="n">4</span><span>Modules</span></a><a href="#state"><span class="n">5</span><span>State</span></a><a href="#i18n"><span class="n">6</span><span>Localization</span></a><a href="#privacy"><span class="n">7</span><span>Trust boundary</span></a><a href="#testing"><span class="n">8</span><span>Testing</span></a><a href="#extend"><span class="n">9</span><span>Extension points</span></a>
+</nav>
+
+<main id="content">
+<h2 id="overview">1 · What it is</h2>
+<p class="lead">The product is one static page with three user-facing views: the marketing/import state, the financial dashboard and recommendations, and the savings directory. A settings drawer edits budgets, rules, categories, backups and manual entries without leaving the page.</p>
+<div class="grid">
+  <div class="box"><span class="tag">input</span><b>Financial exports</b><span>Bank and card files are parsed in memory. Old BIFF8 workbooks, modern SpreadsheetML workbooks and CSV files share one normalized workbook shape.</span></div>
+  <div class="box"><span class="tag">analysis</span><b>Household model</b><span>Transactions are deduplicated, categorized, grouped by month and converted into budgets, recurring charges, alerts and forecasts.</span></div>
+  <div class="box"><span class="tag">experience</span><b>One local workspace</b><span>The user switches language, filters transactions and adjusts rules directly in the browser. No account or remote database is required.</span></div>
+  <div class="box"><span class="tag">guidance</span><b>Savings directory</b><span>Official comparison services and direct links to pension, provident, training-fund and portfolio-management companies live in a separate view.</span></div>
+</div>
+
+<h2 id="runtime">2 · Runtime shape</h2>
+<figure class="diagram" tabindex="0">
+<svg viewBox="0 0 920 400" role="img" aria-labelledby="diagram-title diagram-desc">
+  <title id="diagram-title">Home Economy runtime architecture</title>
+  <desc id="diagram-desc">Files selected by the user enter a browser-only application. Importers normalize them, application logic analyzes them, locale resources translate the interface, and local storage persists state. External links open only after an explicit click.</desc>
+  <defs><marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#929dac"/></marker></defs>
+  <text class="group" x="20" y="22">User device</text>
+  <rect x="20" y="34" width="170" height="70" rx="11" fill="#dbeafe" stroke="#8eafe0"/><text class="label" x="36" y="61" fill="#19395e">Bank / card files</text><text class="sub" x="36" y="82" fill="#19395e">.xls · .xlsx · .csv</text>
+  <rect x="260" y="34" width="178" height="70" rx="11" fill="#dcf3e8" stroke="#85c8a5"/><text class="label" x="276" y="61" fill="#14532d">Import boundary</text><text class="sub" x="276" y="82" fill="#14532d">Workbook → rows</text>
+  <rect x="508" y="34" width="188" height="148" rx="11" fill="#f3e8ff" stroke="#bea0df"/><text class="label" x="524" y="61" fill="#4c1d78">Application core</text><text class="sub" x="524" y="84" fill="#4c1d78">state · rules · totals</text><text class="sub" x="524" y="104" fill="#4c1d78">recurring · forecast</text><text class="sub" x="524" y="124" fill="#4c1d78">render · interactions</text><text class="sub" x="524" y="154" fill="#4c1d78">src/app.ts</text>
+  <rect x="764" y="34" width="136" height="70" rx="11" fill="#ffe9d6" stroke="#e7b681"/><text class="label" x="780" y="61" fill="#723703">DOM views</text><text class="sub" x="780" y="82" fill="#723703">HTML + SVG</text>
+  <rect x="260" y="248" width="178" height="76" rx="11" fill="#e7eefc" stroke="#9ab0dc"/><text class="label" x="276" y="276" fill="#243f73">Locale resources</text><text class="sub" x="276" y="298" fill="#243f73">he · en · am · fr</text>
+  <rect x="508" y="248" width="188" height="76" rx="11" fill="#e5f4ed" stroke="#92c4aa"/><text class="label" x="524" y="276" fill="#165336">Browser storage</text><text class="sub" x="524" y="298" fill="#165336">state + attribution</text>
+  <rect x="764" y="248" width="136" height="76" rx="11" fill="#fff0dc" stroke="#e5b97d"/><text class="label" x="780" y="276" fill="#6e420d">External sites</text><text class="sub" x="780" y="298" fill="#6e420d">links only</text>
+  <path class="edge" marker-end="url(#arrowhead)" d="M190 69H260"/><path class="edge" marker-end="url(#arrowhead)" d="M438 69H508"/><path class="edge" marker-end="url(#arrowhead)" d="M696 104H764"/>
+  <path class="edge" marker-end="url(#arrowhead)" d="M438 286C470 286 470 150 508 150"/><path class="edge" marker-end="url(#arrowhead)" d="M602 182V248"/><path class="edge" marker-end="url(#arrowhead)" d="M832 104V248"/>
+  <text class="edge-label" x="198" y="59">File API</text><text class="edge-label" x="450" y="59">normalized rows</text><text class="edge-label" x="706" y="94">render</text><text class="edge-label" x="610" y="220">save / load</text><text class="edge-label" x="839" y="194">explicit click</text>
+  <rect x="20" y="356" width="880" height="28" rx="9" fill="none" stroke="#a92f27" stroke-dasharray="6 5"/><text class="sub" x="36" y="375" fill="var(--critical)">Trust boundary: financial data does not cross the browser boundary</text>
+</svg>
+<figcaption>The key architectural decision is local execution. The network is needed to serve static assets and to follow a directory link; it is not part of the import or analysis path.</figcaption>
+</figure>
+
+<h2 id="pipeline">3 · Data pipeline</h2>
+<div class="flow">
+  <div class="stage"><span class="k">1 · Read</span><p>The File API supplies bytes. The workbook reader detects CFB/BIFF8, ZIP/SpreadsheetML or delimited text.</p></div><div class="arrow">→</div>
+  <div class="stage"><span class="k">2 · Normalize</span><p>Bank and card adapters map heterogeneous headers and values into one transaction record.</p></div><div class="arrow">→</div>
+  <div class="stage"><span class="k">3 · Decorate</span><p>Stable IDs remove duplicates; manual overrides win, then the first matching rule, then a safe fallback category.</p></div><div class="arrow">→</div>
+  <div class="stage"><span class="k">4 · Derive</span><p>Pure aggregations produce month totals, budgets, recurring merchants, warnings and forecast points.</p></div><div class="arrow">→</div>
+  <div class="stage"><span class="k">5 · Render</span><p>The application updates semantic HTML, tables and SVG charts using locale-aware date and ILS formatters.</p></div>
+</div>
+<div class="callout"><b>Ordering rule.</b> A manual category assignment always wins. Automatic rules are ordered and first-match-wins. Neutral transfers remain visible but do not inflate household income or spending totals.</div>
+
+<h2 id="modules">4 · Module boundaries</h2>
+<div class="scroll" tabindex="0">
+<table><thead><tr><th>Artifact</th><th>Responsibility</th><th>May depend on</th><th>Must not own</th></tr></thead><tbody>
+  <tr><td><code>mazan-habait.html</code></td><td>Semantic structure, page-specific CSS and static copy hooks.</td><td><code>design-system.css</code>, compiled scripts</td><td>Financial parsing rules</td></tr>
+  <tr><td><code>src/app.ts</code></td><td>Workbook reading, bank ingestion, state, analysis, rendering and interaction orchestration.</td><td>Importer, localization, marketing</td><td>Remote persistence</td></tr>
+  <tr><td><code>src/credit-card-importer.ts</code></td><td>Recognize and normalize credit-card workbook variants.</td><td>Workbook interfaces</td><td>DOM rendering</td></tr>
+  <tr><td><code>src/localization.ts</code></td><td>Locale validation, direction, formatters and named-parameter interpolation.</td><td>Browser Intl APIs</td><td>Translated copy</td></tr>
+  <tr><td><code>resources/*.json</code></td><td>Translated text and locale-specific sentence order.</td><td>Canonical key contract</td><td>Executable logic</td></tr>
+  <tr><td><code>src/marketing.ts</code></td><td>Capture campaign attribution and local product events.</td><td>Session/local storage</td><td>Financial report content</td></tr>
+  <tr><td><code>design-system.css</code></td><td>Tokens and reusable component primitives.</td><td>Page semantic color variables</td><td>Feature-specific layout</td></tr>
+</tbody></table>
+</div>
+<pre tabindex="0"><code>mazan-habait.html
+├── design-system.css
+└── dist/app.js
+    ├── app.ts                   composition root + financial domain
+    ├── credit-card-importer.ts credit-card normalization
+    ├── localization.ts         locale and message primitives
+    └── marketing.ts            local attribution and events
+
+resources/{he,en,am,fr}.json    copy loaded at runtime
+localStorage                    user-owned persistence boundary</code></pre>
+
+<h2 id="state">5 · State and persistence</h2>
+<p>The application keeps one serializable <code>AppState</code>. Derived charts and summaries are recalculated rather than stored, which avoids synchronization bugs when the month, locale, budget or category changes.</p>
+<dl class="kv">
+  <dt>tx</dt><dd>Normalized transactions, including source, pending state and stable identity.</dd>
+  <dt>overrides</dt><dd>Transaction ID → category ID. This is the highest-precedence categorization layer.</dd>
+  <dt>rules</dt><dd>Ordered text-match rules used for repeatable categorization.</dd>
+  <dt>cats</dt><dd>User-editable category definitions and financial kind: expense, income or neutral.</dd>
+  <dt>budgets</dt><dd>Category ID → monthly ILS ceiling.</dd>
+  <dt>accounts</dt><dd>Account labels detected in imported reports.</dd>
+  <dt>month</dt><dd>Current view selection; reset safely when persisted state loads.</dd>
+</dl>
+<div class="grid"><div class="box"><span class="tag">automatic</span><b>Browser persistence</b><span>State is serialized to <code>mazan-habait/v1</code>. A blocked or corrupted store falls back to a clean in-memory session.</span></div><div class="box"><span class="tag">portable</span><b>Backup file</b><span>Export and import provide an explicit user-controlled path between browsers or computers.</span></div></div>
+
+<h2 id="i18n">6 · Localization architecture</h2>
+<p><code>he.json</code> is the canonical key set. English, Amharic and French must expose the same keys and the same named parameters, while remaining free to reorder parameters inside a sentence.</p>
+<pre tabindex="0"><code>// Resource
+"recommendationsSummary":
+  "{count} recommended actions for {account}, based on {month}."
+
+// Runtime
+t('recommendationsSummary', {
+  count: recommendations.length,
+  account: accountLabel,
+  month: monthLabel(selectedMonth)
+})</code></pre>
+<div class="grid"><div class="box"><span class="tag">document</span><b>Direction and language</b><span><code>lang</code>, <code>dir</code> and the application containers update together. Hebrew is RTL; English, Amharic and French are LTR.</span></div><div class="box"><span class="tag">formatting</span><b>One financial currency</b><span>Dates and number punctuation follow the locale, while monetary values remain ILS in every language.</span></div><div class="box"><span class="tag">accessibility</span><b>Attributes are localized too</b><span>Text, placeholders and accessible labels use separate data attributes backed by the same resource contract.</span></div></div>
+
+<h2 id="privacy">7 · Privacy and trust boundary</h2>
+<ul class="notes"><li>Selected reports are read by browser APIs and parsed in memory.</li><li>Financial records are stored only in the current browser unless the user exports a backup.</li><li>Marketing attribution records campaign parameters and local events, never bank report contents.</li><li>The savings directory contains ordinary external links with <code>noopener noreferrer</code>; opening one is an explicit user action.</li><li>No authentication, analytics SDK, database client or upload endpoint sits in the financial data path.</li></ul>
+<div class="callout good"><b>Failure mode.</b> If local storage is unavailable, the app warns the user and keeps working in memory until the tab closes. A storage failure does not redirect data elsewhere.</div>
+
+<h2 id="testing">8 · Testing strategy</h2>
+<p>The suite is layered by speed. Cheap structural failures surface before a browser is launched; end-to-end and accessibility checks cover the composed product last.</p>
+<div class="flow"><div class="stage"><span class="k">Fast</span><p>Unit tests cover import and message formatting.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Contracts</span><p>Key parity, named parameters, HTML hooks and design-system rules.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Components</span><p>JSDOM checks language controls, uploads, marketing and directory behavior.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Browser</span><p>Playwright checks real imports, RTL/LTR, mobile layout, dynamic copy and axe WCAG A/AA rules.</p></div></div>
+<pre tabindex="0"><code>npm run build      # TypeScript compilation
+npm test           # unit + API + contract + component
+npm run test:e2e   # Chromium journeys + accessibility
+npm run test:all   # complete verification</code></pre>
+
+<h2 id="extend">9 · Extension points</h2>
+<div class="grid"><div class="box"><span class="tag">new locale</span><b>Extend the locale contract</b><span>Add the locale configuration and a complete resource file. Parameter-parity tests make sentence drift visible immediately.</span></div><div class="box"><span class="tag">new institution</span><b>Add an adapter</b><span>Recognize its header vocabulary and map it to the normalized transaction shape; keep institution-specific rules outside rendering.</span></div><div class="box"><span class="tag">new analysis</span><b>Derive, then render</b><span>Implement a deterministic calculation over state, expose a translation-keyed explanation, then add the view and tests.</span></div><div class="box"><span class="tag">future split</span><b>Reduce the composition root</b><span><code>app.ts</code> deliberately owns orchestration today. As the product grows, workbook reading, forecast calculation and DOM views are the clearest extraction seams.</span></div></div>
+<div class="callout"><b>Architecture guardrail.</b> A future server may serve static assets or optional services, but financial-file upload should remain absent unless the privacy model, consent copy, threat model and retention policy are intentionally redesigned.</div>
+</main>
+
+<footer>Home Economy architecture · generated from the current repository structure · <a href="./README.md">README</a></footer>
+</div>
+<script>
+  const links = [...document.querySelectorAll('.rail a')];
+  const sections = links.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+  const observer = new IntersectionObserver(entries => {
+    const visible = entries.filter(entry => entry.isIntersecting).sort((a,b) => b.intersectionRatio-a.intersectionRatio)[0];
+    if (!visible) return;
+    links.forEach(link => {
+      if (link.getAttribute('href') === '#' + visible.target.id) link.setAttribute('aria-current','true');
+      else link.removeAttribute('aria-current');
+    });
+  }, { rootMargin:'-18% 0px -70% 0px', threshold:[0,.2,.6] });
+  sections.forEach(section => observer.observe(section));
+</script>
+</body>
+</html>

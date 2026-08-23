@@ -1,0 +1,13 @@
+home_economy.xls
+.github/
+node_modules/
+src/
+tests/
+test-results/
+playwright-report/
+coverage/
+package.json
+package-lock.json
+playwright.config.ts
+tsconfig.json
+design-system.md

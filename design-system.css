@@ -1,0 +1,162 @@
+/* Home Economy Design System
+   Layers: tokens -> primitives -> component recipes.
+   Keep product-specific layout in the page stylesheet. */
+:root {
+  --ds-font-body: "Assistant", "Segoe UI", system-ui, sans-serif;
+  --ds-font-display: "Frank Ruhl Libre", Georgia, serif;
+  --ds-font-ethiopic: "Noto Sans Ethiopic", "Assistant", system-ui, sans-serif;
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 20px;
+  --ds-space-6: 24px;
+  --ds-space-7: 32px;
+  --ds-space-8: 40px;
+  --ds-space-10: 48px;
+  --ds-radius-sm: 8px;
+  --ds-radius-md: 12px;
+  --ds-radius-lg: 16px;
+  --ds-radius-pill: 999px;
+  --ds-border: var(--line);
+  --ds-border-strong: var(--line-2);
+  --ds-text: var(--ink);
+  --ds-text-muted: var(--muted);
+  --ds-text-secondary: var(--ink-2);
+  --ds-bg: var(--page);
+  --ds-surface: var(--surface);
+  --ds-surface-subtle: var(--surface-2);
+  --ds-action: var(--accent);
+  --ds-action-soft: var(--accent-soft);
+  --ds-focus: var(--accent);
+  --ds-shadow-1: var(--shadow);
+  --ds-shadow-2: 0 16px 48px -24px rgba(12, 23, 25, .38);
+  --ds-motion-fast: 140ms ease;
+  --ds-motion-standard: 220ms ease;
+}
+
+:root[data-locale="am"] {
+  --ds-font-body: var(--ds-font-ethiopic);
+  --ds-font-display: var(--ds-font-ethiopic);
+}
+
+html { font-family: var(--ds-font-body); }
+html[dir="ltr"] .drawer { transform: translateX(-100%); }
+html[dir="rtl"] .drawer { transform: translateX(100%); }
+html .drawer.on { transform: none; }
+
+.ds-surface {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-1);
+}
+
+.ds-title {
+  font-family: var(--ds-font-display);
+  color: var(--ds-text);
+  font-weight: 700;
+}
+
+.ds-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  min-height: 40px;
+  padding: 0 var(--ds-space-4);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font: 600 14px/1 var(--ds-font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--ds-motion-fast), border-color var(--ds-motion-fast), color var(--ds-motion-fast), transform var(--ds-motion-fast);
+}
+
+.ds-button:hover { background: var(--ds-surface-subtle); border-color: var(--ds-action); }
+.ds-button:active { transform: translateY(1px); }
+.ds-button[data-variant="primary"] { background: var(--ds-action); border-color: var(--ds-action); color: var(--accent-ink); }
+.ds-button[data-variant="quiet"] { border-color: transparent; background: transparent; }
+.ds-button[data-size="sm"] { min-height: 32px; padding-inline: var(--ds-space-3); font-size: 13px; }
+
+.ds-field {
+  min-height: 40px;
+  padding: 0 var(--ds-space-3);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font: 400 14px/1 var(--ds-font-body);
+}
+.ds-field::placeholder { color: var(--ds-text-muted); }
+.ds-field:hover { border-color: var(--ds-action); }
+.ds-field:focus { border-color: var(--ds-action); }
+.ds-field--compact { min-height: 38px; padding-inline: var(--ds-space-2) var(--ds-space-7); }
+
+.locale-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ds-text-secondary);
+}
+.locale-picker > svg {
+  position: absolute;
+  inset-inline-start: var(--ds-space-3);
+  width: 16px;
+  height: 16px;
+  z-index: 1;
+  pointer-events: none;
+}
+.locale-picker .ds-field { padding-inline-start: 36px; font-weight: 600; cursor: pointer; }
+
+.ds-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  min-height: 24px;
+  padding: 0 var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  font: 700 12px/1 var(--ds-font-body);
+}
+.ds-status[data-tone="positive"] { background: rgba(12,163,12,.13); color: var(--good-text); }
+.ds-status[data-tone="warning"] { background: rgba(250,178,25,.18); color: #8a5f00; }
+.ds-status[data-tone="critical"] { background: rgba(208,59,59,.14); color: var(--crit-text); }
+
+.ds-link-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  min-height: 164px;
+  padding: var(--ds-space-5);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  text-decoration: none;
+  box-shadow: var(--ds-shadow-1);
+  transition: transform var(--ds-motion-fast), border-color var(--ds-motion-fast), box-shadow var(--ds-motion-fast);
+}
+.ds-link-card:hover { transform: translateY(-2px); border-color: var(--ds-action); box-shadow: var(--ds-shadow-2); }
+.ds-link-card h4 { margin: var(--ds-space-2) 0 var(--ds-space-1); font: 700 18px/1.35 var(--ds-font-body); }
+.ds-link-card p { margin: 0 0 var(--ds-space-4); color: var(--ds-text-secondary); font-size: 13.5px; }
+.ds-link-card .link-cta { margin-block-start: auto; color: var(--ds-action); font-size: 13px; font-weight: 700; }
+
+.ds-focus:focus-visible,
+.ds-button:focus-visible,
+.ds-field:focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 2px;
+}
+.ds-link-card:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-button { transition-duration: 1ms; }
+}
+
+@media (max-width: 560px) {
+  .locale-picker,
+  .locale-picker .ds-field { width: 100%; }
+}

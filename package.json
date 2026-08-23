@@ -1,0 +1,20 @@
+{
+  "name": "home-economy-stabilation",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run --environment jsdom tests/unit tests/api tests/contract tests/component",
+    "test:unit": "vitest run tests/unit tests/api tests/contract",
+    "test:component": "vitest run --environment jsdom tests/component",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report playwright-report",
+    "test:all": "npm test && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.55.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,52 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e8]:
+        - heading "מאזן הבית" [level=1] [ref=e9]
+        - paragraph [ref=e10]: כלכלת הבית, מדוח הבנק
+      - generic [ref=e11]:
+        - generic [ref=e12]: טעינת דוח בנק
+        - button "הגדרות" [ref=e16] [cursor=pointer]
+        - button "גיבוי" [ref=e17] [cursor=pointer]
+    - generic [ref=e18]:
+      - heading "הכל מתחיל בדוח אחד" [level=2] [ref=e19]
+      - paragraph [ref=e20]: גררו לכאן את קובץ תנועות העו״ש שהורדתם מהבנק. הקובץ נקרא בדפדפן שלכם בלבד — הוא לא נשלח לשום מקום.
+      - list [ref=e21]:
+        - listitem [ref=e22]: "באתר הבנק: עובר ושב ← תנועות בחשבון ← ייצוא לאקסל."
+        - listitem [ref=e23]: גררו את הקובץ לכאן. מתאים לקובץ האקסל שהבנק מייצא — ישן או חדש — וגם לקובץ טקסט מופרד בפסיקים.
+        - listitem [ref=e24]: כל דוח נוסף מצטרף להיסטוריה. תנועות שכבר נקלטו לא ייספרו פעמיים.
+      - generic [ref=e25]:
+        - strong [ref=e26]: גררו קובץ לכאן
+        - generic [ref=e27]: או לחצו על «טעינת דוח בנק» למעלה
+  - dialog [ref=e28]:
+    - banner [ref=e29]:
+      - heading "הגדרות" [level=2] [ref=e30]
+      - button "סגירה" [ref=e31] [cursor=pointer]: ✕
+    - heading "תקרות תקציב חודשיות" [level=3] [ref=e32]
+    - paragraph [ref=e33]: תקרה ריקה = בלי מעקב. הסכום מושווה להוצאה בחודש הנבחר.
+    - heading "כללי שיוך אוטומטי" [level=3] [ref=e34]
+    - paragraph [ref=e35]: כל תנועה מקבלת את הקטגוריה של הכלל הראשון שהתיאור שלה מכיל. שינוי קטגוריה ידני בטבלת התנועות גובר על הכללים.
+    - button "הוספת כלל" [ref=e36] [cursor=pointer]
+    - heading "קטגוריות" [level=3] [ref=e37]
+    - paragraph [ref=e38]: שמונה הקטגוריות הראשונות נושאות צבע ייעודי בגרפים; קטגוריות נוספות מוצגות באפור.
+    - button "הוספת קטגוריה" [ref=e39] [cursor=pointer]
+    - heading "נתונים" [level=3] [ref=e40]
+    - paragraph
+    - generic [ref=e41]:
+      - button "ייצוא גיבוי" [ref=e42] [cursor=pointer]
+      - generic [ref=e43]: טעינת גיבוי
+      - button "מחיקת הכל" [ref=e44] [cursor=pointer]
+    - heading "הוספת תנועה ידנית" [level=3] [ref=e45]
+    - paragraph [ref=e46]: להוספת מזומן, חיוב שטרם הופיע בדוח, או תיקון מהיר. התנועה נשמרת מקומית.
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - textbox "תאריך" [ref=e49]
+        - textbox "תיאור" [ref=e50]
+      - generic [ref=e51]:
+        - combobox "כיוון" [ref=e52]:
+          - option "הוצאה" [selected]
+          - option "הכנסה"
+        - spinbutton "סכום" [ref=e53]
+        - combobox "קטגוריה" [ref=e54]
+      - button "שמירת תנועה" [ref=e55] [cursor=pointer]
+  - status
