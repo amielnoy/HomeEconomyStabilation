@@ -2,6 +2,10 @@ const DAY = 86_400_000;
 const dateValue = (date) => new Date(`${date}T00:00:00Z`).getTime();
 const monthKey = (date) => date.slice(0, 7);
 const dayOfMonth = (date) => Number(date.slice(8, 10));
+const dateAtMonthDay = (year, month, day) => {
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(year, month, Math.min(day, lastDay)));
+};
 const median = (values) => {
     const sorted = [...values].sort((a, b) => a - b);
     const middle = Math.floor(sorted.length / 2);
@@ -138,24 +142,30 @@ export function paydayAgent(transactions) {
         .filter(([, items]) => new Set(items.map((item) => monthKey(item.date))).size >= 2)
         .sort((a, b) => median(b[1].map((item) => item.in)) - median(a[1].map((item) => item.in)))[0];
     if (!recurringIncome)
-        return { balance: latest.bal, nextIncomeDate: null, committed: 0, freeToSpend: latest.bal };
+        return {
+            balance: latest.bal, nextIncomeDate: null, committed: 0, freeToSpend: latest.bal,
+            daysRemaining: null, dailyAllowance: null, weeklyAllowance: null,
+        };
     const expectedDay = Math.round(median(recurringIncome[1].map((item) => dayOfMonth(item.date))));
     const cursor = new Date(`${latest.date}T00:00:00Z`);
-    let nextIncome = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth(), expectedDay));
+    let nextIncome = dateAtMonthDay(cursor.getUTCFullYear(), cursor.getUTCMonth(), expectedDay);
     if (nextIncome.getTime() <= latestTime)
-        nextIncome = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, expectedDay));
+        nextIncome = dateAtMonthDay(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, expectedDay);
     const committed = [...groups(transactions.filter((item) => item.out > 0)).values()]
         .filter((items) => new Set(items.map((item) => monthKey(item.date))).size >= 2)
         .reduce((sum, items) => {
         const dueDay = Math.round(median(items.map((item) => dayOfMonth(item.date))));
-        const due = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth(), dueDay));
+        let due = dateAtMonthDay(cursor.getUTCFullYear(), cursor.getUTCMonth(), dueDay);
         if (due.getTime() <= latestTime)
-            due.setUTCMonth(due.getUTCMonth() + 1);
+            due = dateAtMonthDay(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, dueDay);
         return due < nextIncome ? sum + median(items.map((item) => item.out)) : sum;
     }, 0);
+    const freeToSpend = latest.bal - committed;
+    const daysRemaining = Math.max(1, Math.ceil((nextIncome.getTime() - latestTime) / DAY));
+    const dailyAllowance = freeToSpend / daysRemaining;
     return {
         balance: latest.bal, nextIncomeDate: nextIncome.toISOString().slice(0, 10), committed,
-        freeToSpend: latest.bal - committed,
+        freeToSpend, daysRemaining, dailyAllowance, weeklyAllowance: dailyAllowance * 7,
     };
 }
 export function runFinancialAgents(input) {

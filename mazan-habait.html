@@ -193,6 +193,37 @@ button{ cursor:pointer; }
   background:var(--surface); border:1px solid var(--line); border-radius:18px;
   padding:24px 24px 8px; box-shadow:var(--shadow); margin-top:12px;
 }
+.spending-guide{
+  display:grid; grid-template-columns:minmax(240px,.8fr) minmax(0,1.2fr); gap:28px;
+  align-items:center; margin-top:16px; padding:26px 28px; overflow:hidden;
+  border:1px solid var(--accent-line); border-radius:20px;
+  background:linear-gradient(135deg,var(--surface),var(--accent-soft)); box-shadow:var(--ds-shadow-2);
+}
+.spending-guide-main{ min-width:0; }
+.spending-guide-kicker{ margin:0 0 5px; color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.07em; }
+.spending-guide h2{ font:700 18px var(--ds-font-body); }
+.spending-guide-amount{ margin:9px 0 3px; font-size:clamp(38px,6vw,58px); font-weight:700; line-height:1; letter-spacing:-.035em; }
+.spending-guide-amount.negative{ color:var(--crit-text); }
+.spending-guide-summary{ margin:0; color:var(--ink-2); }
+.spending-guide-side{ display:grid; gap:12px; min-width:0; }
+.spending-guide-rates{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.spending-guide-rate{ padding:14px 16px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+.spending-guide-rate span,.spending-guide-rate strong{ display:block; }
+.spending-guide-rate span{ color:var(--muted); font-size:12px; }
+.spending-guide-rate strong{ margin-top:3px; font-size:21px; }
+.spending-guide details{ border-top:1px solid var(--line-2); padding-top:11px; }
+.spending-guide summary{ cursor:pointer; color:var(--accent); font-weight:700; }
+.spending-guide-breakdown{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
+.spending-guide-breakdown div{ min-width:0; }
+.spending-guide-breakdown span,.spending-guide-breakdown strong{ display:block; }
+.spending-guide-breakdown span{ color:var(--muted); font-size:11.5px; }
+.spending-guide-breakdown strong{ margin-top:2px; font-size:14px; overflow-wrap:anywhere; }
+@media (max-width:700px){
+  .spending-guide{ grid-template-columns:1fr; gap:20px; padding:22px 18px; }
+}
+@media (max-width:420px){
+  .spending-guide-rates,.spending-guide-breakdown{ grid-template-columns:1fr; }
+}
 .attention{ margin-top:16px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
 @media (max-width:860px){ .attention{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:520px){ .attention{ grid-template-columns:1fr; } }
@@ -337,6 +368,15 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
 .drawer h2{ font-size:22px; }
 .drawer h3{ font-size:15px; margin:26px 0 8px; font-family:var(--ds-font-body); font-weight:700; }
 .drawer .note{ font-size:12.5px; color:var(--muted); margin:0 0 12px; }
+.consent-card{ padding:16px; border:1px solid var(--accent-line); border-radius:12px; background:var(--surface); }
+.consent-card p{ margin:0 0 9px; color:var(--ink-2); font-size:13px; }
+.consent-card ul{ margin:8px 0 14px; padding-inline-start:22px; color:var(--ink-2); font-size:13px; }
+.consent-check{ display:flex; gap:9px; align-items:flex-start; padding:11px 0; font-size:13px; font-weight:600; }
+.consent-check input{ width:20px; height:20px; flex:none; margin:1px 0 0; }
+.consent-status{ margin:0 0 10px!important; color:var(--muted)!important; }
+.consent-status.accepted{ color:var(--good-text)!important; font-weight:700; }
+.consent-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+.consent-actions .btn:disabled{ cursor:not-allowed; opacity:.55; }
 .rulerow, .budrow{
   display:flex; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line);
 }
@@ -594,6 +634,29 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
 
     <nav class="monthbar" id="months" aria-label="בחירת חודש" data-i18n-aria-label="chooseMonth" data-testid="months"></nav>
 
+    <section class="spending-guide" id="spending-guide" aria-labelledby="spending-guide-h" data-testid="spending-guide">
+      <div class="spending-guide-main">
+        <p class="spending-guide-kicker" data-i18n="spendingGuideKicker">המספר שכדאי לדעת עכשיו</p>
+        <h2 id="spending-guide-h" data-i18n="spendingGuideTitle" data-testid="spending-guide-h">כמה בטוח להוציא עד ההכנסה הבאה</h2>
+        <div class="spending-guide-amount num" id="spending-guide-amount" aria-live="polite" data-testid="spending-guide-amount">—</div>
+        <p class="spending-guide-summary" id="spending-guide-summary" data-testid="spending-guide-summary"></p>
+      </div>
+      <div class="spending-guide-side" id="spending-guide-content" data-testid="spending-guide-content">
+        <div class="spending-guide-rates">
+          <div class="spending-guide-rate"><span data-i18n="weeklyGuide">יעד לשבוע</span><strong class="num" id="spending-guide-weekly" data-testid="spending-guide-weekly">—</strong></div>
+          <div class="spending-guide-rate"><span data-i18n="dailyGuide">יעד ליום</span><strong class="num" id="spending-guide-daily" data-testid="spending-guide-daily">—</strong></div>
+        </div>
+        <details data-testid="spending-guide-details">
+          <summary data-i18n="howCalculated">איך חישבנו?</summary>
+          <div class="spending-guide-breakdown">
+            <div><span data-i18n="currentBalance">יתרה נוכחית</span><strong class="num" id="spending-guide-balance" data-testid="spending-guide-balance">—</strong></div>
+            <div><span data-i18n="expectedCommitments">חיובים קבועים צפויים</span><strong class="num" id="spending-guide-committed" data-testid="spending-guide-committed">—</strong></div>
+            <div><span data-i18n="nextExpectedIncome">הכנסה הבאה צפויה</span><strong id="spending-guide-date" data-testid="spending-guide-date">—</strong></div>
+          </div>
+        </details>
+      </div>
+    </section>
+
     <section class="recommendations" id="recommendations" hidden aria-labelledby="rec-screen-h" data-testid="recommendations">
       <header class="recommendations-head">
         <div><h2 id="rec-screen-h" data-i18n="recommendationTitle" data-testid="rec-screen-h">המלצות פעולה</h2><p id="rec-screen-note" data-testid="rec-screen-note"></p></div>
@@ -748,6 +811,27 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
     <label class="btn sm" data-testid="backup-import-trigger"><span data-i18n="importBackup">טעינת גיבוי</span><input type="file" id="dr-import" accept=".json,application/json" hidden data-testid="dr-import"></label>
     <button class="btn sm" id="dr-wipe" style="color:var(--crit-text)" data-i18n="deleteAll" data-testid="dr-wipe">מחיקת הכל</button>
   </div>
+
+  <h3 data-testid="settings-translated-content" data-i18n="cloudConsentTitle">הסכמה לסנכרון ענן אופציונלי</h3>
+  <section class="consent-card" aria-labelledby="cloud-consent-heading" data-testid="cloud-consent">
+    <h4 id="cloud-consent-heading" class="vh" data-i18n="cloudConsentTitle" data-testid="cloud-consent-heading">הסכמה לסנכרון ענן אופציונלי</h4>
+    <p data-i18n="cloudConsentIntro">הסנכרון עדיין אינו פעיל. אישור זה מתעד את בחירתך בלבד ואינו מעלה מידע.</p>
+    <ul>
+      <li data-i18n="cloudConsentData">בהפעלה עתידית יישמרו בחשבון המאובטח תנועות, קטגוריות, כללים, תקציבים ושמות חשבונות לצורך גיבוי ושחזור.</li>
+      <li data-i18n="cloudConsentVoluntary">הבחירה חופשית. אפשר להמשיך להשתמש באפליקציה מקומית גם ללא הסכמה ולבטל את ההסכמה בכל עת.</li>
+      <li data-i18n="cloudConsentAdvice">התחזיות והממצאים עשויים לטעות ואינם ייעוץ פיננסי, פנסיוני, מס או משפטי. יש לאמת מידע לפני פעולה.</li>
+      <li data-i18n="cloudConsentRights">האישור אינו גורע מזכויות שלא ניתן לוותר עליהן לפי דין.</li>
+    </ul>
+    <p class="consent-status" id="cloud-consent-status" role="status" aria-live="polite" data-testid="cloud-consent-status"></p>
+    <label class="consent-check" data-testid="cloud-consent-label">
+      <input id="cloud-consent-check" type="checkbox" data-testid="cloud-consent-check">
+      <span data-i18n="cloudConsentCheckbox">קראתי והבנתי, ואני מסכים/ה מרצוני לתנאים המתוארים עבור סנכרון ענן עתידי.</span>
+    </label>
+    <div class="consent-actions" data-testid="cloud-consent-actions">
+      <button class="btn primary sm" id="cloud-consent-accept" type="button" disabled data-i18n="cloudConsentAccept" data-testid="cloud-consent-accept">אישור ותיעוד ההסכמה</button>
+      <button class="btn sm" id="cloud-consent-withdraw" type="button" hidden data-i18n="cloudConsentWithdraw" data-testid="cloud-consent-withdraw">ביטול ההסכמה</button>
+    </div>
+  </section>
 
   <h3 data-testid="settings-translated-content" data-i18n="addManualTransaction">הוספת תנועה ידנית</h3>
   <p data-testid="settings-translated-content" class="note" data-i18n="addManualTransactionNote">להוספת מזומן, חיוב שטרם הופיע בדוח, או תיקון מהיר. התנועה נשמרת מקומית.</p>

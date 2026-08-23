@@ -2,6 +2,7 @@ import { creditCardImporter, type Workbook, type SpreadsheetCell } from './credi
 import { createLocaleFormatters, formatMessage, getLocaleConfig, isSupportedLocale, resolveLocale, type Locale } from './localization.js';
 import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js';
 import { runFinancialAgents, type FinancialAgentResults } from './financial-agents.js';
+import { LocalConsentRepository } from './consent.js';
 
 interface BankTransaction {
   date: string; vdate: string; ref: string; desc: string; out: number; in: number;
@@ -18,6 +19,7 @@ interface Resources extends Record<string, string | boolean | Record<string, str
 let locale: Locale = resolveLocale(localStorage.getItem('mazan-habait/locale'));
 let resources: Resources = {};
 let directoryOpen = window.location.hash === '#savings-directory';
+const consentRepository = new LocalConsentRepository(localStorage);
 
 /* sheetread.ts — minimal, dependency-free reader for legacy .xls (BIFF8 inside a
    CFB container), .xlsx (ZIP + SpreadsheetML) and .csv, returning
@@ -1085,6 +1087,7 @@ function render() {
   if (!S.month || !months.includes(S.month)) S.month = months[0];
 
   renderMonths(months);
+  renderSpendingGuide();
   renderHero(months);
   renderAttention();
   renderAgents();
@@ -1098,6 +1101,49 @@ function render() {
   $('#acct').textContent = S.accounts.length
     ? t('accountLabel', { accounts: S.accounts.join(' · ') })
     : t('subtitle');
+}
+
+function renderSpendingGuide() {
+  const results = runFinancialAgents({
+    transactions: S.tx, overrides: S.overrides, rules: S.rules, categories: S.cats,
+  });
+  const payday = results.payday;
+  const amount = $('#spending-guide-amount');
+  const summary = $('#spending-guide-summary');
+  const values = ['#spending-guide-weekly', '#spending-guide-daily', '#spending-guide-balance', '#spending-guide-committed'];
+
+  amount.classList.remove('negative');
+  if (!payday) {
+    amount.textContent = '—';
+    summary.textContent = t('spendingGuideNoBalance');
+    values.forEach((selector) => { $(selector).textContent = '—'; });
+    $('#spending-guide-date').textContent = '—';
+    return;
+  }
+
+  amount.textContent = money(Math.max(0, payday.freeToSpend));
+  amount.classList.toggle('negative', payday.freeToSpend < 0);
+  $('#spending-guide-balance').textContent = money(payday.balance);
+  $('#spending-guide-committed').textContent = payday.nextIncomeDate ? `−${money(payday.committed)}` : '—';
+  $('#spending-guide-date').textContent = payday.nextIncomeDate ? DDMMYY.format(dOf(payday.nextIncomeDate)) : t('notDetected');
+
+  if (!payday.nextIncomeDate || payday.daysRemaining == null) {
+    summary.textContent = t('spendingGuideNoIncome');
+    $('#spending-guide-weekly').textContent = '—';
+    $('#spending-guide-daily').textContent = '—';
+    return;
+  }
+
+  if (payday.freeToSpend < 0) {
+    summary.textContent = t('spendingGuideGap', { amount: money(Math.abs(payday.freeToSpend)), date: DDMMYY.format(dOf(payday.nextIncomeDate)) });
+    $('#spending-guide-weekly').textContent = money(0);
+    $('#spending-guide-daily').textContent = money(0);
+    return;
+  }
+
+  summary.textContent = t('spendingGuideUntil', { days: payday.daysRemaining, date: DDMMYY.format(dOf(payday.nextIncomeDate)) });
+  $('#spending-guide-weekly').textContent = money(Math.max(0, payday.weeklyAllowance || 0));
+  $('#spending-guide-daily').textContent = money(Math.max(0, payday.dailyAllowance || 0));
 }
 
 function renderAgents() {
@@ -1790,6 +1836,24 @@ function renderDrawer() {
       range: dates.length ? DDMMYY.format(dOf(dates[0])) + ' – ' + DDMMYY.format(dOf(dates[dates.length - 1])) : '',
     })
     : t('noStoredData');
+  renderCloudConsent();
+}
+
+function renderCloudConsent() {
+  const acceptance = consentRepository.current();
+  const status = $('#cloud-consent-status');
+  const acceptButton = document.querySelector<HTMLButtonElement>('#cloud-consent-accept')!;
+  const withdrawButton = document.querySelector<HTMLButtonElement>('#cloud-consent-withdraw')!;
+  const checkbox = document.querySelector<HTMLInputElement>('#cloud-consent-check')!;
+  status.textContent = acceptance
+    ? t('cloudConsentAcceptedAt', { date: DDMMYY.format(new Date(acceptance.acceptedAt)) })
+    : t('cloudConsentNotAccepted');
+  status.className = acceptance ? 'consent-status accepted' : 'consent-status';
+  checkbox.checked = false;
+  checkbox.disabled = Boolean(acceptance);
+  acceptButton.disabled = true;
+  acceptButton.hidden = Boolean(acceptance);
+  withdrawButton.hidden = !acceptance;
 }
 
 function prepareManualForm() {
@@ -1923,6 +1987,22 @@ function wire() {
   $('#btn-backup').addEventListener('click', exportBackup);
   $('#dr-export').addEventListener('click', exportBackup);
   $('#dr-import').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files?.[0]) importBackup(input.files[0]); input.value = ''; });
+  $('#cloud-consent-check').addEventListener('change', (event) => {
+    const checked = (event.currentTarget as HTMLInputElement).checked;
+    document.querySelector<HTMLButtonElement>('#cloud-consent-accept')!.disabled = !checked;
+  });
+  $('#cloud-consent-accept').addEventListener('click', () => {
+    const checkbox = document.querySelector<HTMLInputElement>('#cloud-consent-check')!;
+    if (!checkbox.checked) return;
+    consentRepository.accept(locale);
+    renderCloudConsent();
+    toast(t('cloudConsentSavedLocally'));
+  });
+  $('#cloud-consent-withdraw').addEventListener('click', () => {
+    consentRepository.withdraw();
+    renderCloudConsent();
+    toast(t('cloudConsentWithdrawn'));
+  });
   $('#manual-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const date = $('#manual-date').value;
