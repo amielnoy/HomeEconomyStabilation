@@ -68,6 +68,9 @@ describe('project documentation contract', () => {
     for (const requirement of ['web', 'api', 'tests', 'Prometheus', 'Grafana', 'Allure', 'npm run stack:start']) {
       expect(readme).toContain(requirement);
     }
+    for (const requirement of ['Swagger', 'Scalar', '/api-docs.html', '/scalar-docs.html']) {
+      expect(readme).toContain(requirement);
+    }
     for (const requirement of ['home_economy_endpoint_up', 'JWT', 'payload', '127.0.0.1']) {
       expect(monitoring).toContain(requirement);
     }

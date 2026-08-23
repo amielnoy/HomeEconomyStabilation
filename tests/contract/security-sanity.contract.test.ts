@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 const root = resolve(__dirname, '../..');
 const appSource = readFileSync(resolve(root, 'src/app.ts'), 'utf8');
 const html = readFileSync(resolve(root, 'mazan-habait.html'), 'utf8');
+const apiDocs = readFileSync(resolve(root, 'api-docs.html'), 'utf8');
+const scalarDocs = readFileSync(resolve(root, 'scalar-docs.html'), 'utf8');
 
 describe('security sanity contract', () => {
   it('does not use executable HTML or JavaScript string sinks in application code', () => {
@@ -31,6 +33,8 @@ describe('security sanity contract', () => {
   });
 
   it('loads no remote executable scripts', () => {
-    expect(html).not.toMatch(/<script[^>]+src="https?:\/\//);
+    for (const document of [html, apiDocs, scalarDocs]) {
+      expect(document).not.toMatch(/<script[^>]+src="https?:\/\//);
+    }
   });
 });

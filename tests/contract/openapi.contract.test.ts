@@ -6,6 +6,7 @@ import { HttpStatus } from '../../src/http-status';
 const root = resolve(__dirname, '../..');
 const spec = JSON.parse(readFileSync(resolve(root, 'openapi.json'), 'utf8'));
 const docs = readFileSync(resolve(root, 'api-docs.html'), 'utf8');
+const scalarDocs = readFileSync(resolve(root, 'scalar-docs.html'), 'utf8');
 
 describe('Swagger/OpenAPI contract', () => {
   it('documents the public Vercel health operation without authentication', () => {
@@ -28,6 +29,17 @@ describe('Swagger/OpenAPI contract', () => {
     expect(docs).toContain('/openapi.json');
     expect(docs).toContain('/dist/swagger-ui/swagger-ui-bundle.js');
     expect(docs).not.toMatch(/https?:\/\//);
+    expect(docs).toContain('/scalar-docs.html');
+
+    expect(scalarDocs).toContain('/openapi.json');
+    expect(scalarDocs).toContain('/dist/scalar/standalone.js');
+    expect(scalarDocs).toContain("persistAuth: false");
+    expect(scalarDocs).toContain('telemetry: false');
+    expect(scalarDocs).toContain("showDeveloperTools: 'never'");
+    expect(scalarDocs).toContain('agent: { disabled: true }');
+    expect(scalarDocs).toContain('mcp: { disabled: true }');
+    expect(scalarDocs).toContain('/api-docs.html');
+    expect(scalarDocs).not.toMatch(/https?:\/\//);
   });
 
   it('documents the shared success and failure response codes', () => {

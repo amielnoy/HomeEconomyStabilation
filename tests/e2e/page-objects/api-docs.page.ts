@@ -3,6 +3,7 @@ import { BasePage } from './base.page';
 
 export class ApiDocsPage extends BasePage {
   readonly root = this.page.getByTestId('swagger-api-docs');
+  readonly scalarLink = this.page.getByTestId('scalar-docs-link');
   readonly authorizeButton = this.page.getByRole('button', { name: /authorize/i });
   readonly healthOperation = this.page.getByText('Check API availability', { exact: true });
   readonly loadOperation = this.page.getByText("Load the current user's snapshot", { exact: true });

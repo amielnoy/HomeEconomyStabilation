@@ -20,7 +20,7 @@ describe('monitoring contract', () => {
     ]);
   });
 
-  it('scrapes internal metrics that probe the application, Swagger and API', () => {
+  it('scrapes internal metrics that probe the application, Swagger, Scalar and API', () => {
     const prometheus = read('monitoring/prometheus.yml');
     const server = read('scripts/api-server.mjs');
 
@@ -28,6 +28,7 @@ describe('monitoring contract', () => {
     expect(prometheus).toContain('metrics_path: /metrics');
     expect(server).toContain("probe('application'");
     expect(server).toContain("probe('swagger'");
+    expect(server).toContain("probe('scalar'");
     expect(server).toContain('endpoint="api"');
     expect(server).toContain('home_economy_endpoint_up');
     expect(server).toContain('home_economy_http_requests_total');
@@ -47,6 +48,19 @@ describe('monitoring contract', () => {
     expect(runner).toContain('npm run test:docker:stop');
     expect(containerRunner).toContain('VITEST_SCRIPT=test:allure sh scripts/run-tests-in-parallel.sh');
     expect(containerRunner).toContain('npx allure generate');
+  });
+
+  it('runs Scalar as a health-checked Docker Compose service', () => {
+    const compose = read('docker-compose.yml');
+    const manualCompose = read('docker-compose.manual.yml');
+    const dockerignore = read('.dockerignore');
+
+    expect(compose).toContain('scalar:');
+    expect(compose).toContain('dockerfile: Dockerfile.scalar');
+    expect(compose).toContain('PLAYWRIGHT_SCALAR_BASE_URL: "http://scalar"');
+    expect(compose).toContain('MONITOR_SCALAR_ORIGIN: "http://scalar"');
+    expect(manualCompose).toContain('${SCALAR_PORT:-8767}:80');
+    expect(dockerignore.split(/\r?\n/)).not.toContain('.github');
   });
 
   it('runs Vitest and Playwright concurrently in local, CI and Docker release gates', () => {
