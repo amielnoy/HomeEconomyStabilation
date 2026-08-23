@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import healthHandler from '../dist-api/api/health.js';
 import snapshotHandler from '../dist-api/api/snapshots.js';
 import { HttpStatus } from '../dist-api/src/http-status.js';
 
@@ -89,6 +90,10 @@ const server = createServer(async (request, response) => {
   if (request.url === '/health') {
     response.statusCode = HttpStatus.OK;
     response.end('ok');
+    return;
+  }
+  if (request.url === '/api/health') {
+    healthHandler({ method: request.method }, createResponseAdapter(response));
     return;
   }
   if (request.url === '/metrics') {

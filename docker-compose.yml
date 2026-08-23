@@ -35,6 +35,7 @@ services:
     environment:
       CI: "true"
       PLAYWRIGHT_BASE_URL: "http://web"
+      PLAYWRIGHT_API_BASE_URL: "http://api:3000"
       ALLURE_RESULTS_DIR: "/workspace/allure-results"
     volumes:
       - allure-results:/workspace/allure-results

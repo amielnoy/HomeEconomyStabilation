@@ -8,6 +8,7 @@ import { SavingsDirectoryComponent } from './page-objects/components/savings-dir
 import { SettingsDrawerComponent } from './page-objects/components/settings-drawer.component';
 import { UploadComponent } from './page-objects/components/upload.component';
 import { HomePage } from './page-objects/home.page';
+import { HomeEconomyApi } from './api-objects/home-economy.api';
 
 interface PageFixtures {
   languagePicker: LanguagePickerComponent;
@@ -19,6 +20,7 @@ interface PageFixtures {
   homePage: HomePage;
   architecturePage: ArchitecturePage;
   apiDocsPage: ApiDocsPage;
+  homeEconomyApi: HomeEconomyApi;
 }
 
 export const test = base.extend<PageFixtures>({
@@ -63,6 +65,9 @@ export const test = base.extend<PageFixtures>({
   },
   apiDocsPage: async ({ page }, use) => {
     await use(new ApiDocsPage(page));
+  },
+  homeEconomyApi: async ({ request }, use) => {
+    await use(new HomeEconomyApi(request));
   },
 });
 
