@@ -586,14 +586,14 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
       <div>
         <p class="directory-kicker" data-i18n="directoryKicker">קישורים שימושיים</p>
         <h2 id="directory-h" data-i18n="directoryTitle" data-testid="directory-h">פנסיה, השתלמות והשקעות</h2>
-        <p data-i18n="directoryIntro">כלים רשמיים להשוואה וקישורים ישירים לחברות מנהלות בישראל.</p>
+        <p data-i18n="directoryIntro">כלים רשמיים להשוואה, ארגוני סיוע וקישורים לחברות מנהלות בישראל.</p>
       </div>
       <button class="btn sm" id="btn-directory-back" data-i18n="backToDashboard" data-testid="btn-directory-back">חזרה לתמונת מצב</button>
     </header>
 
     <aside class="directory-notice" data-testid="directory-disclaimer" aria-label="מידע חשוב" data-i18n-aria-label="importantInfo">
       <strong data-i18n="beforeChoosing">לפני שבוחרים</strong>
-      <span data-i18n="directoryDisclaimer">הרשימה אינה דירוג או המלצה. השוו תשואות לאורך זמן, דמי ניהול, רמת סיכון ושירות בכלים הרשמיים, ושקלו ייעוץ מבעל רישיון.</span>
+      <span data-i18n="directoryDisclaimer">הרשימה אינה דירוג או המלצה. השוו תשואות, עלויות, סיכון ושירות בכלים הרשמיים, ושקלו ייעוץ מבעל רישיון. ארגוני הסיוע אחראים לתנאי הזכאות והשירות שלהם.</span>
     </aside>
 
     <section class="directory-section" aria-labelledby="official-tools-h">
@@ -610,6 +610,21 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
         </a>
         <a class="ds-link-card" data-testid="savings-directory-link" href="https://www.gov.il/he/pages/report_cma" target="_blank" rel="noopener noreferrer">
           <span class="ds-status" data-tone="positive" data-i18n="official">רשמי</span><h4 data-i18n="capitalMarketAuthority">רשות שוק ההון</h4><p data-i18n="authorityDescription">מידע לציבור, מחשבוני דמי ניהול ואיתור בעלי רישיון.</p><span class="link-cta" data-i18n="openOfficialTool">פתיחת הכלי הרשמי ↗</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="directory-section" aria-labelledby="support-organizations-h" data-testid="support-organizations-section">
+      <header><h3 id="support-organizations-h" data-i18n="supportOrganizations" data-testid="support-organizations-h">ארגוני סיוע בכלכלת הבית</h3><p data-i18n="supportOrganizationsNote">ליווי, ידע וכלים למשפחות באמצעות אנשי מקצוע ומתנדבים.</p></header>
+      <div class="directory-grid directory-grid--featured">
+        <a class="ds-link-card" data-testid="support-organization-paamonim-link" href="https://www.paamonim.org/" target="_blank" rel="noopener noreferrer">
+          <span class="ds-status" data-tone="neutral" data-i18n="volunteerOrganization">ארגון חברתי</span><h4 data-i18n="paamonim">פעמונים</h4><p data-i18n="paamonimDescription">ליווי וייעוץ כלכלי למשקי בית באמצעות אנשי מקצוע ומתנדבים.</p><span class="link-cta" data-i18n="visitSupportOrganization">לאתר הארגון ↗</span>
+        </a>
+        <a class="ds-link-card" data-testid="support-organization-mekimi-link" href="https://mekimi.org.il/home/" target="_blank" rel="noopener noreferrer">
+          <span class="ds-status" data-tone="neutral" data-i18n="volunteerOrganization">ארגון חברתי</span><h4 data-i18n="mekimi">מקימי</h4><p data-i18n="mekimiDescription">עמותה ללא מטרות רווח המעניקה ייעוץ, הכוונה וסיוע למשפחות במצוקה כלכלית ומשפחתית.</p><span class="link-cta" data-i18n="visitSupportOrganization">לאתר הארגון ↗</span>
+        </a>
+        <a class="ds-link-card" data-testid="support-community-paamonim-whatsapp-link" href="https://www.whatsapp.com/channel/0029Vaf1Mru17EmsEzCjnf3G" target="_blank" rel="noopener noreferrer">
+          <span class="ds-status" data-tone="neutral" data-i18n="communityChannel">ערוץ קהילה</span><h4 data-i18n="paamonimWhatsApp">ערוץ WhatsApp של פעמונים</h4><p data-i18n="paamonimWhatsAppDescription">עדכונים ותוכן שימושי של פעמונים בנושא התנהלות כלכלית.</p><span class="link-cta" data-i18n="openWhatsAppCommunity">פתיחת הערוץ ב־WhatsApp ↗</span>
         </a>
       </div>
     </section>
