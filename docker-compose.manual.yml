@@ -5,6 +5,9 @@ services:
   web:
     ports:
       - "127.0.0.1:${APP_PORT:-8765}:80"
+  scalar:
+    ports:
+      - "127.0.0.1:${SCALAR_PORT:-8767}:80"
   prometheus:
     ports:
       - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"

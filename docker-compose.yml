@@ -9,6 +9,7 @@ services:
       SUPABASE_URL: "${SUPABASE_URL:-}"
       SUPABASE_PUBLISHABLE_KEY: "${SUPABASE_PUBLISHABLE_KEY:-}"
       MONITOR_WEB_ORIGIN: "http://web"
+      MONITOR_SCALAR_ORIGIN: "http://scalar"
     expose:
       - "3000"
 
@@ -17,6 +18,17 @@ services:
       context: .
       dockerfile: Dockerfile.web
     image: home-economy-web:local
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "80"
+
+  scalar:
+    build:
+      context: .
+      dockerfile: Dockerfile.scalar
+    image: home-economy-scalar:local
     depends_on:
       api:
         condition: service_healthy
@@ -32,9 +44,12 @@ services:
     depends_on:
       web:
         condition: service_healthy
+      scalar:
+        condition: service_healthy
     environment:
       CI: "true"
       PLAYWRIGHT_BASE_URL: "http://web"
+      PLAYWRIGHT_SCALAR_BASE_URL: "http://scalar"
       PLAYWRIGHT_API_BASE_URL: "http://api:3000"
       ALLURE_RESULTS_DIR: "/workspace/allure-results"
     volumes:
@@ -57,6 +72,8 @@ services:
     image: prom/prometheus:v3.12.0
     depends_on:
       web:
+        condition: service_healthy
+      scalar:
         condition: service_healthy
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"

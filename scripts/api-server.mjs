@@ -6,6 +6,7 @@ import { HttpStatus } from '../dist-api/src/http-status.js';
 const port = Number(process.env.PORT || 3000);
 const maxBodyBytes = 1_050_000;
 const webOrigin = process.env.MONITOR_WEB_ORIGIN || 'http://web';
+const scalarOrigin = process.env.MONITOR_SCALAR_ORIGIN || webOrigin;
 const requestCounts = new Map();
 
 async function probe(name, url) {
@@ -22,6 +23,7 @@ async function metrics() {
   const probes = await Promise.all([
     probe('application', `${webOrigin}/mazan-habait.html`),
     probe('swagger', `${webOrigin}/api-docs.html`),
+    probe('scalar', `${scalarOrigin}/scalar-docs.html`),
   ]);
   const lines = [
     '# HELP home_economy_process_uptime_seconds API process uptime.',

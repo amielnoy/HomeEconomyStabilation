@@ -1,0 +1,21 @@
+FROM node:24-alpine AS build
+
+WORKDIR /workspace
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY scripts/copy-api-docs-assets.mjs scripts/copy-api-docs-assets.mjs
+RUN node scripts/copy-api-docs-assets.mjs
+
+FROM nginx:1.29-alpine
+
+COPY docker/nginx.scalar.conf /etc/nginx/conf.d/default.conf
+COPY scalar-docs.html /usr/share/nginx/html/scalar-docs.html
+COPY api-docs.html /usr/share/nginx/html/api-docs.html
+COPY openapi.json /usr/share/nginx/html/openapi.json
+COPY --from=build /workspace/dist/scalar /usr/share/nginx/html/dist/scalar
+COPY --from=build /workspace/dist/swagger-ui /usr/share/nginx/html/dist/swagger-ui
+
+EXPOSE 80
+
+HEALTHCHECK --interval=3s --timeout=2s --retries=20 \
+  CMD wget -q -O /dev/null http://127.0.0.1/scalar-docs.html || exit 1
