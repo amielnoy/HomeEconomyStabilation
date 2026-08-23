@@ -104,6 +104,8 @@ npm run test:docker:stop # כיבוי שרתי הבדיקות והדוח
 
 משתני Supabase מועברים בזמן הריצה בלבד באמצעות `SUPABASE_URL` ו־`SUPABASE_PUBLISHABLE_KEY`; הם אינם נארזים בתמונה. קובצי environment,‏ `node_modules` ודוחות קודמים אינם נכנסים ל־build context.
 
+מפת הכיסוי המלאה, סביבת ההרצה, כל קובצי הבדיקות, ה־release gate והבדיקות הידניות נמצאים ב־[TEST_PLAN.md](TEST_PLAN.md).
+
 להפעלה ידנית של השרתים, Swagger וכלי הניטור עם גישה מהמחשב:
 
 ```bash
@@ -115,6 +117,8 @@ npm run stack:start
 ### ניטור באמצעות Grafana
 
 `npm run stack:start` מפעיל את היישום, ה־API,‏ Prometheus ו־Grafana. ה־dashboard ‏**Home Economy Health** מותקן אוטומטית ומציג זמינות, זמן תגובה, uptime ותגובות API לפי קוד סטטוס. Grafana זמין ב־`http://127.0.0.1:3000`, ו־`npm run stack:stop` מכבה את כל השירותים. פירוט מדדים, פורטים, credentials וגבולות פרטיות נמצא ב־[MONITORING.md](MONITORING.md).
+
+מסך החיסכון וההשקעות מציג תחילה כלים ממשלתיים להשוואה, אחריהם את ארגוני הסיוע פעמונים ומקימי ואת ערוץ WhatsApp הקהילתי של פעמונים, ורק אז חברות מנהלות ובתי השקעות. הארגונים והערוץ מוצגים כקישורי מידע וסיוע, לא כדירוג, המלצה, ערוץ ייעוץ בתוך האפליקציה או הבטחת זכאות; תנאי השירות נקבעים באתר הרשמי של כל ארגון.
 
 בדיקות הנגישות משתמשות ב־axe ובודקות כללי WCAG 2 ברמות A ו־AA במצב הריק, בלוח עם נתונים ובשבעת כרטיסי הסוכנים, במגירת ההגדרות ובמסך החיסכון וההשקעות. מטריצת Playwright מריצה את התרחישים ב־Desktop Chrome, בפרופיל Android של Pixel 7 וב־WebKit עם פרופיל iPhone 13. בדיקות המובייל הייעודיות מאמתות יעדי מגע, safe areas, מניעת auto-zoom בשדות, overflow, פעולות אישור ואת מסע הייבוא המלא. האמולציה מספקת כיסוי regression עקבי, אך אינה תחליף לבדיקה ידנית על מכשיר פיזי עם VoiceOver ו־TalkBack לפני פרסום מהותי.
 
@@ -184,6 +188,7 @@ docker-compose.yml      חיבור web,‏ API,‏ tests,‏ Prometheus ו־Graf
 docker-compose.manual.yml חשיפת ממשקי הפיתוח ל־localhost בלבד
 monitoring/             Prometheus ו־Grafana provisioning
 MONITORING.md           הפעלה, מדדים, אבטחה וגבולות הניטור
+TEST_PLAN.md            תכנית מלאה לכל בדיקות האוטומציה והבדיקות הידניות
 vitest.allure.config.ts  דיווח בדיקות unit/API/contract/component ל־Allure
 scripts/                הרצת בדיקות, יצירת Allure, סביבת Compose והעתקת Swagger
 ```

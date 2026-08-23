@@ -60,6 +60,17 @@ Agent cards do not perform remote calls. Findings are derived, while learned rul
 - The status uses `role="status"` and `aria-live="polite"`. Acceptance and withdrawal remain reversible, keyboard accessible and covered by `cloud-consent-*` test IDs.
 - Copy must distinguish “consent recorded locally” from “cloud sync active”. Never imply that recording consent uploaded or protected data.
 
+## Support organization link cards
+
+The savings directory separates official tools, nonprofit household-finance support and commercial providers in that reading order. Paamonim and Mekimi use the existing `.ds-link-card` recipe with a neutral social-organization status; they must never inherit a positive “official” or promotional state.
+
+- Organization descriptions state the available guidance without promising acceptance, outcomes or free service.
+- The directory disclaimer makes each organization responsible for its current eligibility and service terms.
+- Links use HTTPS, open only after an explicit action and retain `noopener noreferrer`.
+- Stable automation selectors are `support-organizations-section`, `support-organizations-h`, `support-organization-paamonim-link`, `support-organization-mekimi-link` and `support-community-paamonim-whatsapp-link`.
+- The WhatsApp destination is described as an updates channel, not as private financial counseling or guaranteed access to an expert.
+- Copy and wrapping are tested in Hebrew, English, French and Amharic, including Android Chromium and iOS WebKit profiles.
+
 ## Internationalization
 
 - Supported locales are Hebrew (`he`), English (`en`), Amharic (`am`), and French (`fr`).
@@ -82,3 +93,4 @@ Agent cards do not perform remote calls. Findings are derived, while learned rul
 8. Do not use color as the only carrier of warning, critical, clear, or approval state.
 9. On mobile, keep every visible approval control at least 44×44 CSS pixels and preserve a single-column reading order for agent cards.
 10. Dynamic financial sentences use translation keys with named parameters; merchant names and amounts remain user data and must be inserted as text, never executable markup.
+11. Every new user journey or component must be reflected in `TEST_PLAN.md`; contract coverage verifies that every test suite remains listed.

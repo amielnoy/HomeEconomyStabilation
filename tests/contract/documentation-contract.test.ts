@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -72,5 +72,23 @@ describe('project documentation contract', () => {
       expect(monitoring).toContain(requirement);
     }
     expect(architecture).toContain('web → API ← Prometheus → Grafana');
+  });
+
+  it('lists every executable test suite in the test plan', () => {
+    const testPlan = read('TEST_PLAN.md');
+    const collectSuites = (directory: string): string[] => readdirSync(resolve(root, directory), { withFileTypes: true })
+      .flatMap((entry) => {
+        const relativePath = `${directory}/${entry.name}`;
+        if (entry.isDirectory()) return collectSuites(relativePath);
+        return /\.(?:test|spec)\.ts$/.test(entry.name) ? [relativePath] : [];
+      });
+
+    for (const suite of collectSuites('tests')) {
+      expect(testPlan, `${suite} is missing from TEST_PLAN.md`).toContain(`\`${suite}\``);
+    }
+    for (const guide of ['README.md', 'design-system.md', 'SUPABASE.md', 'MONITORING.md', 'TODO.md']) {
+      expect(read(guide), `${guide} does not reference the test plan`).toContain('TEST_PLAN.md');
+    }
+    expect(read('Architecture.html')).toContain('TEST_PLAN.md');
   });
 });
