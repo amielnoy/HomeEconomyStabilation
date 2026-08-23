@@ -8,6 +8,15 @@ export class DashboardComponent {
   readonly transactionBalances = this.page.getByTestId('transaction-balance');
   readonly accountSummary = this.page.getByTestId('acct');
   readonly balance = this.page.getByTestId('t-bal');
+  readonly spendingGuide = this.page.getByTestId('spending-guide');
+  readonly spendingGuideAmount = this.page.getByTestId('spending-guide-amount');
+  readonly spendingGuideSummary = this.page.getByTestId('spending-guide-summary');
+  readonly spendingGuideWeekly = this.page.getByTestId('spending-guide-weekly');
+  readonly spendingGuideDaily = this.page.getByTestId('spending-guide-daily');
+  readonly spendingGuideDetails = this.page.getByTestId('spending-guide-details');
+  readonly spendingGuideBalance = this.page.getByTestId('spending-guide-balance');
+  readonly spendingGuideCommitted = this.page.getByTestId('spending-guide-committed');
+  readonly spendingGuideDate = this.page.getByTestId('spending-guide-date');
   readonly recommendationButton = this.page.getByTestId('btn-recommendations');
   readonly recommendations = this.page.getByTestId('recommendations');
   readonly recommendationNote = this.page.getByTestId('rec-screen-note');
@@ -67,6 +76,45 @@ export class DashboardComponent {
       budgets: {}, accounts: ['agent-scenario'],
     });
     await this.page.reload();
+  }
+
+  @step('Load a safe-to-spend sanity example')
+  async loadSpendingGuideScenario(kind: 'no-balance' | 'no-income' | 'shortfall'): Promise<void> {
+    await this.page.evaluate((scenario) => {
+      const transaction = (id: string, date: string, desc: string, out: number, input: Partial<{
+        in: number; bal: number | null; cat: string;
+      }> = {}) => ({
+        id, date, vdate: date, ref: id, desc, out, in: 0, bal: null, pending: false,
+        source: 'bank', src: 'spending-guide-sanity.csv', cat: 'home', ...input,
+      });
+      const salary = [
+        transaction('salary-jan', '2026-01-01', 'Salary Employer', 0, { in: 9000, cat: 'income' }),
+        transaction('salary-feb', '2026-02-01', 'Salary Employer', 0, { in: 9000, cat: 'income' }),
+      ];
+      const tx = scenario === 'no-balance'
+        ? [...salary, transaction('current', '2026-03-20', 'Current activity', 10)]
+        : scenario === 'no-income'
+          ? [transaction('current', '2026-03-20', 'Current activity', 10, { bal: 5000 })]
+          : [
+            ...salary,
+            transaction('rent-jan', '2026-01-25', 'Monthly Rent', 6000),
+            transaction('rent-feb', '2026-02-25', 'Monthly Rent', 6000),
+            transaction('current', '2026-03-20', 'Current activity', 10, { bal: 5000 }),
+          ];
+      localStorage.setItem('mazan-habait/v1', JSON.stringify({
+        tx, overrides: {}, rules: [], budgets: {}, accounts: ['sanity'],
+        cats: [
+          { id: 'home', name: 'Home', kind: 'expense' },
+          { id: 'income', name: 'Income', kind: 'income' },
+        ],
+      }));
+    }, kind);
+    await this.page.reload();
+  }
+
+  @step('Read every safe-to-spend value')
+  async spendingGuideText(): Promise<string> {
+    return this.spendingGuide.innerText();
   }
 
   @step('Read the saved learned categorization rule')

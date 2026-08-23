@@ -20,6 +20,18 @@ test('shows seven independent agents with findings from their own histories', as
   await expect(homePage.dashboard.paydayAgent).toContainText('2,000');
 });
 
+test('leads with a transparent safe-to-spend guide', async ({ homePage }) => {
+  await expect(homePage.dashboard.spendingGuide).toBeVisible();
+  await expect(homePage.dashboard.spendingGuideAmount).toContainText('2,000');
+  await expect(homePage.dashboard.spendingGuideSummary).toContainText('12');
+  await expect(homePage.dashboard.spendingGuideWeekly).toContainText('1,167');
+  await expect(homePage.dashboard.spendingGuideDaily).toContainText('167');
+
+  await homePage.dashboard.spendingGuideDetails.locator('summary').click();
+  await expect(homePage.dashboard.spendingGuideBalance).toContainText('5,000');
+  await expect(homePage.dashboard.spendingGuideCommitted).toContainText('3,000');
+});
+
 test('requires explicit approval before saving a learned categorization rule', async ({ homePage }) => {
   await expect(homePage.dashboard.learningAgent).toContainText('coffee shop');
   await expect(homePage.dashboard.approveLearningRule).toBeVisible();

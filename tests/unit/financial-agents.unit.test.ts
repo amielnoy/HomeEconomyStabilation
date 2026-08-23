@@ -72,6 +72,50 @@ describe('independent financial agents', () => {
       tx('2026-03-20', 'Current activity', 10, { bal: 5000 }),
     ]);
 
-    expect(result).toMatchObject({ balance: 5000, committed: 3000, freeToSpend: 2000, nextIncomeDate: '2026-04-01' });
+    expect(result).toMatchObject({
+      balance: 5000, committed: 3000, freeToSpend: 2000, nextIncomeDate: '2026-04-01',
+      daysRemaining: 12,
+    });
+    expect(result?.dailyAllowance).toBeCloseTo(166.67, 1);
+    expect(result?.weeklyAllowance).toBeCloseTo(1166.67, 1);
+  });
+
+  it('returns an explicit unavailable result when no balance exists', () => {
+    expect(paydayAgent([
+      tx('2026-01-01', 'Salary Employer', 0, { out: 0, in: 9000 }),
+      tx('2026-02-01', 'Salary Employer', 0, { out: 0, in: 9000 }),
+    ])).toBeNull();
+  });
+
+  it('does not invent time allowances without recurring income', () => {
+    expect(paydayAgent([
+      tx('2026-03-20', 'Current activity', 10, { bal: 5000 }),
+    ])).toEqual({
+      balance: 5000, nextIncomeDate: null, committed: 0, freeToSpend: 5000,
+      daysRemaining: null, dailyAllowance: null, weeklyAllowance: null,
+    });
+  });
+
+  it('keeps a negative runway finite when commitments exceed the balance', () => {
+    const result = paydayAgent([
+      tx('2026-01-01', 'Salary Employer', 0, { out: 0, in: 9000 }),
+      tx('2026-02-01', 'Salary Employer', 0, { out: 0, in: 9000 }),
+      tx('2026-01-25', 'Monthly Rent', 6000), tx('2026-02-25', 'Monthly Rent', 6000),
+      tx('2026-03-20', 'Current activity', 10, { bal: 5000 }),
+    ]);
+
+    expect(result).toMatchObject({ freeToSpend: -1000, daysRemaining: 12 });
+    expect(result?.dailyAllowance).toBeCloseTo(-83.33, 1);
+    expect(Number.isFinite(result?.weeklyAllowance)).toBe(true);
+  });
+
+  it('clamps a month-end payday to the last real day of a shorter month', () => {
+    const result = paydayAgent([
+      tx('2025-12-31', 'Salary Employer', 0, { out: 0, in: 9000 }),
+      tx('2026-01-31', 'Salary Employer', 0, { out: 0, in: 9000 }),
+      tx('2026-02-20', 'Current activity', 10, { bal: 5000 }),
+    ]);
+
+    expect(result).toMatchObject({ nextIncomeDate: '2026-02-28', daysRemaining: 8 });
   });
 });

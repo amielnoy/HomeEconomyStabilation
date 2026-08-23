@@ -7,6 +7,12 @@ export class SettingsDrawerComponent {
   readonly closeButton = this.page.getByTestId('dr-close');
   readonly translatedContent = this.page.getByTestId('settings-translated-content');
   readonly backupInput = this.page.getByTestId('dr-import');
+  readonly cloudConsent = this.page.getByTestId('cloud-consent');
+  readonly cloudConsentCheck = this.page.getByTestId('cloud-consent-check');
+  readonly cloudConsentLabel = this.page.getByTestId('cloud-consent-label');
+  readonly cloudConsentAccept = this.page.getByTestId('cloud-consent-accept');
+  readonly cloudConsentWithdraw = this.page.getByTestId('cloud-consent-withdraw');
+  readonly cloudConsentStatus = this.page.getByTestId('cloud-consent-status');
   readonly formControls = [
     this.closeButton, this.page.getByTestId('dr-addrule'), this.page.getByTestId('dr-addcat'),
     this.page.getByTestId('dr-export'), this.page.getByTestId('backup-import-trigger'), this.page.getByTestId('dr-wipe'),
@@ -16,6 +22,7 @@ export class SettingsDrawerComponent {
     this.page.getByTestId('delete-category-button'), this.page.getByTestId('manual-date'),
     this.page.getByTestId('manual-desc'), this.page.getByTestId('manual-dir'), this.page.getByTestId('manual-amount'),
     this.page.getByTestId('manual-cat'), this.page.getByTestId('manual-submit'),
+    this.cloudConsentLabel, this.cloudConsentAccept, this.cloudConsentWithdraw,
   ];
 
   constructor(private readonly page: Page) {}
@@ -33,5 +40,16 @@ export class SettingsDrawerComponent {
   @step('Import a saved backup')
   async importBackup(file: FilePayload): Promise<void> {
     await this.backupInput.setInputFiles(file);
+  }
+
+  @step('Read and accept the optional cloud-sync notice')
+  async acceptCloudConsent(): Promise<void> {
+    await this.cloudConsentCheck.check();
+    await this.cloudConsentAccept.click();
+  }
+
+  @step('Withdraw the optional cloud-sync consent')
+  async withdrawCloudConsent(): Promise<void> {
+    await this.cloudConsentWithdraw.click();
   }
 }
