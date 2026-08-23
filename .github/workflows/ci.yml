@@ -36,14 +36,11 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
-      - name: Run unit, component, and contract tests
-        run: npm test
-
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium webkit
 
-      - name: Run Playwright E2E tests
-        run: npm run test:e2e
+      - name: Run Vitest and Playwright in parallel
+        run: npm run test:all
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

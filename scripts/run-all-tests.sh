@@ -37,7 +37,7 @@ compose build api web tests || exit $?
 echo "Starting the application and monitoring servers"
 compose up --detach api web prometheus grafana || exit $?
 
-echo "Running all tests in the test service against the separate web and API services"
+echo "Running Vitest and Playwright in parallel against the separate web and API services"
 test_status=0
 compose run --rm tests || test_status=$?
 
