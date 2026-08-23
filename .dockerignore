@@ -1,0 +1,15 @@
+.git
+.github
+.vercel
+node_modules
+dist
+dist-api
+playwright-report
+test-results
+coverage
+allure-results
+allure-report
+.env
+.env.*
+!.env.example
+*.legacy-backup.html

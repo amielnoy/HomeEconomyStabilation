@@ -1,0 +1,16 @@
+services:
+  api:
+    ports:
+      - "127.0.0.1:${API_PORT:-3001}:3000"
+  web:
+    ports:
+      - "127.0.0.1:${APP_PORT:-8765}:80"
+  prometheus:
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+  grafana:
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+  allure:
+    ports:
+      - "127.0.0.1:${ALLURE_PORT:-5050}:80"

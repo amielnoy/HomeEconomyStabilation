@@ -1,0 +1,26 @@
+FROM node:24-alpine AS build
+
+WORKDIR /workspace
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY tsconfig.json tsconfig.api.json tsconfig.api.build.json ./
+COPY api ./api
+COPY src/cloud-sync.ts ./src/cloud-sync.ts
+COPY src/http-status.ts ./src/http-status.ts
+RUN npm run build:api
+
+FROM node:24-alpine
+
+WORKDIR /workspace
+ENV NODE_ENV=production
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+COPY --from=build /workspace/dist-api ./dist-api
+COPY scripts/api-server.mjs ./scripts/api-server.mjs
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=3s --timeout=2s --retries=20 \
+  CMD wget -q -O /dev/null http://127.0.0.1:3000/health || exit 1
+
+CMD ["node", "scripts/api-server.mjs"]

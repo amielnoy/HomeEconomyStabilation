@@ -3,6 +3,10 @@ node_modules/
 *.legacy-backup.html
 playwright-report/
 test-results/
+allure-results/
+allure-report/
+dist-api/
+dist/swagger-ui/
 .env
 .env.*
 !.env.example
