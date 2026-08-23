@@ -45,8 +45,26 @@ describe('monitoring contract', () => {
     expect(runner).toContain('$PRODUCTION_URL/api/health');
     expect(runner).toContain('Local Docker services (available on this computer only)');
     expect(runner).toContain('npm run test:docker:stop');
-    expect(containerRunner).toContain('npm run test:allure');
-    expect(containerRunner).toContain('npm run test:e2e');
+    expect(containerRunner).toContain('VITEST_SCRIPT=test:allure sh scripts/run-tests-in-parallel.sh');
     expect(containerRunner).toContain('npx allure generate');
+  });
+
+  it('runs Vitest and Playwright concurrently in local, CI and Docker release gates', () => {
+    const packageJson = JSON.parse(read('package.json'));
+    const parallelRunner = read('scripts/run-tests-in-parallel.sh');
+    const containerRunner = read('scripts/run-tests-and-generate-allure.sh');
+    const workflow = read('.github/workflows/ci.yml');
+    const playwrightConfig = read('playwright.config.ts');
+
+    expect(packageJson.scripts['test:all']).toBe('sh scripts/run-tests-in-parallel.sh');
+    expect(parallelRunner).toContain('npm run "$VITEST_SCRIPT" &');
+    expect(parallelRunner).toContain('npm run test:e2e &');
+    expect(parallelRunner).toContain('wait "$vitest_pid"');
+    expect(parallelRunner).toContain('wait "$playwright_pid"');
+    expect(parallelRunner).toContain('vitest=$vitest_status playwright=$playwright_status');
+    expect(containerRunner).toContain('VITEST_SCRIPT=test:allure sh scripts/run-tests-in-parallel.sh');
+    expect(workflow).toContain('Run Vitest and Playwright in parallel');
+    expect(workflow).toContain('run: npm run test:all');
+    expect(playwrightConfig).toContain('workers: process.env.CI ? 2 : undefined');
   });
 });
