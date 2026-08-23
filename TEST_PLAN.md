@@ -16,7 +16,7 @@ No test may use real banking credentials, production JWTs or personally identify
 | Desktop browser | Playwright, Desktop Chrome | Primary journeys and keyboard/desktop behavior |
 | Android browser | Playwright, Pixel 7 Chromium profile | Touch layout, responsive journeys and Android browser behavior |
 | iOS browser | Playwright, iPhone 13 WebKit profile | WebKit, safe-area, touch and iOS browser behavior |
-| Container release gate | Docker Compose | Tests the built web and API images over the internal service network |
+| Container release gate | Docker Compose | Tests the built web, API and dedicated Scalar server images over the internal service network |
 
 Playwright device profiles are repeatable emulations, not a substitute for final manual checks on physical iOS and Android devices with VoiceOver and TalkBack.
 
@@ -24,7 +24,7 @@ Playwright device profiles are repeatable emulations, not a substitute for final
 
 | Command | Expected result |
 |---|---|
-| `npm run build` | Application and API TypeScript compile; local Swagger assets are copied |
+| `npm run build` | Application and API TypeScript compile; local Swagger and Scalar assets are copied |
 | `npm test` | All Vitest unit, API, contract and component suites pass |
 | `npm run test:e2e` | All applicable Playwright scenarios pass in one API and three browser projects |
 | `npm run test:all` | Vitest and Playwright start together, both complete, and either failure fails the command |
@@ -72,7 +72,7 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 | `tests/contract/importer-contract.test.ts` | Dashboard transaction shape |
 | `tests/contract/localization-contract.test.ts` | Key parity, named-parameter parity and complete HTML/runtime translation coverage |
 | `tests/contract/monitoring.contract.test.ts` | Prometheus, Grafana and combined Allure publication |
-| `tests/contract/openapi.contract.test.ts` | Snapshot operations, bearer security, responses and self-hosted Swagger |
+| `tests/contract/openapi.contract.test.ts` | Snapshot operations, bearer security, responses and self-hosted Swagger/Scalar |
 | `tests/contract/security-sanity.contract.test.ts` | Dangerous sinks, HTTPS opener isolation, file types and remote scripts |
 | `tests/contract/supabase-schema.contract.test.ts` | Tables, grants, RLS ownership and publishable-key boundary |
 | `tests/contract/test-id-contract.test.ts` | Stable test IDs for static/dynamic controls and Page Object selector discipline |
@@ -94,7 +94,7 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 | File | Coverage |
 |---|---|
 | `tests/e2e/accessibility.e2e.spec.ts` | axe WCAG A/AA checks for empty, populated, settings, agents and directory states |
-| `tests/e2e/api-docs.e2e.spec.ts` | Self-hosted Swagger and all snapshot operations |
+| `tests/e2e/api-docs.e2e.spec.ts` | Self-hosted Swagger and Scalar loading the same specification and all snapshot operations |
 | `tests/e2e/architecture.e2e.spec.ts` | Architecture content, responsive layout and accessibility |
 | `tests/e2e/cloud-consent.e2e.spec.ts` | Consent acceptance and withdrawal without upload |
 | `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import, upload availability and prioritized recommendations |
@@ -117,7 +117,7 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 3. Switch Hebrew → Amharic → French → English and verify direction, wrapping and understandable copy.
 4. Navigate using keyboard only, then check VoiceOver and TalkBack announcements.
 5. Open Paamonim, Mekimi and the Paamonim WhatsApp channel; verify the destinations are still official HTTPS pages and that the channel has not become a private-advice promise.
-6. Review Swagger without entering a production token.
+6. Review Swagger and Scalar, including the link between them, without entering a production token.
 7. Review Grafana and confirm no JWT, transaction, email or snapshot content appears in metrics.
 8. Open the Allure report and investigate failures, retries, unexpected skips and missing attachments.
 

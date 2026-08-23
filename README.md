@@ -96,24 +96,24 @@ npm run test:docker:stop # כיבוי שרתי הבדיקות והדוח
 
 אפשר גם להריץ `npm run test:docker`.
 
-- `web` מגיש את היישום ואת Swagger UI באמצעות Nginx.
+- `web` מגיש את היישום ואת Swagger UI באמצעות Nginx; `scalar` הוא שרת Nginx נפרד לתיעוד ולבדיקות API ידניות.
 - `api` מריץ את `/api/snapshots` ב־Node; Nginx מעביר אליו את נתיבי `/api/`.
 - `tests` מכיל את Chromium ו־WebKit, מריץ build,‏ Vitest ו־Playwright במקביל, ממתין לשניהם וכותב את תוצאות שתי המסגרות לאותו volume של Allure.
 - `allure` מגיש באמצעות Nginx את דוח ה־HTML שנוצר לאחר סיום הבדיקות.
 
-בסוף הריצה ה־CLI מפריד בין כתובות ה־Production האמיתיות ב־Vercel — האפליקציה, Architecture,‏ Swagger,‏ `/api/health` ו־Snapshot API — לבין שירותי Docker שזמינים רק במחשב המקומי. Prometheus,‏ Grafana ו־Allure אינם מוצגים כשירותים ציבוריים. ברירת המחדל היא `https://home-economy-stabilation.vercel.app`, ואפשר לבדוק deployment אחר באמצעות `PRODUCTION_URL`. השרתים המקומיים נשארים פעילים כדי שאפשר יהיה לבדוק את התוצאה; `npm run test:docker:stop` מכבה אותם. גם אם אחת ממסגרות הבדיקה נכשלת, הסקריפט ממתין למסגרת השנייה, מנסה ליצור ולפרסם את הדוח המאוחד, מדפיס את הקישורים ומחזיר קוד יציאה שגוי. סביבת הבדיקות משתמשת בפורטים נפרדים מסביבת הפיתוח: אפליקציה `18766`,‏ API‏ `13002`,‏ Prometheus‏ `19091`,‏ Grafana‏ `13001` ו־Allure‏ `15050`. אפשר לשנות כל אחד באמצעות `APP_PORT`,‏ `API_PORT`,‏ `PROMETHEUS_PORT`,‏ `GRAFANA_PORT` ו־`ALLURE_PORT`.
+בסוף הריצה ה־CLI מפריד בין כתובות ה־Production האמיתיות ב־Vercel — האפליקציה, Architecture,‏ Swagger,‏ Scalar,‏ `/api/health` ו־Snapshot API — לבין שירותי Docker שזמינים רק במחשב המקומי. Prometheus,‏ Grafana ו־Allure אינם מוצגים כשירותים ציבוריים. ברירת המחדל היא `https://home-economy-stabilation.vercel.app`, ואפשר לבדוק deployment אחר באמצעות `PRODUCTION_URL`. השרתים המקומיים נשארים פעילים כדי שאפשר יהיה לבדוק את התוצאה; `npm run test:docker:stop` מכבה אותם. גם אם אחת ממסגרות הבדיקה נכשלת, הסקריפט ממתין למסגרת השנייה, מנסה ליצור ולפרסם את הדוח המאוחד, מדפיס את הקישורים ומחזיר קוד יציאה שגוי. סביבת הבדיקות משתמשת בפורטים נפרדים מסביבת הפיתוח: אפליקציה `18766`,‏ Scalar‏ `18767`,‏ API‏ `13002`,‏ Prometheus‏ `19091`,‏ Grafana‏ `13001` ו־Allure‏ `15050`. אפשר לשנות כל אחד באמצעות `APP_PORT`,‏ `SCALAR_PORT`,‏ `API_PORT`,‏ `PROMETHEUS_PORT`,‏ `GRAFANA_PORT` ו־`ALLURE_PORT`.
 
 משתני Supabase מועברים בזמן הריצה בלבד באמצעות `SUPABASE_URL` ו־`SUPABASE_PUBLISHABLE_KEY`; הם אינם נארזים בתמונה. קובצי environment,‏ `node_modules` ודוחות קודמים אינם נכנסים ל־build context.
 
 מפת הכיסוי המלאה, סביבת ההרצה, כל קובצי הבדיקות, ה־release gate והבדיקות הידניות נמצאים ב־[TEST_PLAN.md](TEST_PLAN.md).
 
-להפעלה ידנית של השרתים, Swagger וכלי הניטור עם גישה מהמחשב:
+להפעלה ידנית של השרתים, Swagger,‏ Scalar וכלי הניטור עם גישה מהמחשב:
 
 ```bash
 npm run stack:start
 ```
 
-לאחר מכן האתר זמין ב־`http://127.0.0.1:8765` ו־Swagger ב־`http://127.0.0.1:8765/api-docs.html`. אפשר לבחור פורטים אחרים, למשל `APP_PORT=8080 GRAFANA_PORT=3100 npm run stack:start`. מכבים את כל השירותים של הסביבה המקומית באמצעות `npm run stack:stop`.
+לאחר מכן האתר זמין ב־`http://127.0.0.1:8765`,‏ Swagger ב־`http://127.0.0.1:8765/api-docs.html` ושרת Scalar הנפרד ב־`http://127.0.0.1:8767/scalar-docs.html`. אפשר לבחור פורטים אחרים, למשל `APP_PORT=8080 SCALAR_PORT=8082 GRAFANA_PORT=3100 npm run stack:start`. מכבים את כל השירותים של הסביבה המקומית באמצעות `npm run stack:stop`.
 
 ### ניטור באמצעות Grafana
 
@@ -159,11 +159,11 @@ Vitest בודק handlers, לוגיקה וחוזים ישירות ובמהירו�
 
 פירוט מלא נמצא ב־[SUPABASE.md](SUPABASE.md).
 
-### בדיקה ידנית דרך Swagger
+### בדיקה ידנית דרך Swagger או Scalar
 
-לאחר `npm run build` מפעילים שרת מקומי ופותחים את `http://127.0.0.1:8765/api-docs.html`. מסך Swagger UI מציג ומריץ את כל פעולות `GET`,‏ `PUT` ו־`DELETE` של `/api/snapshots`. לבדיקת תוצאה מוצלחת יש ללחוץ **Authorize** ולהזין JWT אמיתי של משתמש Supabase; אין להדביק secret או `service_role`. בהיעדר הגדרת Supabase אפשר לבדוק שכשל התשתית מוחזר סגור כ־`503 cloud_not_configured`.
+לאחר `npm run build` מפעילים את סביבת Compose ופותחים את Swagger ב־`http://127.0.0.1:8765/api-docs.html` או את שרת Scalar ב־`http://127.0.0.1:8767/scalar-docs.html`. שני הממשקים מציגים ומריצים ידנית את `GET /api/health` ואת פעולות `GET`,‏ `PUT` ו־`DELETE` של `/api/snapshots`, ויש ביניהם קישור מעבר ישיר. ב־Scalar בוחרים פעולה ולוחצים **Test Request**. לבדיקת snapshot מוצלחת מזינים Bearer JWT אמיתי של משתמש Supabase במנגנון Authentication; אין להדביק secret או `service_role`. בהיעדר הגדרת Supabase אפשר לבדוק שכשל התשתית מוחזר סגור כ־`503 cloud_not_configured`.
 
-החוזה נמצא ב־`openapi.json`, ונכסי Swagger UI מועתקים מקומית בזמן build כך שהמסך אינו תלוי ב־CDN חיצוני.
+החוזה היחיד נמצא ב־`openapi.json`. נכסי Swagger UI ו־Scalar בגרסאות מקובעות מועתקים מקומית בזמן build, ללא CDN, telemetry או גופנים חיצוניים. פרטי האימות אינם נשמרים לאחר טעינה מחדש.
 
 הקמת הפרויקט בפועל, Auth, משתני Vercel ובדיקות integration מסומנים כרשימת עבודה מפורשת ב־[TODO.md](TODO.md); תשתית מוכנה אינה מוצגת בטעות כשירות ענן פעיל.
 
@@ -185,15 +185,16 @@ resources/              משאבי ארבע השפות
 tests/e2e/page-objects/ עמודי בסיס ורכיבי Page Object לבדיקות הדפדפן
 tests/                  בדיקות יחידה, חוזה, רכיבים ו־E2E
 Dockerfile.web          image של שרת היישום ו־Swagger
+Dockerfile.scalar       image נפרד של Scalar ו־Swagger לבדיקות API ידניות
 Dockerfile.api          image של גבול ה־API
 Dockerfile.test         image של build ודפדפני הבדיקות
-docker-compose.yml      חיבור web,‏ API,‏ tests,‏ Prometheus ו־Grafana ברשת פנימית
+docker-compose.yml      חיבור web,‏ API,‏ Scalar,‏ tests,‏ Prometheus ו־Grafana ברשת פנימית
 docker-compose.manual.yml חשיפת ממשקי הפיתוח ל־localhost בלבד
 monitoring/             Prometheus ו־Grafana provisioning
 MONITORING.md           הפעלה, מדדים, אבטחה וגבולות הניטור
 TEST_PLAN.md            תכנית מלאה לכל בדיקות האוטומציה והבדיקות הידניות
 vitest.allure.config.ts  דיווח בדיקות unit/API/contract/component ל־Allure
-scripts/                הרצת בדיקות, יצירת Allure, סביבת Compose והעתקת Swagger
+scripts/                הרצת בדיקות, יצירת Allure, סביבת Compose והעתקת נכסי תיעוד API
 ```
 
 ## פרטיות והבהרה פיננסית

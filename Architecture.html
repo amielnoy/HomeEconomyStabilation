@@ -126,8 +126,9 @@
   <tr><td><code>src/cloud-sync.ts</code></td><td>Bounded cloud contract and <code>SupabaseSnapshotRepository</code>.</td><td>First-party API and access-token callback</td><td>Token persistence or consent UI</td></tr>
   <tr><td><code>src/consent.ts</code></td><td>Versioned local consent acceptance and withdrawal.</td><td>Minimal storage port</td><td>Financial state or immunity claims</td></tr>
   <tr><td><code>api/snapshots.ts</code></td><td>Verify JWT and mediate snapshot CRUD through RLS.</td><td>Supabase publishable key</td><td>Secret or service-role keys</td></tr>
+  <tr><td><code>openapi.json</code></td><td>One API contract rendered by the self-hosted Swagger and Scalar explorers.</td><td>Documented first-party routes</td><td>Runtime credentials or duplicated schemas</td></tr>
   <tr><td><code>src/http-status.ts</code></td><td>Single static vocabulary for REST response codes.</td><td>HTTP semantics</td><td>Response bodies or routing</td></tr>
-  <tr><td><code>docker-compose.yml</code></td><td>Isolate web, API, tests and monitoring services on one local network.</td><td>Health checks and runtime environment</td><td>Production secrets</td></tr>
+  <tr><td><code>docker-compose.yml</code></td><td>Isolate web, API, Scalar, tests and monitoring services on one local network.</td><td>Health checks and runtime environment</td><td>Production secrets</td></tr>
   <tr><td><code>monitoring/</code></td><td>Provision Prometheus collection and the Grafana health dashboard.</td><td>Internal metadata-only <code>/metrics</code></td><td>Financial payloads or JWTs</td></tr>
   <tr><td><code>supabase/migrations/*.sql</code></td><td>Tables, grants, constraints and owner-only RLS.</td><td>Supabase Auth identity</td><td>Application rendering</td></tr>
   <tr><td><code>design-system.css</code></td><td>Tokens and reusable component primitives.</td><td>Page semantic color variables</td><td>Feature-specific layout</td></tr>

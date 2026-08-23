@@ -48,7 +48,7 @@ npm run build
 
 מריצים את קובץ ה־migration בפרויקט Supabase, ומגדירים את שני המשתנים גם ב־Vercel. אפשר לבדוק את ה־API רק עם JWT אמיתי של משתמש מאומת. בהיעדר configuration הנתיב נכשל סגור עם `cloud_not_configured`; הדבר אינו פוגע בשימוש המקומי.
 
-לבדיקה ידנית פותחים את `/api-docs.html`, לוחצים **Authorize** ומזינים Bearer JWT של משתמש בדיקה. Swagger UI נטען מנכסים מקומיים ומכסה את `GET`,‏ `PUT` ו־`DELETE /api/snapshots`; החוזה הניתן גם לייבוא לכלי API אחרים נמצא ב־`openapi.json`.
+לבדיקה ידנית פותחים את Swagger ב־`/api-docs.html` או את Scalar ב־`/scalar-docs.html`. ב־Scalar בוחרים פעולה ולוחצים **Test Request**; לפעולות snapshot משתמשים במנגנון Authentication כדי להזין Bearer JWT של משתמש בדיקה. שני הממשקים נטענים מנכסים מקומיים ומכסים את `GET /api/health` ואת `GET`,‏ `PUT` ו־`DELETE /api/snapshots`; Scalar מוגדר בלי telemetry ובלי שמירת authentication. החוזה המשותף, הניתן גם לייבוא לכלי API אחרים, נמצא ב־`openapi.json`.
 
 ## הפעלה עתידית
 

@@ -2,9 +2,9 @@
 
 ## מה מנוטר
 
-שירות ה־API חושף את `/metrics` רק בתוך רשת Docker. בכל scrape הוא בודק את דף האפליקציה ואת Swagger UI ומפרסם מדדי Prometheus:
+שירות ה־API חושף את `/metrics` רק בתוך רשת Docker. בכל scrape הוא בודק את דף האפליקציה, Swagger UI ו־Scalar ומפרסם מדדי Prometheus:
 
-- `home_economy_endpoint_up` — זמינות `application`,‏ `swagger` ו־`api`.
+- `home_economy_endpoint_up` — זמינות `application`,‏ `swagger`,‏ `scalar` ו־`api`.
 - `home_economy_endpoint_duration_seconds` — זמן הבדיקה האחרון של נקודות הקצה.
 - `home_economy_process_uptime_seconds` — זמן הפעילות של תהליך ה־API.
 - `home_economy_http_requests_total` — מספר תגובות לפי method וקוד HTTP.
@@ -24,6 +24,7 @@ npm run stack:stop
 
 - יישום: `http://127.0.0.1:8765`
 - Swagger: `http://127.0.0.1:8765/api-docs.html`
+- Scalar: `http://127.0.0.1:8767/scalar-docs.html`
 - API health: `http://127.0.0.1:3001/health`
 - Prometheus: `http://127.0.0.1:9090`
 - Grafana: `http://127.0.0.1:3000`
