@@ -8,10 +8,18 @@ export class SavingsDirectoryComponent {
   readonly paamonimLink = this.page.getByTestId('support-organization-paamonim-link');
   readonly mekimiLink = this.page.getByTestId('support-organization-mekimi-link');
   readonly paamonimWhatsAppLink = this.page.getByTestId('support-community-paamonim-whatsapp-link');
+  readonly independentAdvisorsHeading = this.page.getByTestId('independent-advisors-h');
+  readonly pensionAdvisorRegistry = this.page.getByTestId('advisor-pension-registry-link');
+  readonly investmentAdvisorRegistry = this.page.getByTestId('advisor-investment-registry-link');
+  readonly doritGovAriLink = this.page.getByTestId('advisor-dorit-gov-ari-link');
+  readonly advisorChecklist = this.page.getByTestId('advisor-checklist');
   readonly cards = this.page.getByTestId('savings-directory-link')
     .or(this.paamonimLink)
     .or(this.mekimiLink)
-    .or(this.paamonimWhatsAppLink);
+    .or(this.paamonimWhatsAppLink)
+    .or(this.pensionAdvisorRegistry)
+    .or(this.investmentAdvisorRegistry)
+    .or(this.doritGovAriLink);
   readonly officialToolsHeading = this.page.getByTestId('official-tools-h');
   readonly supportOrganizationsHeading = this.page.getByTestId('support-organizations-h');
   readonly companiesHeading = this.page.getByTestId('companies-h');

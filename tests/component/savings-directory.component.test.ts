@@ -17,24 +17,49 @@ describe('savings and investments directory component', () => {
     expect(document.querySelector('[data-testid="savings-directory"]')).not.toBeNull();
   });
 
-  it('places official tools and support organizations before management companies', () => {
+  it('places official tools, adviser registries and support organizations before management companies', () => {
     const directory = document.querySelector('[data-testid="savings-directory"]')!;
     const links = [...directory.querySelectorAll<HTMLAnchorElement>('[data-testid$="-link"]')];
 
-    expect(links).toHaveLength(15);
+    expect(links).toHaveLength(18);
     expect(links.slice(0, 4).map((link) => new URL(link.href).hostname)).toEqual([
       'gemelnet.cma.gov.il',
       'pensyanet.cma.gov.il',
       'www.gov.il',
       'www.gov.il',
     ]);
-    expect(directory.querySelectorAll('[data-i18n="official"]')).toHaveLength(4);
-    expect(links.slice(4, 7).map((link) => new URL(link.href).hostname)).toEqual([
+    expect(directory.querySelectorAll('[data-i18n="official"]')).toHaveLength(6);
+    expect(links.slice(4, 6).map((link) => new URL(link.href).hostname)).toEqual([
+      'www.gov.il',
+      'www.new.isa.gov.il',
+    ]);
+    expect(links[6].hostname).toBe('www.hon.co.il');
+    expect(links.slice(7, 10).map((link) => new URL(link.href).hostname)).toEqual([
       'www.paamonim.org',
       'mekimi.org.il',
       'www.whatsapp.com',
     ]);
     expect(directory.querySelector('[data-testid="support-organizations-section"]')).not.toBeNull();
+  });
+
+  it('uses official registries and explains how to verify independence', () => {
+    const section = document.querySelector('[data-testid="independent-advisors-section"]')!;
+    const pensionRegistry = section.querySelector<HTMLAnchorElement>('[data-testid="advisor-pension-registry-link"]')!;
+    const investmentRegistry = section.querySelector<HTMLAnchorElement>('[data-testid="advisor-investment-registry-link"]')!;
+
+    expect(pensionRegistry.href).toBe('https://www.gov.il/he/service/agents_and_consultants_search');
+    expect(investmentRegistry.href).toBe('https://www.new.isa.gov.il/tax_licensing_advisors_tree/page/magar');
+    expect(section.textContent).toContain('אין כאן דירוג או רשימת מומלצים');
+    expect(section.textContent).toContain('מי משלם ליועץ');
+    expect(section.querySelectorAll('[data-testid="advisor-checklist"] li')).toHaveLength(3);
+  });
+
+  it('lists Dorit Gov Ari without presenting the requested entry as an endorsement', () => {
+    const link = document.querySelector<HTMLAnchorElement>('[data-testid="advisor-dorit-gov-ari-link"]')!;
+
+    expect(link.href).toBe('https://www.hon.co.il/professional/%D7%92%D7%95%D7%91-%D7%90%D7%A8%D7%99-%D7%93%D7%95%D7%A8%D7%99%D7%AA/');
+    expect(link.textContent).toContain('דורית גוב ארי');
+    expect(link.textContent).toContain('אינה המלצה או אימות עצמאות');
   });
 
   it('opens every external destination safely in a new tab', () => {

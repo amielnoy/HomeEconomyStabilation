@@ -78,7 +78,7 @@ test.describe('mobile browser usability', () => {
 
     await homePage.savingsDirectory.open();
     await expect(homePage.savingsDirectory.root).toBeVisible();
-    await expect(homePage.savingsDirectory.cards).toHaveCount(15);
+    await expect(homePage.savingsDirectory.cards).toHaveCount(18);
     expect(await homePage.hasHorizontalOverflow()).toBe(false);
     await homePage.savingsDirectory.goBack();
     await expect(homePage.dashboard.root).toBeVisible();
