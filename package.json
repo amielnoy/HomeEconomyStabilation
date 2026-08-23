@@ -1,6 +1,7 @@
 {
   "name": "home-economy-stabilation",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.app.json && tsc --noEmit -p tsconfig.api.json",
     "test": "vitest run --exclude '.vercel/**' --environment jsdom tests/unit tests/api tests/contract tests/component",
