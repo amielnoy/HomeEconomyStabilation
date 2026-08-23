@@ -17,6 +17,17 @@ export interface MissingCharge { merchant: string; amount: number; direction: 'i
 export interface DuplicateCharge { merchant: string; amount: number; firstDate: string; secondDate: string }
 export interface SubscriptionFinding { merchant: string; monthly: number; annual: number; increasePercent: number }
 export interface BudgetSuggestion { categoryId: string; suggested: number; months: number }
+export type SavingsOpportunityType = 'subscription-review' | 'price-increase' | 'fee-review' | 'duplicate-review';
+export interface SavingsOpportunity {
+  id: string;
+  type: SavingsOpportunityType;
+  merchant: string;
+  estimatedSaving: number;
+  cadence: 'annual' | 'one-time';
+  confidence: number;
+  evidenceTransactionIds: string[];
+  increasePercent?: number;
+}
 export interface PaydayRunway {
   balance: number;
   nextIncomeDate: string | null;
@@ -34,7 +45,19 @@ export interface FinancialAgentResults {
   duplicates: DuplicateCharge[];
   subscriptions: SubscriptionFinding[];
   budgetSuggestions: BudgetSuggestion[];
+  savingsOpportunities: SavingsOpportunity[];
   payday: PaydayRunway | null;
+}
+
+export interface FinancialAgentContext {
+  transactions: AgentTransaction[];
+  overrides: Record<string, string>;
+  rules: AgentRule[];
+  categories: AgentCategory[];
+}
+
+export interface FinancialAgentStrategy<Result> {
+  analyze(context: Readonly<FinancialAgentContext>): Result;
 }
 
 const DAY = 86_400_000;
@@ -176,6 +199,70 @@ export function budgetAgent(
   });
 }
 
+const feeDescription = (description: string) => /(?:עמל|דמי כרטיס|bank fee|account fee|commission|frais|ኮሚሽን)/iu.test(description);
+const confidenceForMonths = (months: number, base = .55) => Math.min(.95, base + months * .1);
+
+export function savingsOpportunityAgent(transactions: AgentTransaction[]): SavingsOpportunity[] {
+  const opportunities: SavingsOpportunity[] = [];
+  const outgoing = transactions.filter((item) => item.out > 0);
+  const outgoingGroups = groups(outgoing);
+
+  for (const [merchant, items] of groups(outgoing.filter((item) => feeDescription(item.desc)))) {
+    const months = new Set(items.map((item) => monthKey(item.date))).size;
+    if (months < 2) continue;
+    const monthly = median(items.map((item) => item.out));
+    opportunities.push({
+      id: `fee:${merchant}`,
+      type: 'fee-review',
+      merchant,
+      estimatedSaving: monthly * 12,
+      cadence: 'annual',
+      confidence: confidenceForMonths(months, .5),
+      evidenceTransactionIds: items.flatMap((item) => item.id ? [item.id] : []),
+    });
+  }
+
+  for (const subscription of subscriptionAgent(outgoing)) {
+    const items = [...(outgoingGroups.get(subscription.merchant) || [])]
+      .sort((a, b) => dateValue(a.date) - dateValue(b.date));
+    if (items.some((item) => feeDescription(item.desc))) continue;
+    const months = new Set(items.map((item) => monthKey(item.date))).size;
+    const previous = items.slice(0, -1).map((item) => item.out);
+    const previousMonthly = previous.length ? median(previous) : subscription.monthly;
+    const latest = items.at(-1)?.out || subscription.monthly;
+    const priceIncreaseSaving = Math.max(0, (latest - previousMonthly) * 12);
+    opportunities.push({
+      id: `${subscription.increasePercent >= 5 ? 'price' : 'subscription'}:${subscription.merchant}`,
+      type: subscription.increasePercent >= 5 ? 'price-increase' : 'subscription-review',
+      merchant: subscription.merchant,
+      estimatedSaving: subscription.increasePercent >= 5 ? priceIncreaseSaving : subscription.annual,
+      cadence: 'annual',
+      confidence: confidenceForMonths(months),
+      evidenceTransactionIds: items.flatMap((item) => item.id ? [item.id] : []),
+      ...(subscription.increasePercent >= 5 ? { increasePercent: subscription.increasePercent } : {}),
+    });
+  }
+
+  for (const duplicate of duplicateAgent(outgoing)) {
+    const evidence = outgoing.filter((item) => merchantKey(item.desc) === duplicate.merchant
+      && [duplicate.firstDate, duplicate.secondDate].includes(item.date)
+      && Math.abs(item.out - duplicate.amount) <= Math.max(1, duplicate.amount * .005));
+    opportunities.push({
+      id: `duplicate:${duplicate.merchant}:${duplicate.firstDate}:${duplicate.secondDate}`,
+      type: 'duplicate-review',
+      merchant: duplicate.merchant,
+      estimatedSaving: duplicate.amount,
+      cadence: 'one-time',
+      confidence: .9,
+      evidenceTransactionIds: evidence.flatMap((item) => item.id ? [item.id] : []),
+    });
+  }
+
+  return opportunities
+    .filter((item) => item.estimatedSaving > 0)
+    .sort((a, b) => b.estimatedSaving - a.estimatedSaving || b.confidence - a.confidence);
+}
+
 export function paydayAgent(transactions: AgentTransaction[]): PaydayRunway | null {
   const withBalance = transactions.filter((item) => item.bal != null).sort((a, b) => dateValue(b.date) - dateValue(a.date));
   if (!withBalance.length) return null;
@@ -209,20 +296,79 @@ export function paydayAgent(transactions: AgentTransaction[]): PaydayRunway | nu
   };
 }
 
-export function runFinancialAgents(input: {
-  transactions: AgentTransaction[];
-  overrides: Record<string, string>;
-  rules: AgentRule[];
-  categories: AgentCategory[];
-}): FinancialAgentResults {
-  const { transactions, overrides, rules, categories } = input;
-  return {
-    learning: learningAgent(transactions, overrides, rules),
-    anomalies: anomalyAgent(transactions),
-    missing: missingChargeAgent(transactions),
-    duplicates: duplicateAgent(transactions),
-    subscriptions: subscriptionAgent(transactions),
-    budgetSuggestions: budgetAgent(transactions, categories),
-    payday: paydayAgent(transactions),
-  };
+export class LearningAgentStrategy implements FinancialAgentStrategy<LearningProposal | null> {
+  analyze(context: Readonly<FinancialAgentContext>) {
+    return learningAgent(context.transactions, context.overrides, context.rules);
+  }
+}
+
+export class AnomalyAgentStrategy implements FinancialAgentStrategy<AmountAnomaly[]> {
+  analyze(context: Readonly<FinancialAgentContext>) { return anomalyAgent(context.transactions); }
+}
+
+export class MissingChargeAgentStrategy implements FinancialAgentStrategy<MissingCharge[]> {
+  analyze(context: Readonly<FinancialAgentContext>) { return missingChargeAgent(context.transactions); }
+}
+
+export class DuplicateAgentStrategy implements FinancialAgentStrategy<DuplicateCharge[]> {
+  analyze(context: Readonly<FinancialAgentContext>) { return duplicateAgent(context.transactions); }
+}
+
+export class SubscriptionAgentStrategy implements FinancialAgentStrategy<SubscriptionFinding[]> {
+  analyze(context: Readonly<FinancialAgentContext>) { return subscriptionAgent(context.transactions); }
+}
+
+export class BudgetAgentStrategy implements FinancialAgentStrategy<BudgetSuggestion[]> {
+  analyze(context: Readonly<FinancialAgentContext>) { return budgetAgent(context.transactions, context.categories); }
+}
+
+export class SavingsOpportunityAgentStrategy implements FinancialAgentStrategy<SavingsOpportunity[]> {
+  analyze(context: Readonly<FinancialAgentContext>) { return savingsOpportunityAgent(context.transactions); }
+}
+
+export class PaydayAgentStrategy implements FinancialAgentStrategy<PaydayRunway | null> {
+  analyze(context: Readonly<FinancialAgentContext>) { return paydayAgent(context.transactions); }
+}
+
+export interface FinancialAgentStrategies {
+  learning: FinancialAgentStrategy<LearningProposal | null>;
+  anomalies: FinancialAgentStrategy<AmountAnomaly[]>;
+  missing: FinancialAgentStrategy<MissingCharge[]>;
+  duplicates: FinancialAgentStrategy<DuplicateCharge[]>;
+  subscriptions: FinancialAgentStrategy<SubscriptionFinding[]>;
+  budgetSuggestions: FinancialAgentStrategy<BudgetSuggestion[]>;
+  savingsOpportunities: FinancialAgentStrategy<SavingsOpportunity[]>;
+  payday: FinancialAgentStrategy<PaydayRunway | null>;
+}
+
+export class FinancialAgentsOrchestrator {
+  constructor(private readonly strategies: Readonly<FinancialAgentStrategies>) {}
+
+  run(context: Readonly<FinancialAgentContext>): FinancialAgentResults {
+    return {
+      learning: this.strategies.learning.analyze(context),
+      anomalies: this.strategies.anomalies.analyze(context),
+      missing: this.strategies.missing.analyze(context),
+      duplicates: this.strategies.duplicates.analyze(context),
+      subscriptions: this.strategies.subscriptions.analyze(context),
+      budgetSuggestions: this.strategies.budgetSuggestions.analyze(context),
+      savingsOpportunities: this.strategies.savingsOpportunities.analyze(context),
+      payday: this.strategies.payday.analyze(context),
+    };
+  }
+}
+
+const defaultFinancialAgents = new FinancialAgentsOrchestrator({
+  learning: new LearningAgentStrategy(),
+  anomalies: new AnomalyAgentStrategy(),
+  missing: new MissingChargeAgentStrategy(),
+  duplicates: new DuplicateAgentStrategy(),
+  subscriptions: new SubscriptionAgentStrategy(),
+  budgetSuggestions: new BudgetAgentStrategy(),
+  savingsOpportunities: new SavingsOpportunityAgentStrategy(),
+  payday: new PaydayAgentStrategy(),
+});
+
+export function runFinancialAgents(input: FinancialAgentContext): FinancialAgentResults {
+  return defaultFinancialAgents.run(input);
 }
