@@ -39,6 +39,8 @@ Artifacts:
 - `allure-report/` — generated combined report, served by the `allure` service.
 - Retained Playwright traces are attached only for failures.
 
+The Docker gate starts by removing stale containers and orphans from the isolated `home-economy-tests` Compose project without deleting its volumes. This makes reruns safe after an interrupted container replacement; the Allure server is force-recreated after report generation.
+
 The shared POSIX runner tracks both child process IDs, waits for both exit codes and stops both on interruption. Playwright uses its normal local worker count and two workers in CI; Vitest retains its own file-level parallelism. Build and Allure generation remain ordering barriers because the tests need compiled assets and the report needs complete result files.
 
 ## Unit suites
