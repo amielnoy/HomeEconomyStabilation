@@ -90,6 +90,7 @@ button{ cursor:pointer; }
 }
 .btn{ min-height:40px; font-family:var(--ds-font-body); }
 .btn:hover{ background:var(--surface-2); border-color:var(--accent-line); }
+.btn:disabled{ cursor:wait; opacity:.62; }
 .btn.primary{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
 .btn.primary:hover{ filter:brightness(1.08); }
 .btn.sm{ padding:5px 11px; font-size:13px; font-weight:500; }
@@ -544,7 +545,7 @@ body.drawer-open{ overflow:hidden; }
       </label>
       <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
       <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
-        <button class="btn" id="btn-recommendations" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
+        <button class="btn" id="btn-recommendations" disabled data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
         <button class="btn" id="btn-savings" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
         <label class="locale-picker" data-testid="language-picker">
           <span class="vh" data-i18n="languageLabel">שפת ממשק</span>

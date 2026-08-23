@@ -703,6 +703,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
         const localeSelect = document.querySelector('#locale-select');
         localeSelect.value = locale;
         localeSelect.setAttribute('aria-label', t('languageLabel'));
+        document.querySelector('#btn-recommendations').disabled = false;
         const formatters = createLocaleFormatters(locale);
         ILS0 = formatters.money0;
         ILS2 = formatters.money2;

@@ -676,6 +676,7 @@ function applyLocale() {
   const localeSelect = document.querySelector<HTMLSelectElement>('#locale-select')!;
   localeSelect.value = locale;
   localeSelect.setAttribute('aria-label', t('languageLabel'));
+  document.querySelector<HTMLButtonElement>('#btn-recommendations')!.disabled = false;
   const formatters = createLocaleFormatters(locale);
   ILS0 = formatters.money0;
   ILS2 = formatters.money2;
