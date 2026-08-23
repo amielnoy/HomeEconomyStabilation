@@ -7,6 +7,7 @@ allure-results/
 allure-report/
 dist-api/
 dist/swagger-ui/
+dist/scalar/
 .env
 .env.*
 !.env.example

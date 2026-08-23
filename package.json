@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.app.json && tsc --noEmit -p tsconfig.api.json && node scripts/copy-swagger-assets.mjs",
+    "build": "tsc -p tsconfig.app.json && tsc --noEmit -p tsconfig.api.json && node scripts/copy-api-docs-assets.mjs",
     "test": "vitest run --exclude '.vercel/**' --environment jsdom tests/unit tests/api tests/contract tests/component",
     "test:allure": "vitest run --config vitest.allure.config.ts --exclude '.vercel/**' tests/unit tests/api tests/contract tests/component",
     "test:unit": "vitest run --exclude '.vercel/**' tests/unit tests/api tests/contract",
@@ -21,6 +21,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "1.62.1",
+    "@scalar/api-reference": "1.66.1",
     "@vitest/runner": "3.2.7",
     "allure": "3.15.0",
     "allure-playwright": "3.10.2",

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Home Economy API · Scalar</title>
+  <style>
+    html,body{margin:0;min-height:100%;background:#f8faf9}
+    .docs-switch{position:fixed;z-index:1000;inset-block-start:.75rem;inset-inline-end:1rem;padding:.55rem .85rem;border:1px solid #82908d;border-radius:999px;background:#fff;color:#173c37;font:600 14px/1.2 system-ui,sans-serif;text-decoration:none;box-shadow:0 2px 8px #173c371c}
+    .docs-switch:focus-visible{outline:3px solid #146c5e;outline-offset:3px}
+  </style>
+</head>
+<body data-testid="scalar-api-docs">
+  <a class="docs-switch" data-testid="swagger-docs-link" href="/api-docs.html">Open Swagger UI</a>
+  <div id="scalar-api-reference" data-testid="scalar-api-reference"></div>
+  <script src="/dist/scalar/standalone.js"></script>
+  <script>
+    Scalar.createApiReference('#scalar-api-reference', {
+      url: '/openapi.json',
+      theme: 'kepler',
+      layout: 'modern',
+      showDeveloperTools: 'never',
+      hideClientButton: true,
+      agent: { disabled: true },
+      mcp: { disabled: true },
+      persistAuth: false,
+      telemetry: false,
+      withDefaultFonts: false,
+      modelsSectionLabel: 'Schemas'
+    });
+  </script>
+</body>
+</html>

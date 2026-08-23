@@ -12,6 +12,7 @@ COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/mazan-habait.html /usr/share/nginx/html/mazan-habait.html
 COPY --from=build /workspace/Architecture.html /usr/share/nginx/html/Architecture.html
 COPY --from=build /workspace/api-docs.html /usr/share/nginx/html/api-docs.html
+COPY --from=build /workspace/scalar-docs.html /usr/share/nginx/html/scalar-docs.html
 COPY --from=build /workspace/openapi.json /usr/share/nginx/html/openapi.json
 COPY --from=build /workspace/design-system.css /usr/share/nginx/html/design-system.css
 COPY --from=build /workspace/resources /usr/share/nginx/html/resources
