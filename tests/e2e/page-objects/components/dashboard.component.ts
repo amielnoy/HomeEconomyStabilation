@@ -132,6 +132,7 @@ export class DashboardComponent {
 
   @step('Open the recommendations')
   async openRecommendations(): Promise<void> {
+    if (!await this.recommendationButton.isVisible()) await this.page.getByTestId('mobile-menu-toggle').click();
     await this.recommendationButton.click();
   }
 

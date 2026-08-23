@@ -25,15 +25,21 @@ export class HomePage extends BasePage {
   readonly savingsDirectory: SavingsDirectoryComponent;
   readonly emptyState = this.page.getByTestId('empty');
   readonly toast = this.page.getByTestId('toast');
+  readonly header = this.page.getByTestId('app-header');
+  readonly mobileMenuToggle = this.page.getByTestId('mobile-menu-toggle');
+  readonly secondaryActions = this.page.getByTestId('secondary-actions');
   readonly bankUploadTrigger = this.page.getByTestId('bank-upload-trigger');
   readonly cardUploadTrigger = this.page.getByTestId('card-upload-trigger');
   readonly recommendationsTrigger = this.page.getByTestId('btn-recommendations');
   readonly savingsTrigger = this.page.getByTestId('btn-savings');
   readonly mobilePrimaryControls = [
-    this.bankUploadTrigger, this.cardUploadTrigger, this.recommendationsTrigger, this.savingsTrigger,
-    this.page.getByTestId('locale-select'), this.page.getByTestId('btn-set'), this.page.getByTestId('btn-backup'),
+    this.bankUploadTrigger, this.cardUploadTrigger, this.mobileMenuToggle,
     this.page.getByTestId('marketing-upload'), this.page.getByTestId('marketing-how'),
     this.page.getByTestId('marketing-upload-final'),
+  ];
+  readonly mobileSecondaryControls = [
+    this.recommendationsTrigger, this.savingsTrigger, this.page.getByTestId('locale-select'),
+    this.page.getByTestId('btn-set'), this.page.getByTestId('btn-backup'),
   ];
   readonly mobileDashboardControls = [
     this.page.getByTestId('month-chip'), this.page.getByTestId('btn-dashboard'),

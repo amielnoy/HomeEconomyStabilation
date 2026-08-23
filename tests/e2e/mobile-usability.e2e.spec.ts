@@ -26,19 +26,23 @@ test.describe('mobile browser usability', () => {
     );
     expect(localeFontSize).toBeGreaterThanOrEqual(16);
 
-    const [bank, card, recommendations, savings] = await Promise.all([
+    const [header, bank, card, menu] = await Promise.all([
+      homePage.header.boundingBox(),
       homePage.bankUploadTrigger.boundingBox(),
       homePage.cardUploadTrigger.boundingBox(),
-      homePage.recommendationsTrigger.boundingBox(),
-      homePage.savingsTrigger.boundingBox(),
+      homePage.mobileMenuToggle.boundingBox(),
     ]);
+    expect(header).not.toBeNull();
     expect(bank).not.toBeNull();
     expect(card).not.toBeNull();
-    expect(recommendations).not.toBeNull();
-    expect(savings).not.toBeNull();
-    expect(bank!.width).toBeGreaterThan(card!.width * 1.8);
-    expect(Math.abs(recommendations!.y - savings!.y)).toBeLessThan(1);
-    expect(Math.abs(recommendations!.width - savings!.width)).toBeLessThan(1);
+    expect(menu).not.toBeNull();
+    expect(header!.height).toBeLessThan(180);
+    expect(Math.abs(bank!.y - card!.y)).toBeLessThan(1);
+    expect(Math.abs(bank!.y - menu!.y)).toBeLessThan(1);
+
+    await homePage.mobileMenuToggle.click();
+    await expect(homePage.secondaryActions).toBeVisible();
+    expect(await homePage.touchTargetsBelow(homePage.mobileSecondaryControls)).toEqual([]);
   });
 
   test('supports the complete import, recommendations, settings and directory journey', async ({ homePage }) => {
@@ -46,6 +50,16 @@ test.describe('mobile browser usability', () => {
     await expect(homePage.dashboard.root).toBeVisible();
     expect(await homePage.hasHorizontalOverflow()).toBe(false);
     expect(await homePage.touchTargetsBelow(homePage.mobileDashboardControls)).toEqual([]);
+    const [guide, amount, months] = await Promise.all([
+      homePage.dashboard.spendingGuide.boundingBox(),
+      homePage.dashboard.spendingGuideAmount.boundingBox(),
+      homePage.page.getByTestId('months').boundingBox(),
+    ]);
+    expect(guide).not.toBeNull();
+    expect(amount).not.toBeNull();
+    expect(months).not.toBeNull();
+    expect(guide!.y).toBeLessThan(months!.y);
+    expect(amount!.y + amount!.height).toBeLessThan(homePage.page.viewportSize()!.height);
 
     await homePage.dashboard.openRecommendations();
     await expect(homePage.dashboard.recommendations).toBeVisible();

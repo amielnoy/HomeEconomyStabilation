@@ -23,6 +23,7 @@ export class SavingsDirectoryComponent {
 
   @step('Open the savings and investments directory')
   async open(): Promise<void> {
+    if (!await this.openButton.isVisible()) await this.page.getByTestId('mobile-menu-toggle').click();
     await this.openButton.click();
   }
 

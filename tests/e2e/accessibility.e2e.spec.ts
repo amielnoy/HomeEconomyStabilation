@@ -37,3 +37,18 @@ test('data dashboard, settings dialog and savings directory meet WCAG A/AA check
   await expect(homePage.savingsDirectory.root).toBeVisible();
   await expectNoSeriousAccessibilityViolations(homePage, 'savings directory');
 });
+
+test('settings dialog traps keyboard focus and restores it to its opener', async ({ homePage }) => {
+  const mobileMenuIsVisible = await homePage.mobileMenuToggle.isVisible();
+  const expectedReturnTarget = mobileMenuIsVisible ? homePage.mobileMenuToggle : homePage.settings.openButton;
+
+  await homePage.settings.open();
+  await expect(homePage.settings.closeButton).toBeFocused();
+  await homePage.page.keyboard.press('Shift+Tab');
+  await expect(homePage.settings.root.locator(':focus')).toHaveCount(1);
+
+  await homePage.page.keyboard.press('Escape');
+  await expect(homePage.settings.root).not.toHaveClass(/\bon\b/);
+  await expect(expectedReturnTarget).toBeFocused();
+  await expect(homePage.settings.openButton).toHaveAttribute('aria-expanded', 'false');
+});

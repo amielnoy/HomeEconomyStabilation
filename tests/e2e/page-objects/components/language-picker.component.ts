@@ -12,6 +12,7 @@ export class LanguagePickerComponent {
 
   @step('Switch the interface language')
   async choose(locale: SupportedLocale): Promise<void> {
+    if (!await this.select.isVisible()) await this.page.getByTestId('mobile-menu-toggle').click();
     await this.select.selectOption(locale);
   }
 }

@@ -13,6 +13,7 @@ export class SettingsDrawerComponent {
   readonly cloudConsentAccept = this.page.getByTestId('cloud-consent-accept');
   readonly cloudConsentWithdraw = this.page.getByTestId('cloud-consent-withdraw');
   readonly cloudConsentStatus = this.page.getByTestId('cloud-consent-status');
+  readonly dataSection = this.page.getByTestId('settings-section-data');
   readonly formControls = [
     this.closeButton, this.page.getByTestId('dr-addrule'), this.page.getByTestId('dr-addcat'),
     this.page.getByTestId('dr-export'), this.page.getByTestId('backup-import-trigger'), this.page.getByTestId('dr-wipe'),
@@ -29,6 +30,7 @@ export class SettingsDrawerComponent {
 
   @step('Open the settings panel')
   async open(): Promise<void> {
+    if (!await this.openButton.isVisible()) await this.page.getByTestId('mobile-menu-toggle').click();
     await this.openButton.click();
   }
 
@@ -42,14 +44,23 @@ export class SettingsDrawerComponent {
     await this.backupInput.setInputFiles(file);
   }
 
+  @step('Open the data and privacy settings group')
+  async openDataSection(): Promise<void> {
+    if (!await this.dataSection.evaluate((element: HTMLDetailsElement) => element.open)) {
+      await this.dataSection.locator('summary').click();
+    }
+  }
+
   @step('Read and accept the optional cloud-sync notice')
   async acceptCloudConsent(): Promise<void> {
+    await this.openDataSection();
     await this.cloudConsentCheck.check();
     await this.cloudConsentAccept.click();
   }
 
   @step('Withdraw the optional cloud-sync consent')
   async withdrawCloudConsent(): Promise<void> {
+    await this.openDataSection();
     await this.cloudConsentWithdraw.click();
   }
 }

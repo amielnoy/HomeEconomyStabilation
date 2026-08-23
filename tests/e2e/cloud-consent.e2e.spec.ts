@@ -11,6 +11,7 @@ test('records and withdraws explicit cloud consent without uploading financial d
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method())) writes.push(request.url());
   });
 
+  await homePage.settings.openDataSection();
   await expect(homePage.settings.cloudConsent).toBeVisible();
   await expect(homePage.settings.cloudConsentCheck).not.toBeChecked();
   await expect(homePage.settings.cloudConsentAccept).toBeDisabled();

@@ -83,6 +83,7 @@ Artifacts:
 | `tests/component/language-picker.component.test.ts` | Native language names, accessible field and keyboard semantics |
 | `tests/component/marketing-landing.component.test.ts` | Conversion path, concrete benefits, privacy and claim discipline |
 | `tests/component/savings-directory.component.test.ts` | Official tools, Paamonim, Mekimi, commercial providers, safe links and neutral disclosure |
+| `tests/component/settings-drawer.component.test.ts` | Modal semantics, initial inert state and four collapsible settings groups |
 
 ## End-to-end and sanity suites
 
