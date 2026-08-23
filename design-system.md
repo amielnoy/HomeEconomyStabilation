@@ -26,13 +26,16 @@ The system is implemented in `design-system.css` and is intentionally small enou
 
 ## Financial agent pattern
 
-The seven financial agents use a page-level pattern built from the same tokens:
+The eight financial agents use a page-level pattern built from the same tokens:
 
 - `.agents` is the section surface and owns the translated heading and privacy/approval note.
 - `.agent-grid` uses two equal columns on wider screens and one column below 700px.
 - `.agent-card` is a compact derived-result surface. Its modifier communicates emphasis: `--quiet`, `--info`, `--action`, `--warning`, or `--critical`.
 - `.agent-dot` is a redundant visual cue; status meaning must remain present in the heading and sentence, never in color alone.
 - `.agent-body` contains short, plain-language findings. Lists are capped in the view while the pure engine may return more findings.
+- `.agent-opportunity` separates each measurable saving candidate. Annual and one-time estimates must use explicit labels and may never be added into one total.
+- Savings evidence uses a native keyboard-operable `details` element. The card discloses evidence count, confidence and that the estimate is not a promise; it must not expose an automatic cancellation button.
+- Stable savings selectors are `agent-savings`, `savings-opportunity-summary`, `savings-opportunity` and `savings-opportunity-details`.
 
 ## Safe-to-spend guide
 

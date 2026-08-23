@@ -43,7 +43,7 @@ Artifacts:
 
 | File | Coverage |
 |---|---|
-| `tests/unit/financial-agents.unit.test.ts` | Seven independent agents, safe-to-spend edge cases and month-end payday clamping |
+| `tests/unit/financial-agents.unit.test.ts` | Eight agents, saving estimates, Strategy injection, safe-to-spend edges and date clamping |
 | `tests/unit/localization.unit.test.ts` | Supported locale validation, RTL/LTR, UTC formatting and named parameters |
 | `tests/unit/credit-card-importer.unit.test.ts` | Charges, refunds and invalid workbook rows |
 | `tests/unit/marketing.unit.test.ts` | Allowed attribution, first/last touch and bounded local event history |
@@ -81,7 +81,7 @@ Artifacts:
 |---|---|
 | `tests/component/cloud-consent.component.test.ts` | Unselected explicit consent, voluntariness, limits and rights |
 | `tests/component/credit-card-upload.component.test.ts` | Multi-file spreadsheet upload contract |
-| `tests/component/financial-agents.component.test.ts` | Accessible seven-agent host and prominent safe-to-spend result |
+| `tests/component/financial-agents.component.test.ts` | Accessible eight-agent host and prominent safe-to-spend result |
 | `tests/component/language-picker.component.test.ts` | Native language names, accessible field and keyboard semantics |
 | `tests/component/marketing-landing.component.test.ts` | Conversion path, concrete benefits, privacy and claim discipline |
 | `tests/component/savings-directory.component.test.ts` | Official tools and adviser registries, independence checks, Paamonim, Mekimi, commercial providers and safe links |
@@ -96,13 +96,14 @@ Artifacts:
 | `tests/e2e/architecture.e2e.spec.ts` | Architecture content, responsive layout and accessibility |
 | `tests/e2e/cloud-consent.e2e.spec.ts` | Consent acceptance and withdrawal without upload |
 | `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import, upload availability and prioritized recommendations |
-| `tests/e2e/financial-agents.e2e.spec.ts` | Seven agents, safe-to-spend, explicit approvals and translation |
+| `tests/e2e/financial-agents.e2e.spec.ts` | Eight agents, saving evidence, safe-to-spend, explicit approvals and translation |
 | `tests/e2e/i18n-dynamic.e2e.spec.ts` | Generated English, French and Amharic copy without Hebrew leakage |
 | `tests/e2e/localization.e2e.spec.ts` | Persistence, RTL/LTR, ILS formatting and mobile overflow in every locale |
 | `tests/e2e/marketing-landing.e2e.spec.ts` | Attribution privacy, CTAs, four locales and dark mode |
 | `tests/e2e/mobile-usability.e2e.spec.ts` | Touch targets and complete Android/iOS browser journey |
 | `tests/e2e/http-api.api.e2e.spec.ts` | Real HTTP health GET/HEAD, method rejection, anonymous snapshot protection and unknown routes |
 | `tests/e2e/savings-directory.e2e.spec.ts` | Empty-state access, 18 links, licensed-adviser registries, requested Dorit Gov Ari profile, support section, WhatsApp channel, French and return journey |
+| `tests/e2e/savings-opportunities.sanity.e2e.spec.ts` | Annual/one-time separation, evidence disclosure and absence of automatic cancellation |
 | `tests/e2e/security-sanity.e2e.spec.ts` | Workbook XSS, malformed backup, opener isolation and no outgoing financial writes |
 | `tests/e2e/spending-guide.sanity.e2e.spec.ts` | Missing inputs and projected-shortfall fail-safe behavior |
 | `tests/e2e/support-organizations.sanity.e2e.spec.ts` | Paamonim, Mekimi and WhatsApp URLs, neutral presentation, ordering and four-language copy |
