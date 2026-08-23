@@ -4,7 +4,7 @@ import {
   CLOUD_SNAPSHOT_SCHEMA_VERSION,
   isCloudStatePayload,
   snapshotBytes,
-} from '../src/cloud-sync';
+} from '../src/cloud-sync.js';
 
 interface ApiRequest {
   method?: string;
