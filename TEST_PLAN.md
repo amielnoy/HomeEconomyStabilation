@@ -12,6 +12,7 @@ No test may use real banking credentials, production JWTs or personally identify
 |---|---|---|
 | Unit, API, contract | Vitest on Node | Fast logic, schema, security and public-boundary validation |
 | Component | Vitest with JSDOM | Rendered controls, translations, disclosures and link behavior |
+| HTTP API | Playwright request context | Real-server health, method, authentication-boundary and not-found behavior |
 | Desktop browser | Playwright, Desktop Chrome | Primary journeys and keyboard/desktop behavior |
 | Android browser | Playwright, Pixel 7 Chromium profile | Touch layout, responsive journeys and Android browser behavior |
 | iOS browser | Playwright, iPhone 13 WebKit profile | WebKit, safe-area, touch and iOS browser behavior |
@@ -25,7 +26,7 @@ Playwright device profiles are repeatable emulations, not a substitute for final
 |---|---|
 | `npm run build` | Application and API TypeScript compile; local Swagger assets are copied |
 | `npm test` | All Vitest unit, API, contract and component suites pass |
-| `npm run test:e2e` | All applicable Playwright scenarios pass in three browser projects |
+| `npm run test:e2e` | All applicable Playwright scenarios pass in one API and three browser projects |
 | `npm run test:all` | Vitest followed by Playwright |
 | `npm run verify` | Build followed by the complete local suite |
 | `npm run test:docker` | Compose services start, every test runs, and Allure is published at the printed localhost URL |
@@ -83,7 +84,7 @@ Artifacts:
 | `tests/component/financial-agents.component.test.ts` | Accessible seven-agent host and prominent safe-to-spend result |
 | `tests/component/language-picker.component.test.ts` | Native language names, accessible field and keyboard semantics |
 | `tests/component/marketing-landing.component.test.ts` | Conversion path, concrete benefits, privacy and claim discipline |
-| `tests/component/savings-directory.component.test.ts` | Official tools, Paamonim, Mekimi, commercial providers, safe links and neutral disclosure |
+| `tests/component/savings-directory.component.test.ts` | Official tools and adviser registries, independence checks, Paamonim, Mekimi, commercial providers and safe links |
 | `tests/component/settings-drawer.component.test.ts` | Modal semantics, initial inert state and four collapsible settings groups |
 
 ## End-to-end and sanity suites
@@ -100,7 +101,8 @@ Artifacts:
 | `tests/e2e/localization.e2e.spec.ts` | Persistence, RTL/LTR, ILS formatting and mobile overflow in every locale |
 | `tests/e2e/marketing-landing.e2e.spec.ts` | Attribution privacy, CTAs, four locales and dark mode |
 | `tests/e2e/mobile-usability.e2e.spec.ts` | Touch targets and complete Android/iOS browser journey |
-| `tests/e2e/savings-directory.e2e.spec.ts` | Empty-state access, 15 links, support section, WhatsApp channel, French and return journey |
+| `tests/e2e/http-api.api.e2e.spec.ts` | Real HTTP health GET/HEAD, method rejection, anonymous snapshot protection and unknown routes |
+| `tests/e2e/savings-directory.e2e.spec.ts` | Empty-state access, 18 links, licensed-adviser registries, requested Dorit Gov Ari profile, support section, WhatsApp channel, French and return journey |
 | `tests/e2e/security-sanity.e2e.spec.ts` | Workbook XSS, malformed backup, opener isolation and no outgoing financial writes |
 | `tests/e2e/spending-guide.sanity.e2e.spec.ts` | Missing inputs and projected-shortfall fail-safe behavior |
 | `tests/e2e/support-organizations.sanity.e2e.spec.ts` | Paamonim, Mekimi and WhatsApp URLs, neutral presentation, ordering and four-language copy |

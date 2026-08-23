@@ -71,6 +71,16 @@ The savings directory separates official tools, nonprofit household-finance supp
 - The WhatsApp destination is described as an updates channel, not as private financial counseling or guaranteed access to an expert.
 - Copy and wrapping are tested in Hebrew, English, French and Amharic, including Android Chromium and iOS WebKit profiles.
 
+## Licensed adviser registries
+
+The directory links to official pension-adviser and investment-adviser registries instead of ranking or endorsing named professionals. Copy must not infer independence from a licence alone.
+
+- Separate pension advice, investment advice, marketing and agency roles in the wording.
+- Ask users to verify active licence status, compensation, affiliations, price and scope in writing.
+- Registry links use the same HTTPS and opener-isolation rules as every external directory card.
+- Named professionals requested by a user are visibly labelled as requested listings, never as verified, ranked or endorsed entries.
+- Stable selectors are `independent-advisors-section`, `advisor-pension-registry-link`, `advisor-investment-registry-link`, `advisor-dorit-gov-ari-link` and `advisor-checklist`.
+
 ## Internationalization
 
 - Supported locales are Hebrew (`he`), English (`en`), Amharic (`am`), and French (`fr`).

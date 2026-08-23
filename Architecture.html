@@ -187,11 +187,11 @@ t('recommendationsSummary', {
 
 <h2 data-testid="architecture-section" id="testing">8 · Testing strategy</h2>
 <p>The suite is layered by speed. Cheap structural failures surface before a browser is launched; end-to-end and accessibility checks cover the composed product last. The Docker runner merges Vitest and Playwright events into a static Allure report served on localhost.</p>
-<div class="flow"><div class="stage"><span class="k">Fast</span><p>Unit tests cover every agent algorithm, import and message formatting.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Contracts</span><p>Key parity, named parameters, HTML hooks and design-system rules.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Components</span><p>JSDOM checks agents, language controls, uploads, marketing and directory behavior.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Browser</span><p>Playwright checks agent approvals, real imports, RTL/LTR, mobile layout, dynamic copy and axe WCAG A/AA rules.</p></div></div>
+<div class="flow"><div class="stage"><span class="k">Fast</span><p>Vitest covers agent algorithms, handlers, imports and message formatting without starting a server.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Contracts</span><p>Key parity, named parameters, HTML hooks and design-system rules.</p></div><div class="arrow">→</div><div class="stage"><span class="k">HTTP API</span><p>Playwright sends real requests to verify routing, headers, status codes and anonymous access boundaries.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Browser</span><p>Playwright checks agent approvals, real imports, RTL/LTR, mobile layout, dynamic copy and axe WCAG A/AA rules.</p></div></div>
 <div class="callout good"><b>Safe-to-spend sanity matrix.</b> Unit tests cover the formula, negative runway and month-end date clamping. Browser tests cover missing balance, missing recurring income and projected shortfall in desktop Chromium, Android Chromium and iOS WebKit, and reject <code>NaN</code>, <code>Infinity</code> or a negative allowance as user guidance.</div>
 <pre tabindex="0"><code>npm run build      # TypeScript compilation
 npm test           # unit + API + contract + component
-npm run test:e2e   # Chromium journeys + accessibility
+npm run test:e2e   # Real HTTP API + desktop, Android and iOS browser journeys
 npm run test:all   # complete verification
 npm run test:docker # Compose verification + localhost Allure report
 npm run test:docker:stop # stop the test and report servers

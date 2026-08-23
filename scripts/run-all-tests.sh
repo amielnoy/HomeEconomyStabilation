@@ -55,7 +55,7 @@ echo "  Snapshot API: $PRODUCTION_URL/api/snapshots (authentication required)"
 echo
 echo "Local Docker services (available on this computer only)"
 echo "  Application: http://127.0.0.1:$APP_PORT"
-echo "  API health:  http://127.0.0.1:$API_PORT/health"
+echo "  API health:  http://127.0.0.1:$API_PORT/api/health"
 echo "  Prometheus:  http://127.0.0.1:$PROMETHEUS_PORT"
 echo "  Grafana:     http://127.0.0.1:$GRAFANA_PORT"
 echo "  Allure:      http://127.0.0.1:$ALLURE_PORT"
