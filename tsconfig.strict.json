@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": [
+    "src/domain-model.ts",
+    "src/privacy.ts",
+    "src/state-repository.ts",
+    "src/bank-importer.ts",
+    "src/credit-card-importer.ts",
+    "src/categorization.ts",
+    "src/cloud-sync.ts",
+    "src/http-status.ts",
+    "api/request-guard.ts",
+    "api/snapshots.ts"
+  ]
+}

@@ -21,7 +21,8 @@
 - `SupabaseSnapshotRepository` מממש את `CloudSnapshotClient`. הוא מקבל callback ל־access token ואינו שומר אותו.
 - `LocalConsentRepository` קורא, מתעד ומבטל הסכמה מקומית לפי `CLOUD_CONSENT_VERSION`.
 - `CloudSyncError` מחזיר קוד ומצב יציבים בלי לחשוף הודעות פנימיות של Supabase.
-- `/api/snapshots` מאמת method, configuration, Bearer token, משתמש, מבנה וגודל לפני קריאה או כתיבה.
+- `/api/snapshots` מאמת method, קצב, media type, גודל ומבנה לפני אימות המשתמש ופעולת ספק יקרה. לאחר מכן הוא מאמת configuration,‏ Bearer token ומשתמש לפני קריאה או כתיבה.
+- `AppStateCodec` ו־DTO מבוסס allowlist דוחים שדות לא מוכרים; `SupabaseSnapshotRepository` מפעיל timeout מפורש ואינו מבצע retry אוטומטי לכתיבה.
 - `runFinancialAgents` נשאר pure; תוצאות סוכנים אינן חלק ממודל ההתמדה.
 
 ## אבטחה
@@ -31,6 +32,7 @@
 - RLS ו־grants פועלים יחד: `anon` חסום, ו־`authenticated` רשאי לפעול רק כאשר `auth.uid() = user_id`.
 - ה־API מוגש מאותו origin, אינו משתמש ב־cookies ומחזיר `Cache-Control: no-store`.
 - payload לא תקין או גדול מדי נדחה לפני כתיבה. שגיאת ספק מוחזרת כקוד כללי.
+- קיימת הגבלת קצב מקומית, חסומה בזיכרון, עם `Retry-After`. בפריסה אמיתית יש להפעיל בנוסף rate limiting מבוזר ב־Vercel Firewall; ההגבלה בתוך function אינה הגנת DDoS מלאה בין instances.
 - אין רישום token, תוכן דוח, דוא״ל או כתובת IP בלוגי האפליקציה.
 - מדדי Prometheus כוללים health, latency, method וקוד תגובה בלבד; הם אינם כוללים JWT או payload פיננסי ואינם נחשפים דרך Nginx.
 
@@ -46,7 +48,7 @@ npm install
 npm run build
 ```
 
-מריצים את קובץ ה־migration בפרויקט Supabase, ומגדירים את שני המשתנים גם ב־Vercel. אפשר לבדוק את ה־API רק עם JWT אמיתי של משתמש מאומת. בהיעדר configuration הנתיב נכשל סגור עם `cloud_not_configured`; הדבר אינו פוגע בשימוש המקומי.
+מריצים לפי שם ובסדר את שני קובצי ה־migration בפרויקט Supabase, ומגדירים את שני המשתנים גם ב־Vercel. ה־migration השני קובע default ו־constraint לגרסה 2 עבור כתיבות חדשות, כ־`NOT VALID`, כדי לא למחוק או לסמן מחדש snapshots ישנים. רשומת v1 קיימת דורשת שחזור/שמירה מחודשת מבוקרת לפני אימות ה־constraint. אפשר לבדוק את ה־API רק עם JWT אמיתי של משתמש מאומת. בהיעדר configuration הנתיב נכשל סגור עם `cloud_not_configured`; הדבר אינו פוגע בשימוש המקומי.
 
 לבדיקה ידנית פותחים את Swagger ב־`/api-docs.html` או את Scalar ב־`/scalar-docs.html`. ב־Scalar בוחרים פעולה ולוחצים **Test Request**; לפעולות snapshot משתמשים במנגנון Authentication כדי להזין Bearer JWT של משתמש בדיקה. שני הממשקים נטענים מנכסים מקומיים ומכסים את `GET /api/health` ואת `GET`,‏ `PUT` ו־`DELETE /api/snapshots`; Scalar מוגדר בלי telemetry ובלי שמירת authentication. החוזה המשותף, הניתן גם לייבוא לכלי API אחרים, נמצא ב־`openapi.json`.
 

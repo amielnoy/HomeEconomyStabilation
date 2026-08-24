@@ -60,8 +60,8 @@ export abstract class BasePage {
       if (!box || (box.width >= minimumSize && box.height >= minimumSize)) continue;
       undersized.push({
         label: (await target.getAttribute('aria-label'))
-          ?? (await target.innerText()).trim().slice(0, 80)
-          ?? '<unlabelled>',
+          || (await target.innerText()).trim().slice(0, 80)
+          || '<unlabelled>',
         width: Math.round(box.width),
         height: Math.round(box.height),
       });

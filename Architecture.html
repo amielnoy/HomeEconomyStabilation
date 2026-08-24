@@ -117,7 +117,10 @@
 <div class="scroll" tabindex="0">
 <table><thead><tr><th>Artifact</th><th>Responsibility</th><th>May depend on</th><th>Must not own</th></tr></thead><tbody>
   <tr><td><code>mazan-habait.html</code></td><td>Semantic structure, page-specific CSS and static copy hooks.</td><td><code>design-system.css</code>, compiled scripts</td><td>Financial parsing rules</td></tr>
-  <tr><td><code>src/app.ts</code></td><td>Workbook reading, bank ingestion, state, analysis, rendering and interaction orchestration.</td><td>Importer, localization, marketing</td><td>Remote persistence</td></tr>
+  <tr><td><code>src/app.ts</code></td><td>Composition root, workbook parsing, analysis, rendering and interaction orchestration.</td><td>Typed domain services and browser adapters</td><td>Persistence validation or institution-specific ingestion</td></tr>
+  <tr><td><code>src/bank-importer.ts</code></td><td>Typed bank import Strategy and normalized transaction IDs.</td><td>Workbook contract</td><td>Rendering or persistence</td></tr>
+  <tr><td><code>src/categorization.ts</code></td><td>Rule-based categorization with explicit override precedence and honest fallback.</td><td>Transactions and approved rules</td><td>DOM or storage</td></tr>
+  <tr><td><code>src/state-repository.ts</code></td><td>Runtime codec and local-storage Repository for untrusted persisted state.</td><td>Privacy allowlist and domain model</td><td>UI rendering</td></tr>
   <tr><td><code>src/financial-agents.ts</code></td><td>Eight pure engines behind Strategy objects, composed by <code>FinancialAgentsOrchestrator</code> and exposed through a stable Facade.</td><td>Normalized transaction and category values</td><td>DOM, translations or persistence</td></tr>
   <tr><td><code>src/credit-card-importer.ts</code></td><td>Recognize and normalize credit-card workbook variants.</td><td>Workbook interfaces</td><td>DOM rendering</td></tr>
   <tr><td><code>src/localization.ts</code></td><td>Locale validation, direction, formatters and named-parameter interpolation.</td><td>Browser Intl APIs</td><td>Translated copy</td></tr>
@@ -137,7 +140,11 @@
 <pre tabindex="0"><code>mazan-habait.html
 ├── design-system.css
 └── dist/app.js
-    ├── app.ts                   composition root + financial domain
+    ├── app.ts                   composition root + workbook reader + views
+    ├── domain-model.ts          shared domain contracts
+    ├── bank-importer.ts         bank Import Strategy
+    ├── categorization.ts        classification policy
+    ├── state-repository.ts      validated local persistence
     ├── financial-agents.ts      independent local financial agents
     ├── credit-card-importer.ts credit-card normalization
     ├── localization.ts         locale and message primitives
@@ -167,7 +174,7 @@ localStorage                    user-owned persistence boundary</code></pre>
 <div class="grid"><div class="box"><span class="tag">automatic</span><b>Browser persistence</b><span>State is serialized to <code>mazan-habait/v1</code>. A blocked or corrupted store falls back to a clean in-memory session.</span></div><div class="box"><span class="tag">portable</span><b>Backup file</b><span>Export and import provide an explicit user-controlled path between browsers or computers.</span></div></div>
 <h3>Optional cloud data model</h3>
 <div class="grid"><div class="box"><span class="tag">identity</span><b><code>user_profiles</code></b><span>Only user ID and preferred locale; no financial payload.</span></div><div class="box"><span class="tag">state</span><b><code>app_snapshots</code></b><span>One bounded, schema-versioned JSON snapshot per authenticated owner.</span></div><div class="box"><span class="tag">consent</span><b><code>consent_acceptances</code></b><span>Purpose, statement version, locale and server timestamps for acceptance or withdrawal.</span></div></div>
-<div class="callout"><b>Not persisted.</b> Raw reports, account/card numbers, CVV, references, original filenames, agent findings, forecasts, JWTs, typed names, signatures, IP addresses and device fingerprints are excluded. Transaction history is minimised by <code>privacy.ts</code> before browser storage, manual backup or a future schema-v2 cloud snapshot.</div>
+<div class="callout"><b>Not persisted.</b> Raw reports, account/card numbers, CVV, references, original filenames, unknown imported properties, agent findings, forecasts, JWTs, typed names, signatures, IP addresses and device fingerprints are excluded. <code>privacy.ts</code> constructs a fresh allowlisted DTO, while <code>state-repository.ts</code> validates every untrusted browser/backup value before browser storage, manual backup or a future schema-v2 cloud snapshot.</div>
 
 <h2 data-testid="architecture-section" id="i18n">6 · Localization architecture</h2>
 <p><code>he.json</code> is the canonical key set. English, Amharic and French must expose the same keys and the same named parameters, while remaining free to reorder parameters inside a sentence.</p>
@@ -201,7 +208,7 @@ npm run stack:start # application + Prometheus + Grafana</code></pre>
 <p class="small">The complete automated-suite inventory, browser matrix, manual release checks and failure policy are maintained in <code>TEST_PLAN.md</code>.</p>
 
 <h2 data-testid="architecture-section" id="extend">9 · Extension points</h2>
-<div class="grid"><div class="box"><span class="tag">new locale</span><b>Extend the locale contract</b><span>Add the locale configuration and a complete resource file. Parameter-parity tests make sentence drift visible immediately.</span></div><div class="box"><span class="tag">new institution</span><b>Add an adapter</b><span>Recognize its header vocabulary and map it to the normalized transaction shape; keep institution-specific rules outside rendering.</span></div><div class="box"><span class="tag">new agent</span><b>Derive, explain, approve</b><span>Add a pure typed engine to <code>financial-agents.ts</code>, a localized plain-language card, stable test IDs and independent unit/API/component/browser coverage. Any mutation requires an explicit approval action.</span></div><div class="box"><span class="tag">future split</span><b>Reduce the composition root</b><span><code>app.ts</code> deliberately owns orchestration today. As the product grows, workbook reading, forecast calculation and DOM views are the clearest extraction seams.</span></div></div>
+<div class="grid"><div class="box"><span class="tag">new locale</span><b>Extend the locale contract</b><span>Add the locale configuration and a complete resource file. Parameter-parity tests make sentence drift visible immediately.</span></div><div class="box"><span class="tag">new institution</span><b>Add an adapter</b><span>Implement the normalized importer contract; keep institution-specific rules outside rendering.</span></div><div class="box"><span class="tag">new agent</span><b>Derive, explain, approve</b><span>Add a pure typed engine to <code>financial-agents.ts</code>, a localized plain-language card, stable test IDs and independent unit/API/component/browser coverage. Any mutation requires an explicit approval action.</span></div><div class="box"><span class="tag">next split</span><b>Continue shrinking the composition root</b><span>Bank ingestion, state validation and categorization are extracted. Workbook binary parsing, forecast calculation and DOM views remain the next safe seams.</span></div></div>
 <div class="callout"><b>Architecture guardrail.</b> Do not enable cloud upload until authentication, server-side consent recording, deletion and recovery journeys, controller contact details, retention policy, threat model and legal review are complete. Local use must remain available after refusal.</div>
 <p class="small"><b>Activation status:</b> account-level work for automated Vercel deployment and the Supabase project is tracked in <code>TODO.md</code>. “Supabase-ready” means the boundary and schema exist; it does not mean cloud storage is enabled.</p>
 </main>

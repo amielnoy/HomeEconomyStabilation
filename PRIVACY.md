@@ -4,13 +4,14 @@
 
 Financial reports are parsed in memory and are never uploaded on the default local path. The original file bytes are not persisted. The browser keeps only the minimised transaction fields required for history, budgets and the financial agents.
 
-Before browser storage, manual backup or optional cloud snapshot, the privacy boundary:
+Before browser storage, manual backup or optional cloud snapshot, the privacy boundary constructs a fresh allowlisted DTO rather than copying the imported object. It:
 
 - removes detected bank-account labels;
 - removes transaction references;
 - replaces the original report filename with `bank-report`, `card-report` or `manual-entry`;
 - redacts card-number-like values, bank-account-like values, IBAN and labelled CVV/CVC values from descriptions;
 - rejects account collections and unsanitised transactions at the future cloud API boundary.
+- rejects unknown transaction properties, including future fields that have not been explicitly approved for persistence.
 
 Amounts, dates, merchant descriptions, balances, categories and approved rules remain financial data. They stay in the browser until the user chooses **Delete all**, clears site storage or imports a replacement backup. A manual backup is an explicit user-controlled JSON file and contains the same minimised snapshot. Cloud sync is inactive.
 
@@ -27,6 +28,6 @@ Do not claim “GDPR compliant”, “HIPAA compliant” or “no financial data
 
 ## Verification
 
-The privacy unit suite verifies redaction and snapshot minimisation. Cloud repository tests reject account collections and unsanitised transactions. Browser security sanity imports real-shaped bank and card data and inspects the actual `localStorage` value. Network sanity separately proves that local import produces no write request.
+The privacy and state-repository unit suites inject account, card, note and prototype-like properties and verify that the allowlist removes or rejects them. Cloud repository tests cover account collections, unknown properties, provider failure, timeout and deletion. Browser security sanity imports real-shaped bank and card data and inspects the actual `localStorage` value. Network sanity separately proves that local import produces no write request.
 
 The complete mapping and commands are in [TEST_PLAN.md](TEST_PLAN.md).

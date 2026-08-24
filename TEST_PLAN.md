@@ -24,7 +24,8 @@ Playwright device profiles are repeatable emulations, not a substitute for final
 
 | Command | Expected result |
 |---|---|
-| `npm run build` | Application and API TypeScript compile; local Swagger and Scalar assets are copied |
+| `npm run build` | Application/API compile, strict boundary typecheck passes, and local Swagger/Scalar assets are copied |
+| `npm run typecheck:strict` | New domain, import, persistence and API boundaries pass strict/null/index type checks |
 | `npm test` | All Vitest unit, API, contract and component suites pass |
 | `npm run test:e2e` | All applicable Playwright scenarios pass in one API and three browser projects |
 | `npm run test:all` | Vitest and Playwright start together, both complete, and either failure fails the command |
@@ -50,9 +51,12 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 | `tests/unit/financial-agents.unit.test.ts` | Eight agents, saving estimates, Strategy injection, safe-to-spend edges and date clamping |
 | `tests/unit/localization.unit.test.ts` | Supported locale validation, RTL/LTR, UTC formatting and named parameters |
 | `tests/unit/credit-card-importer.unit.test.ts` | Charges, refunds and invalid workbook rows |
+| `tests/unit/bank-importer.unit.test.ts` | Bank headers, account extraction, transaction normalization and stable IDs |
+| `tests/unit/categorization.unit.test.ts` | Transfer/alimony classification, unknown fallbacks, income and manual-override precedence |
 | `tests/unit/marketing.unit.test.ts` | Allowed attribution, first/last touch and bounded local event history |
-| `tests/unit/privacy.unit.test.ts` | Identifier redaction, privacy-safe snapshots and rejection of unsanitised transactions |
-| `tests/unit/cloud-sync.unit.test.ts` | Privacy-safe schema-v2 snapshot validation, signed-out failure and authorization-header handling |
+| `tests/unit/privacy.unit.test.ts` | Identifier redaction, allowlisted snapshots and removal/rejection of unknown sensitive properties |
+| `tests/unit/state-repository.unit.test.ts` | Runtime state validation, safe migration, default-rule merge, prototype-key refusal and persistence round-trip |
+| `tests/unit/cloud-sync.unit.test.ts` | Privacy-safe schema-v2 validation, signed-out behavior, auth headers, failures, timeout and DELETE |
 | `tests/unit/consent.unit.test.ts` | Versioned consent, malformed records and withdrawal |
 
 ## API suites
@@ -64,6 +68,7 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 | `tests/api/health.api.test.ts` | Public Vercel health response, HEAD support and method rejection |
 | `tests/api/localization.api.test.ts` | Public locale configuration and formatter factory |
 | `tests/api/marketing.api.test.ts` | Stable attribution payload and callable analytics boundary |
+| `tests/api/request-guard.api.test.ts` | JSON/content-length enforcement and bounded per-client request rate |
 | `tests/api/supabase-infrastructure.api.test.ts` | Shared HTTP statuses, configuration fail-closed behavior and bearer parsing |
 
 ## Contract and security suites
@@ -77,7 +82,7 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 | `tests/contract/monitoring.contract.test.ts` | Prometheus, Grafana and combined Allure publication |
 | `tests/contract/openapi.contract.test.ts` | Snapshot operations, privacy-minimised schema v2, bearer security, responses and self-hosted Swagger/Scalar |
 | `tests/contract/security-sanity.contract.test.ts` | Dangerous sinks, HTTPS opener isolation, file types and remote scripts |
-| `tests/contract/supabase-schema.contract.test.ts` | Tables, grants, RLS ownership and publishable-key boundary |
+| `tests/contract/supabase-schema.contract.test.ts` | Tables, grants, RLS ownership, publishable-key boundary and migration/runtime schema-version parity |
 | `tests/contract/test-id-contract.test.ts` | Stable test IDs for static/dynamic controls and Page Object selector discipline |
 
 ## Component suites
@@ -100,13 +105,13 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 | `tests/e2e/api-docs.e2e.spec.ts` | Self-hosted Swagger and Scalar loading the same specification and all snapshot operations |
 | `tests/e2e/architecture.e2e.spec.ts` | Architecture content, responsive layout and accessibility |
 | `tests/e2e/cloud-consent.e2e.spec.ts` | Consent acceptance and withdrawal without upload |
-| `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import, upload availability and prioritized recommendations |
+| `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import, evidence-based transfer/alimony categorization, honest unknown fallback, upload availability and recommendations |
 | `tests/e2e/financial-agents.e2e.spec.ts` | Eight agents, saving evidence, safe-to-spend, explicit approvals and translation |
 | `tests/e2e/i18n-dynamic.e2e.spec.ts` | Generated English, French and Amharic copy without Hebrew leakage |
 | `tests/e2e/localization.e2e.spec.ts` | Persistence, RTL/LTR, ILS formatting and mobile overflow in every locale |
 | `tests/e2e/marketing-landing.e2e.spec.ts` | Attribution privacy, CTA visual hierarchy and tap size, four locales and dark mode |
 | `tests/e2e/mobile-usability.e2e.spec.ts` | Touch targets and complete Android/iOS browser journey |
-| `tests/e2e/http-api.api.e2e.spec.ts` | Real HTTP health GET/HEAD, method rejection, anonymous snapshot protection and unknown routes |
+| `tests/e2e/http-api.api.e2e.spec.ts` | Real HTTP health GET/HEAD, method/media rejection, anonymous snapshot protection and unknown routes |
 | `tests/e2e/savings-directory.e2e.spec.ts` | Empty-state access, 18 links, licensed-adviser registries, requested Dorit Gov Ari profile, support section, WhatsApp channel, French and return journey |
 | `tests/e2e/savings-opportunities.sanity.e2e.spec.ts` | Annual/one-time separation, evidence disclosure and absence of automatic cancellation |
 | `tests/e2e/security-sanity.e2e.spec.ts` | Workbook XSS, malformed backup, opener isolation, no outgoing financial writes and real-browser bank/card identifier minimisation |
@@ -123,6 +128,7 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 6. Review Swagger and Scalar, including the link between them, without entering a production token.
 7. Review Grafana and confirm no JWT, transaction, email or snapshot content appears in metrics.
 8. Open the Allure report and investigate failures, retries, unexpected skips and missing attachments.
+9. In a disposable Supabase project, apply every migration, insert/update a schema-v2 snapshot, verify owner isolation, and exercise a legacy-v1 row before validating the v2 constraint.
 
 ## Failure handling
 

@@ -11,15 +11,18 @@ export class UploadComponent {
   @step('Upload the sample bank report')
   async uploadSampleBankReport(): Promise<void> {
     await this.bankReportInput.setInputFiles(resolve('home_economy.xls'));
+    await this.page.getByTestId('main').waitFor({ state: 'visible' });
   }
 
   @step('Upload a bank report')
   async uploadBankReport(file: FilePayload): Promise<void> {
     await this.bankReportInput.setInputFiles(file);
+    await this.page.getByTestId('main').waitFor({ state: 'visible' });
   }
 
   @step('Upload a credit-card report')
   async uploadCreditCardReport(file: FilePayload): Promise<void> {
     await this.creditCardInput.setInputFiles(file);
+    await this.page.getByTestId('main').waitFor({ state: 'visible' });
   }
 }
