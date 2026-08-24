@@ -20,6 +20,22 @@ test('exposes the credit-card upload control in the live UI', async ({ homePage 
   await expect(input).toHaveAttribute('multiple', '');
 });
 
+test('classifies evidenced transfers and alimony while leaving unexplained debits as other', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'classification.csv', mimeType: 'text/csv', buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,יתרה',
+      '09/08/2026,המבצע: עמיאל פלד עבור: משיכה לחשבון הבנק,300,1000',
+      '10/08/2026,לטובת: אסתר אושרית פלד עבור: מזונות,3000,-2000',
+      '11/08/2026,,50,-2050',
+    ].join('\n')),
+  });
+
+  await expect(homePage.dashboard.transactionCategories).toHaveCount(3);
+  await expect(homePage.dashboard.transactionCategories.nth(0)).toHaveValue('other');
+  await expect(homePage.dashboard.transactionCategories.nth(1)).toHaveValue('home');
+  await expect(homePage.dashboard.transactionCategories.nth(2)).toHaveValue('savings');
+});
+
 test('shows prioritized customer recommendations', async ({ homePage }) => {
   await homePage.upload.uploadSampleBankReport();
   await expect(homePage.dashboard.root).toBeVisible();

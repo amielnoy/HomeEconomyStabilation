@@ -64,7 +64,9 @@ const dateValue = (cell: SpreadsheetCell | null | undefined): string | null => {
   const text = clean(value);
   const match = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
   if (!match) return text.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
-  const [, day, month, year] = match;
+  const day = match[1]!;
+  const month = match[2]!;
+  const year = match[3]!;
   return `${year.length === 2 ? `20${year}` : year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 };
 
@@ -103,7 +105,7 @@ export class CreditCardImportStrategy implements ImportStrategy {
         return map.date !== undefined && map.desc !== undefined && (map.amount !== undefined || map.out !== undefined);
       });
       if (headerIndex < 0) continue;
-      const map = headerMap(sheet.rows[headerIndex]);
+      const map = headerMap(sheet.rows[headerIndex]!);
       for (const row of sheet.rows.slice(headerIndex + 1)) {
         const date = dateValue(row[map.date ?? -1]);
         if (!date) continue;
@@ -141,6 +143,3 @@ const factory = new ImportStrategyFactory([new CreditCardImportStrategy()]);
 export const creditCardImporter: CreditCardImporterBridge = {
   import: (workbook, filename) => factory.select(workbook).import(workbook, filename),
 };
-if (typeof window !== 'undefined') {
-  (window as Window & { __creditCardImporter?: CreditCardImporterBridge }).__creditCardImporter = creditCardImporter;
-}

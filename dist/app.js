@@ -1,9 +1,12 @@
 import { creditCardImporter } from './credit-card-importer.js';
-import { createPrivacySafeSnapshot, sanitizeTransaction } from './privacy.js';
+import { createPrivacySafeSnapshot } from './privacy.js';
 import { createLocaleFormatters, formatMessage, getLocaleConfig, isSupportedLocale, resolveLocale } from './localization.js';
 import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js';
 import { runFinancialAgents } from './financial-agents.js';
 import { LocalConsentRepository } from './consent.js';
+import { AppStateCodec, LocalStorageStateRepository } from './state-repository.js';
+import { bankImporter, cleanTransactionText as clean, transactionId as txId } from './bank-importer.js';
+import { RuleBasedTransactionCategorizer } from './categorization.js';
 let locale = resolveLocale(localStorage.getItem('mazan-habait/locale'));
 let resources = {};
 let directoryOpen = window.location.hash === '#savings-directory';
@@ -716,43 +719,6 @@ async function readWorkbook(arrayBuffer, filename = '') {
         MONTH_LONG = formatters.longMonth;
         MONTH_SHORT = formatters.shortMonth;
     }
-    /* Strip bidi controls and collapse the slash-separated fragments the bank
-       uses inside one description field. */
-    const BIDI = /[‎‏‪-‮⁦-⁩]/g;
-    const clean = (v) => String(v == null ? '' : v).replace(BIDI, '').replace(/\s+/g, ' ').trim();
-    /* The בנק exports numbers as text often enough that this has to be forgiving. */
-    function toNum(cell) {
-        if (cell == null)
-            return 0;
-        const v = cell.v !== undefined ? cell.v : cell;
-        if (typeof v === 'number')
-            return v;
-        if (v instanceof Date)
-            return 0;
-        const t = String(v).replace(BIDI, '').replace(/[₪,\s]/g, '').replace(/[()]/g, '');
-        if (t === '' || t === '-')
-            return 0;
-        const n = parseFloat(t);
-        return isFinite(n) ? n : 0;
-    }
-    function toDate(cell) {
-        if (cell == null)
-            return null;
-        const v = cell.v !== undefined ? cell.v : cell;
-        if (v instanceof Date)
-            return iso(v);
-        const t = clean(v);
-        let m = t.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
-        if (m) {
-            let [, dd, mm, yy] = m;
-            yy = yy.length === 2 ? '20' + yy : yy;
-            return `${yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
-        }
-        m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (m)
-            return m[0];
-        return null;
-    }
     /* ---------------------------------------------------------- categories -- */
     /* Slot order is fixed and never cycled: the first eight categories carry the
        validated categorical hues, anything past them takes the neutral. */
@@ -794,9 +760,13 @@ async function readWorkbook(arrayBuffer, filename = '') {
         ['העברה', 'savings'], ['הפקדה', 'savings'], ['חיסכון', 'savings'], ['קרן השתלמות', 'savings'],
         ['גמל', 'savings'], ['פיקדון', 'savings'], ['ניירות ערך', 'savings'],
         ['משכורת', 'income'], ['שכר', 'income'], ['ביטוח לאומי', 'income'], ['קצבה', 'income'],
+        ['משיכה לחשבון הבנק', 'savings'], ['העברה לחשבון', 'savings'], ['העברה בנקאית', 'savings'],
+        ['מזונות', 'home'],
     ].map(([match, cat], i) => ({ id: 'r' + i, match, cat }));
     /* --------------------------------------------------------------- state -- */
     const KEY = 'mazan-habait/v1';
+    const stateCodec = new AppStateCodec({ rules: DEFAULT_RULES, cats: DEFAULT_CATS });
+    const stateRepository = new LocalStorageStateRepository(localStorage, KEY, stateCodec);
     let S = {
         tx: [], // ingested transactions
         overrides: {}, // txId -> category id (manual, wins over rules)
@@ -808,28 +778,19 @@ async function readWorkbook(arrayBuffer, filename = '') {
     };
     function load() {
         try {
-            const raw = localStorage.getItem(KEY);
-            if (!raw)
+            const persisted = stateRepository.load();
+            if (!persisted)
                 return;
-            const p = JSON.parse(raw);
-            S = Object.assign(S, p, {
-                tx: Array.isArray(p.tx) ? p.tx.map((transaction) => sanitizeTransaction(transaction)) : [],
-                accounts: [],
-                month: null,
-            });
-            if (!Array.isArray(S.cats) || !S.cats.length)
-                S.cats = DEFAULT_CATS;
-            if (!Array.isArray(S.rules))
-                S.rules = DEFAULT_RULES;
+            S = persisted;
             save(); // migrate older browser state and erase persisted account/report identifiers
         }
-        catch (e) { /* storage blocked or corrupt — start clean */ }
+        catch { /* storage blocked or corrupt — start clean */ }
     }
     function save() {
         try {
-            localStorage.setItem(KEY, JSON.stringify(createPrivacySafeSnapshot(S)));
+            stateRepository.save(S);
         }
-        catch (e) {
+        catch {
             toast(t('storageSaveError'));
         }
     }
@@ -842,133 +803,10 @@ async function readWorkbook(arrayBuffer, filename = '') {
         clearTimeout(toastT);
         toastT = setTimeout(() => t.classList.remove('on'), 3400);
     }
-    /* ------------------------------------------------------------- ingest --- */
-    const HEAD = {
-        date: [/^תאריך$/, /^תאריך\s*פעולה/, /^תאריך\s*עסקה/, /מועד\s*עסקה/],
-        vdate: [/תאריך\s*ערך/],
-        ref: [/אסמכתא/, /מספר\s*אסמכתא/],
-        desc: [/תיאור\s*פעולה/, /^תיאור$/, /פרטים/, /^סוג\s*תנועה/, /שם\s*בית\s*עסק/, /בית\s*עסק/, /שם\s*העסק/, /ספק/],
-        out: [/^חובה/, /^חיוב/, /^יציאה/, /סכום\s*חיוב/, /סכום\s*עסקה/],
-        in: [/^זכות/, /^זיכוי/, /^כניסה/],
-        amt: [/^סכום/],
-        bal: [/יתרה/],
-    };
-    function matchHeader(text) {
-        const t = clean(text);
-        for (const [key, pats] of Object.entries(HEAD))
-            if (pats.some((p) => p.test(t)))
-                return key;
-        return null;
-    }
-    /* Find the header row in a sheet and map column index -> field. */
-    function findHeader(rows) {
-        for (let r = 0; r < Math.min(rows.length, 30); r++) {
-            const row = rows[r];
-            if (!row)
-                continue;
-            const map = {};
-            let hits = 0;
-            row.forEach((cell, c) => {
-                if (!cell || cell.t !== 's')
-                    return;
-                const k = matchHeader(cell.v);
-                if (k && map[k] === undefined) {
-                    map[k] = c;
-                    hits++;
-                }
-            });
-            if (map.date !== undefined && map.desc !== undefined && (map.out !== undefined || map.in !== undefined || map.amt !== undefined)) {
-                return { row: r, map, hits };
-            }
-        }
-        return null;
-    }
-    function txId(t) {
-        const raw = [t.date, t.ref, t.out.toFixed(2), t.in.toFixed(2), t.desc].join('|');
-        let h = 5381;
-        for (let i = 0; i < raw.length; i++)
-            h = ((h * 33) ^ raw.charCodeAt(i)) >>> 0;
-        return h.toString(36) + '-' + raw.length.toString(36);
-    }
-    function ingest(wb, filename, source = 'bank') {
-        const found = [];
-        let account = null;
-        for (const sheet of wb.sheets) {
-            const rows = sheet.rows || [];
-            // account number, if the export carries one in its preamble
-            for (let r = 0; r < Math.min(rows.length, 12) && !account; r++) {
-                const row = rows[r] || [];
-                for (let c = 0; c < row.length; c++) {
-                    if (row[c] && row[c].t === 's' && /^חשבון/.test(clean(row[c].v))) {
-                        const next = row[c + 1];
-                        if (next)
-                            account = clean(next.v);
-                    }
-                }
-            }
-            const hdr = findHeader(rows);
-            if (!hdr)
-                continue;
-            const pending = /המתנה|זמני/.test(clean(sheet.name));
-            for (let r = hdr.row + 1; r < rows.length; r++) {
-                const row = rows[r];
-                if (!row)
-                    continue;
-                const date = toDate(row[hdr.map.date]);
-                if (!date)
-                    continue;
-                const desc = clean(row[hdr.map.desc] && row[hdr.map.desc].v);
-                let out = hdr.map.out !== undefined ? Math.abs(toNum(row[hdr.map.out])) : 0;
-                let inn = hdr.map.in !== undefined ? Math.abs(toNum(row[hdr.map.in])) : 0;
-                if (source === 'card' && hdr.map.out !== undefined && hdr.map.in === undefined) {
-                    const signedAmount = toNum(row[hdr.map.out]);
-                    out = signedAmount >= 0 ? signedAmount : 0;
-                    inn = signedAmount < 0 ? -signedAmount : 0;
-                }
-                if (hdr.map.amt !== undefined && !out && !inn) {
-                    const a = toNum(row[hdr.map.amt]);
-                    if (source === 'card') {
-                        if (a < 0)
-                            inn = -a;
-                        else
-                            out = a;
-                    }
-                    else if (a < 0)
-                        out = -a;
-                    else
-                        inn = a;
-                }
-                if (!out && !inn)
-                    continue;
-                const bal = hdr.map.bal !== undefined ? toNum(row[hdr.map.bal]) : null;
-                const t = {
-                    date,
-                    vdate: hdr.map.vdate !== undefined ? toDate(row[hdr.map.vdate]) || date : date,
-                    ref: clean(row[hdr.map.ref] && row[hdr.map.ref].v),
-                    desc, out, in: inn,
-                    bal: hdr.map.bal !== undefined && bal !== 0 ? bal : null,
-                    pending,
-                    source,
-                    src: filename,
-                };
-                t.id = txId(t);
-                found.push(t);
-            }
-        }
-        return { rows: found, account };
-    }
     /* ---------------------------------------------------------- categorise -- */
-    function autoCat(t) {
-        if (S.overrides[t.id])
-            return S.overrides[t.id];
-        const d = t.desc.toLocaleLowerCase();
-        for (const r of S.rules) {
-            if (!r.match)
-                continue;
-            if (d.includes(r.match.toLocaleLowerCase()))
-                return r.cat;
-        }
-        return t.in > 0 ? 'income' : 'other';
+    const transactionCategorizer = new RuleBasedTransactionCategorizer();
+    function autoCat(transaction) {
+        return transactionCategorizer.categorize(transaction, S.overrides, S.rules);
     }
     const catById = (id) => {
         const category = S.cats.find((c) => c.id === id) || { id, name: id, kind: 'expense' };
@@ -2054,16 +1892,10 @@ async function readWorkbook(arrayBuffer, filename = '') {
             try {
                 if (typeof fr.result !== 'string')
                     throw new Error('bad');
-                const p = JSON.parse(fr.result);
-                if (!p || !Array.isArray(p.tx))
+                const restored = stateCodec.decode(JSON.parse(fr.result));
+                if (!restored)
                     throw new Error('bad');
-                S.tx = p.tx.map((transaction) => sanitizeTransaction(transaction));
-                S.overrides = p.overrides || {};
-                S.rules = p.rules || DEFAULT_RULES;
-                S.cats = p.cats || DEFAULT_CATS;
-                S.budgets = p.budgets || {};
-                S.accounts = [];
-                S.month = null;
+                S = restored;
                 save();
                 renderDrawer();
                 render();
@@ -2088,7 +1920,7 @@ async function readWorkbook(arrayBuffer, filename = '') {
                 const cardImporter = creditCardImporter;
                 const imported = source === 'card' && cardImporter
                     ? { rows: cardImporter.import(wb, file.name), account: null }
-                    : ingest(wb, file.name, source);
+                    : bankImporter.import(wb, file.name, source);
                 const { rows, account } = imported;
                 if (!rows.length) {
                     bad++;
@@ -2310,6 +2142,4 @@ async function readWorkbook(arrayBuffer, filename = '') {
     captureMarketingAttribution(window.location.search);
     wire();
     loadResources().then(() => { render(); });
-    const browserWindow = window;
-    browserWindow.__mazan = { S, ingest, recurring, forecast, totals, byCategory, render, handleFiles, autoCat, decorate };
 })();

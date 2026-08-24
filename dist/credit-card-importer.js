@@ -25,7 +25,9 @@ const dateValue = (cell) => {
     const match = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
     if (!match)
         return text.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
-    const [, day, month, year] = match;
+    const day = match[1];
+    const month = match[2];
+    const year = match[3];
     return `${year.length === 2 ? `20${year}` : year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 };
 const headerMap = (row) => {
@@ -101,6 +103,3 @@ const factory = new ImportStrategyFactory([new CreditCardImportStrategy()]);
 export const creditCardImporter = {
     import: (workbook, filename) => factory.select(workbook).import(workbook, filename),
 };
-if (typeof window !== 'undefined') {
-    window.__creditCardImporter = creditCardImporter;
-}
