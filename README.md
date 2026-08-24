@@ -192,6 +192,7 @@ src/categorization.ts    מדיניות סיווג תנועות ובכורת ש�
 src/state-repository.ts  Codec קשיח ו־Repository ל־localStorage/גיבוי
 src/cloud-sync.ts       חוזה סנכרון ו־SupabaseSnapshotRepository
 src/consent.ts          הסכמה גרסתית וביטולה
+src/{architecture,api-docs,scalar-docs}.ts התנהגות TypeScript למסמכי המערכת וה־API
 server/                 FastAPI, validation ומאגרי Supabase
 api/index.py            נקודת הכניסה של Vercel לשרת Python
 supabase/migrations/    סכמת מסד הנתונים ומדיניות ההרשאות
@@ -209,7 +210,8 @@ monitoring/             Prometheus ו־Grafana provisioning
 MONITORING.md           הפעלה, מדדים, אבטחה וגבולות הניטור
 TEST_PLAN.md            תכנית מלאה לכל בדיקות האוטומציה והבדיקות הידניות
 vitest.allure.config.ts  דיווח בדיקות unit/API/contract/component ל־Allure
-scripts/                הרצת בדיקות, יצירת Allure, סביבת Compose והעתקת נכסי תיעוד API
+scripts/*.ts            סקריפטי build טיפוסיים שמקומפלים ל־dist-scripts
+scripts/*.sh            הרצת בדיקות, יצירת Allure וסביבת Compose
 ```
 
 ## פרטיות והבהרה פיננסית

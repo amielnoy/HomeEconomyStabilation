@@ -95,6 +95,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/contract/security-sanity.contract.test.ts` | Dangerous sinks, HTTPS opener isolation, file types and remote scripts |
 | `tests/contract/supabase-schema.contract.test.ts` | Tables, grants, RLS ownership, publishable-key boundary and migration/runtime schema-version parity |
 | `tests/contract/test-id-contract.test.ts` | Stable test IDs for static/dynamic controls and Page Object selector discipline |
+| `tests/contract/typescript-source.contract.test.ts` | No project-owned JavaScript source or inline scripts; browser behavior comes from compiled TypeScript modules |
 
 ## Component suites
 
