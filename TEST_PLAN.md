@@ -11,6 +11,7 @@ No test may use real banking credentials, production JWTs or personally identify
 | Layer | Runtime | Purpose |
 |---|---|---|
 | Unit, API, contract | Vitest on Node | Fast logic, schema, security and public-boundary validation |
+| Python server | Pytest on Python 3.12 | FastAPI routes, validation, guards and Supabase repositories |
 | Component | Vitest with JSDOM | Rendered controls, translations, disclosures and link behavior |
 | HTTP API | Playwright request context | Real-server health, method, authentication-boundary and not-found behavior |
 | Desktop browser | Playwright, Desktop Chrome | Primary journeys and keyboard/desktop behavior |
@@ -27,8 +28,9 @@ Playwright device profiles are repeatable emulations, not a substitute for final
 | `npm run build` | Application/API compile, strict boundary typecheck passes, and local Swagger/Scalar assets are copied |
 | `npm run typecheck:strict` | New domain, import, persistence and API boundaries pass strict/null/index type checks |
 | `npm test` | All Vitest unit, API, contract and component suites pass |
+| `npm run test:server` | All Pytest server suites pass |
 | `npm run test:e2e` | All applicable Playwright scenarios pass in one API and three browser projects |
-| `npm run test:all` | Vitest and Playwright start together, both complete, and either failure fails the command |
+| `npm run test:all` | Vitest, Pytest and Playwright start together, all complete, and any failure fails the command |
 | `npm run verify` | Build followed by both test frameworks in parallel |
 | `npm run test:docker` | Compose services start, every test runs, and Allure is published at the printed localhost URL |
 | `npm run test:docker:stop` | The isolated test and report stack stops without affecting the development stack |
@@ -36,13 +38,15 @@ Playwright device profiles are repeatable emulations, not a substitute for final
 Artifacts:
 
 - `playwright-report/` — Playwright’s native HTML report, including `test.step` descriptions.
-- `allure-results/` — raw Vitest and Playwright Allure events inside the Compose volume.
+- `allure-results/` — raw Vitest, Pytest and Playwright Allure events inside the Compose volume.
 - `allure-report/` — generated combined report, served by the `allure` service.
 - Retained Playwright traces are attached only for failures.
 
 The Docker gate starts by removing stale containers and orphans from the isolated `home-economy-tests` Compose project without deleting its volumes. This makes reruns safe after an interrupted container replacement; the Allure server is force-recreated after report generation.
 
-The shared POSIX runner tracks both child process IDs, waits for both exit codes and stops both on interruption. Playwright uses its normal local worker count and two workers in CI; Vitest retains its own file-level parallelism. Build and Allure generation remain ordering barriers because the tests need compiled assets and the report needs complete result files.
+The Playwright test image installs `python3-venv` before creating its isolated Python environment, while the web build stage installs Python only to validate the FastAPI source during the shared build. These dependencies are image-local; a host running the Docker gate needs Docker Compose v2, not a host Python environment.
+
+The shared POSIX runner tracks all three child process IDs, waits for every exit code and stops them on interruption. Playwright uses its normal local worker count and two workers in CI; Vitest retains its file-level parallelism, while Pytest covers the Python boundary independently. Build and Allure generation remain ordering barriers.
 
 ## Unit suites
 
@@ -59,17 +63,24 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 | `tests/unit/cloud-sync.unit.test.ts` | Privacy-safe schema-v2 validation, signed-out behavior, auth headers, failures, timeout and DELETE |
 | `tests/unit/consent.unit.test.ts` | Versioned consent, malformed records and withdrawal |
 
+## Python server suites
+
+| File | Coverage |
+|---|---|
+| `tests/server/test_config.py` | Environment validation and strict bearer-token parsing |
+| `tests/server/test_models.py` | Pydantic allowlists, size bounds and financial-identifier rejection |
+| `tests/server/test_request_guard.py` | Media type, body size and bounded rate limiting |
+| `tests/server/test_repositories.py` | Profile, snapshot and consent CRUD with owner filters and stable failures |
+| `tests/server/test_app.py` | FastAPI health, methods, authentication boundary and snapshot responses |
+
 ## API suites
 
 | File | Coverage |
 |---|---|
 | `tests/api/credit-card-importer.api.test.ts` | Stable importer output and unsupported workbook rejection |
 | `tests/api/financial-agents.api.test.ts` | Stable result slot for every agent |
-| `tests/api/health.api.test.ts` | Public Vercel health response, HEAD support and method rejection |
 | `tests/api/localization.api.test.ts` | Public locale configuration and formatter factory |
 | `tests/api/marketing.api.test.ts` | Stable attribution payload and callable analytics boundary |
-| `tests/api/request-guard.api.test.ts` | JSON/content-length enforcement and bounded per-client request rate |
-| `tests/api/supabase-infrastructure.api.test.ts` | Shared HTTP statuses, configuration fail-closed behavior and bearer parsing |
 
 ## Contract and security suites
 
@@ -79,7 +90,7 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 | `tests/contract/documentation-contract.test.ts` | README, architecture, design system, privacy, Supabase, TODO, monitoring and this test plan stay synchronized |
 | `tests/contract/importer-contract.test.ts` | Dashboard transaction shape |
 | `tests/contract/localization-contract.test.ts` | Key parity, named-parameter parity and complete HTML/runtime translation coverage |
-| `tests/contract/monitoring.contract.test.ts` | Prometheus, Grafana and combined Allure publication |
+| `tests/contract/monitoring.contract.test.ts` | Prometheus, application/database Grafana dashboards, privacy-safe Supabase metrics and combined Allure publication |
 | `tests/contract/openapi.contract.test.ts` | Snapshot operations, privacy-minimised schema v2, bearer security, responses and self-hosted Swagger/Scalar |
 | `tests/contract/security-sanity.contract.test.ts` | Dangerous sinks, HTTPS opener isolation, file types and remote scripts |
 | `tests/contract/supabase-schema.contract.test.ts` | Tables, grants, RLS ownership, publishable-key boundary and migration/runtime schema-version parity |

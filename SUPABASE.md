@@ -2,7 +2,7 @@
 
 ## סטטוס
 
-התשתית מוכנה אך סנכרון הענן אינו פעיל בממשק. האפליקציה ממשיכה לקרוא ולנתח דוחות מקומית בלבד. אישור ההצהרה בהגדרות נשמר במכשיר ואינו מעלה נתונים; חיבור אמיתי יחייב Supabase Auth, JWT תקף והסכמה פעילה בשרת.
+שלוש המיגרציות הוחלו בפרויקט Supabase המקושר והיסטוריית ה־CLI המקומית והמרוחקת תואמת. סנכרון הענן עדיין אינו פעיל בממשק: האפליקציה ממשיכה לקרוא ולנתח דוחות מקומית בלבד. אישור ההצהרה בהגדרות נשמר במכשיר ואינו מעלה נתונים; חיבור אמיתי יחייב Supabase Auth, JWT תקף והסכמה פעילה בשרת.
 
 הקמת הפרויקט והפעלתו מנוהלות כמשימות מפורשות ב־[`TODO.md`](TODO.md). אין לסמן את הענן כפעיל לפני שכל שערי האבטחה, הפרטיות וה־integration ברשימה הושלמו.
 
@@ -18,7 +18,9 @@
 
 ## מחלקות וגבולות
 
-- `SupabaseSnapshotRepository` מממש את `CloudSnapshotClient`. הוא מקבל callback ל־access token ואינו שומר אותו.
+- `SupabaseSnapshotRepository` בצד הדפדפן מממש את `CloudSnapshotClient`. הוא מקבל callback ל־access token ואינו שומר אותו.
+- `SupabaseRestClient` ב־Python מאמת משתמש דרך `/auth/v1/user` וניגש ל־PostgREST עם ה־JWT שלו.
+- `UserProfileRepository`,‏ `SnapshotRepository` ו־`ConsentRepository` מרכזים קריאה, יצירה, עדכון ומחיקה עם סינון owner מפורש בנוסף ל־RLS.
 - `LocalConsentRepository` קורא, מתעד ומבטל הסכמה מקומית לפי `CLOUD_CONSENT_VERSION`.
 - `CloudSyncError` מחזיר קוד ומצב יציבים בלי לחשוף הודעות פנימיות של Supabase.
 - `/api/snapshots` מאמת method, קצב, media type, גודל ומבנה לפני אימות המשתמש ופעולת ספק יקרה. לאחר מכן הוא מאמת configuration,‏ Bearer token ומשתמש לפני קריאה או כתיבה.
@@ -28,7 +30,7 @@
 ## אבטחה
 
 - משתמשים ב־`SUPABASE_PUBLISHABLE_KEY` בפורמט `sb_publishable_...`; אין שימוש ב־secret או `service_role`.
-- ה־API מאמת JWT באמצעות `auth.getUser(token)` לפני גישה למסד.
+- ה־API מאמת JWT באמצעות `/auth/v1/user` לפני גישה למסד.
 - RLS ו־grants פועלים יחד: `anon` חסום, ו־`authenticated` רשאי לפעול רק כאשר `auth.uid() = user_id`.
 - ה־API מוגש מאותו origin, אינו משתמש ב־cookies ומחזיר `Cache-Control: no-store`.
 - payload לא תקין או גדול מדי נדחה לפני כתיבה. שגיאת ספק מוחזרת כקוד כללי.
@@ -45,10 +47,13 @@
 ```bash
 cp .env.example .env.local
 npm install
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements-dev.txt
 npm run build
 ```
 
-מריצים לפי שם ובסדר את שני קובצי ה־migration בפרויקט Supabase, ומגדירים את שני המשתנים גם ב־Vercel. ה־migration השני קובע default ו־constraint לגרסה 2 עבור כתיבות חדשות, כ־`NOT VALID`, כדי לא למחוק או לסמן מחדש snapshots ישנים. רשומת v1 קיימת דורשת שחזור/שמירה מחודשת מבוקרת לפני אימות ה־constraint. אפשר לבדוק את ה־API רק עם JWT אמיתי של משתמש מאומת. בהיעדר configuration הנתיב נכשל סגור עם `cloud_not_configured`; הדבר אינו פוגע בשימוש המקומי.
+בסביבה חדשה מריצים לפי שם ובסדר את כל קובצי ה־migration בפרויקט Supabase, ומגדירים את שני המשתנים גם ב־Vercel. המיגרציה השנייה קובעת default ו־constraint לגרסה 2 כ־`NOT VALID`; השלישית מתקינה trigger לפרופיל ומאמתת את ה־constraint רק כשאין רשומות legacy. בפרויקט הפיתוח המקושר שלושתן כבר הוחלו. אפשר לבדוק את ה־API רק עם JWT אמיתי של משתמש מאומת.
 
 לבדיקה ידנית פותחים את Swagger ב־`/api-docs.html` או את Scalar ב־`/scalar-docs.html`. ב־Scalar בוחרים פעולה ולוחצים **Test Request**; לפעולות snapshot משתמשים במנגנון Authentication כדי להזין Bearer JWT של משתמש בדיקה. שני הממשקים נטענים מנכסים מקומיים ומכסים את `GET /api/health` ואת `GET`,‏ `PUT` ו־`DELETE /api/snapshots`; Scalar מוגדר בלי telemetry ובלי שמירת authentication. החוזה המשותף, הניתן גם לייבוא לכלי API אחרים, נמצא ב־`openapi.json`.
 

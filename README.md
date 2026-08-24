@@ -30,10 +30,13 @@
 
 ## הפעלה מקומית
 
-נדרשים Node.js ו־npm.
+נדרשים Node.js,‏ npm ו־Python 3.12.
 
 ```bash
 npm install
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements-dev.txt
 npm run build             # כולל strict typecheck לגבולות החדשים
 npm run typecheck:strict  # בדיקת strict עצמאית
 ```
@@ -75,13 +78,14 @@ t('amountAsOfDate', { amount: '₪1,250', date: '23.08.2026' });
 
 ## בדיקות
 
-הבדיקות מחולקות לשני מסלולים מקבילים: Vitest מריץ יחידה, API, חוזה ורכיבים; במקביל Playwright מריץ API אמיתי, דפדפן ונגישות. גם כל מסגרת מפזרת את קובצי הבדיקות שלה בין workers. כך מתקבל משוב מהיר בלי לוותר על אף שכבת כיסוי.
+הבדיקות מחולקות לשלושה מסלולים מקבילים: Vitest מריץ יחידה, חוזה ורכיבים; Pytest בודק את שרת Python ומאגרי Supabase; ו־Playwright מריץ API אמיתי, דפדפן ונגישות.
 
 ```bash
 npm test                 # יחידה, API, חוזה ורכיבים
+npm run test:server      # בדיקות Pytest לשרת Python
 npm run test:e2e         # תרחישי דפדפן, שפות ונגישות
 npm run test:e2e:report  # פתיחת דוח ה־HTML האחרון
-npm run test:all         # Vitest ו־Playwright במקביל
+npm run test:all         # Vitest, Pytest ו־Playwright במקביל
 npm run verify           # build ולאחריו כל הבדיקות
 npm run test:docker      # כל הבדיקות ב־Compose + פרסום Allure מקומי
 npm run test:docker:stop # כיבוי שרתי הבדיקות והדוח
@@ -98,9 +102,10 @@ npm run test:docker:stop # כיבוי שרתי הבדיקות והדוח
 אפשר גם להריץ `npm run test:docker`.
 
 - `web` מגיש את היישום ואת Swagger UI באמצעות Nginx; `scalar` הוא שרת Nginx נפרד לתיעוד ולבדיקות API ידניות.
-- `api` מריץ את `/api/snapshots` ב־Node; Nginx מעביר אליו את נתיבי `/api/`.
-- `tests` מכיל את Chromium ו־WebKit, מריץ build,‏ Vitest ו־Playwright במקביל, ממתין לשניהם וכותב את תוצאות שתי המסגרות לאותו volume של Allure.
+- `api` מריץ FastAPI/Uvicorn ואת `/api/snapshots`; Nginx מעביר אליו את נתיבי `/api/`.
+- `tests` מכיל Python,‏ Chromium ו־WebKit, מריץ build,‏ Vitest,‏ Pytest ו־Playwright במקביל, ומאחד את תוצאותיהם ב־Allure.
 - `allure` מגיש באמצעות Nginx את דוח ה־HTML שנוצר לאחר סיום הבדיקות.
+- `grafana` טוען דשבורד בריאות כללי ודשבורד `Home Economy Database` לזמינות, latency וקודי תוצאה של Supabase, ללא סיסמת DB וללא תוכן פיננסי.
 
 בתחילת כל הרצה הסקריפט מנקה containers ישנים רק מה־Compose project המבודד `home-economy-tests`, בלי למחוק volumes, כדי שגם rerun אחרי interruption לא ייתקע בהתנגשות שמות.
 
@@ -130,7 +135,7 @@ npm run stack:start
 
 בדיקות ה־E2E משתמשות ב־Page Object Model. המחלקה `BasePage` מרכזת ניווט, איפוס מצב, viewport ובדיקות overflow; העמודים `HomePage` ו־`ArchitecturePage` מרכיבים רכיבי משנה ייעודיים לשפה, העלאות, שיווק, דשבורד, סוכנים, הגדרות וספריית החיסכון. `HomeEconomyApi` מרכז קריאות API דרך `APIRequestContext` אמיתי. כל האובייקטים מאותחלים כ־fixtures טיפוסיים בקובץ `tests/e2e/fixtures.ts`, והבדיקות אינן יוצרות אותם בעצמן. הסלקטורים הציבוריים מבוססים על `data-testid` סמנטי בלבד; גם רכיבים דינמיים כגון שורות תנועה, ממצאי סוכנים, פעולות אישור, המלצות ושדות הגדרות מקבלים מזהים יציבים. בדיקת החוזה `tests/contract/test-id-contract.test.ts` מונעת הוספת רכיב אינטראקטיבי ללא מזהה וחזרה ל־CSS selectors שבירים בתוך Page Objects. בדיקת `tests/contract/documentation-contract.test.ts` שומרת את שלושת מסמכי הפרויקט מסונכרנים עם רשימת הסוכנים, מנגנוני האישור ומבנה המודולים. פעולות Page/API Object מסומנות ב־`@step('Simple action description')`; ה־decorator עוטף אותן ב־`test.step`, כך שגם דוח Playwright וגם Allure מתעדים פעולות בשפה פשוטה. דוח ה־HTML המובנה של Playwright עדיין נוצר בתיקייה `playwright-report/`.
 
-Vitest בודק handlers, לוגיקה וחוזים ישירות ובמהירות, ללא תלות בשרת חי. פרויקט ה־API של Playwright משלים אותו בבקשות HTTP אמיתיות אל `/api/health` ו־`/api/snapshots`, ולכן תופס גם ניתוב, headers, serialization וקודי תגובה. בהרצה מקומית Playwright מפעיל שרת API על פורט `8766`; ב־Docker הוא משתמש ב־`PLAYWRIGHT_API_BASE_URL=http://api:3000`, ובבדיקת deployment אפשר להגדיר את אותה משתנה לכתובת היעד.
+Vitest בודק לוגיקת דפדפן וחוזים במהירות. Pytest בודק את FastAPI, הוולידציה ומחלקות מאגרי Supabase. Playwright משלים אותם בבקשות HTTP אמיתיות אל `/api/health` ו־`/api/snapshots`, ולכן תופס גם ניתוב, headers, serialization וקודי תגובה. בהרצה מקומית הוא מפעיל Uvicorn על פורט `8766`; ב־Docker הוא משתמש ב־`PLAYWRIGHT_API_BASE_URL=http://api:3000`.
 
 ## פריסה אוטומטית ל־Vercel
 
@@ -153,12 +158,12 @@ Vitest בודק handlers, לוגיקה וחוזים ישירות ובמהירו�
 להכנה בסביבת Supabase/Vercel:
 
 1. יוצרים פרויקט Supabase ומפעילים ספק התחברות מתאים.
-2. מריצים לפי הסדר את כל ה־migrations שבתיקייה `supabase/migrations/`; ה־migration השני מעביר כתיבות חדשות ל־snapshot schema v2 בלי למחוק רשומות v1 קיימות.
+2. מריצים לפי הסדר את כל ה־migrations שבתיקייה `supabase/migrations/`; השנייה מעבירה כתיבות חדשות ל־snapshot schema v2 בלי למחוק רשומות v1, והשלישית מוסיפה תחזוקת timestamp ומאמתת את ה־constraint רק כשאין רשומות legacy. בפרויקט המקושר של הפיתוח שלושתן כבר הוחלו.
 3. מעתיקים את `.env.example` להגדרה מקומית שאינה נכנסת ל־Git, וב־Vercel מגדירים `SUPABASE_URL` ו־`SUPABASE_PUBLISHABLE_KEY`.
 4. משתמשים במפתח החדש מסוג `sb_publishable_...` בלבד. אין להגדיר `service_role` או secret key ביישום זה.
 5. לפני הפעלה למשתמשים אמיתיים משלימים את מסך ההתחברות, מדיניות הפרטיות, פרטי בעל השליטה במידע, דרך עיון/תיקון/מחיקה ובדיקת ייעוץ משפטי ואבטחת מידע.
 
-מודל הנתונים המינימלי כולל `user_profiles`,‏ `app_snapshots` ו־`consent_acceptances`. כל הטבלאות מפעילות RLS, מבטלות הרשאות `anon`, ומאפשרות למשתמש מאומת לגשת רק לשורה שלו. `app_snapshots` מוגבלת ל־1MB ולגרסת schema נתמכת; ממצאי הסוכנים אינם נשמרים ונגזרים מחדש. המחלקה `SupabaseSnapshotRepository` מדברת רק עם `/api/snapshots`,‏ `LocalConsentRepository` מנהלת הסכמה גרסתית במכשיר, ו־`CloudSyncError` מספק שגיאות יציבות שאינן חושפות פרטי ספק.
+מודל הנתונים המינימלי כולל `user_profiles`,‏ `app_snapshots` ו־`consent_acceptances`. כל הטבלאות מפעילות RLS ומאפשרות למשתמש מאומת לגשת רק לשורה שלו. בצד Python המחלקות `UserProfileRepository`,‏ `SnapshotRepository` ו־`ConsentRepository` מנהלות את הקריאה והכתיבה דרך JWT המשתמש ו־publishable key בלבד. בדפדפן `SupabaseSnapshotRepository` מדברת רק עם `/api/snapshots` ו־`LocalConsentRepository` מנהלת הסכמה גרסתית.
 
 פירוט מלא נמצא ב־[SUPABASE.md](SUPABASE.md).
 
@@ -187,7 +192,8 @@ src/categorization.ts    מדיניות סיווג תנועות ובכורת ש�
 src/state-repository.ts  Codec קשיח ו־Repository ל־localStorage/גיבוי
 src/cloud-sync.ts       חוזה סנכרון ו־SupabaseSnapshotRepository
 src/consent.ts          הסכמה גרסתית וביטולה
-api/snapshots.ts        API מאומת לשמירת snapshot דרך RLS
+server/                 FastAPI, validation ומאגרי Supabase
+api/index.py            נקודת הכניסה של Vercel לשרת Python
 supabase/migrations/    סכמת מסד הנתונים ומדיניות ההרשאות
 src/                    לוגיקת היישום, מנועי הסוכנים, ייבוא, תרגום ושיווק
 resources/              משאבי ארבע השפות

@@ -47,8 +47,8 @@ describe('project documentation contract', () => {
   it('documents Supabase tables, classes, security and activation prerequisites', () => {
     const guide = read('SUPABASE.md');
     for (const requirement of [
-      'user_profiles', 'app_snapshots', 'consent_acceptances', 'SupabaseSnapshotRepository',
-      'LocalConsentRepository', 'auth.getUser(token)', 'RLS', 'service_role', 'integration',
+      'user_profiles', 'app_snapshots', 'consent_acceptances', 'SnapshotRepository',
+      'LocalConsentRepository', '/auth/v1/user', 'RLS', 'service_role', 'integration',
     ]) expect(guide).toContain(requirement);
   });
 
@@ -93,7 +93,7 @@ describe('project documentation contract', () => {
       .flatMap((entry) => {
         const relativePath = `${directory}/${entry.name}`;
         if (entry.isDirectory()) return collectSuites(relativePath);
-        return /\.(?:test|spec)\.ts$/.test(entry.name) ? [relativePath] : [];
+        return /(?:\.(?:test|spec)\.ts|test_.+\.py)$/.test(entry.name) ? [relativePath] : [];
       });
 
     for (const suite of collectSuites('tests')) {

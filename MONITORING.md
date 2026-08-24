@@ -41,9 +41,13 @@ GRAFANA_ADMIN_USER=local-admin GRAFANA_ADMIN_PASSWORD='choose-a-local-password' 
 npm run stack:start
 ```
 
-`npm run test:docker` משתמש ב־Compose project נפרד בשם `home-economy-tests`, מריץ את Vitest ואת Playwright במקביל, ממתין לתוצאה של שניהם ורק אז יוצר את דוח Allure ב־`http://127.0.0.1:15050`. הוא משאיר את השרתים פעילים לאחר הבדיקות. סביבת הבדיקות מקבלת פורטים נפרדים כדי שתוכל לפעול לצד סביבת הפיתוח; מכבים אותה באמצעות `npm run test:docker:stop`.
+`npm run test:docker` משתמש ב־Compose project נפרד בשם `home-economy-tests`, מריץ את Vitest,‏ Pytest ואת Playwright במקביל, ממתין לתוצאה של שלושתם ורק אז יוצר את דוח Allure ב־`http://127.0.0.1:15050`. הוא משאיר את השרתים פעילים לאחר הבדיקות. סביבת הבדיקות מקבלת פורטים נפרדים כדי שתוכל לפעול לצד סביבת הפיתוח; מכבים אותה באמצעות `npm run test:docker:stop`.
 
 ## גבול פרטיות
+
+Grafana טוען גם את הדשבורד `Home Economy Database`. הוא מציג זמינות Supabase, זמן בדיקת health, קצב פעולות לפי operation/status וה־latency האחרון. המדדים נוצרים ב־API דרך publishable key ו־JWT המשתמש בעת פעולה רגילה; Grafana ו־Prometheus אינם מקבלים סיסמת PostgreSQL ואינם קוראים טבלאות או payloads ישירות.
+
+הדשבורד נטען אוטומטית מהקובץ `monitoring/grafana/dashboards/home-economy-database.json` לתיקיית `Home Economy`. ללא `SUPABASE_URL` ו־`SUPABASE_PUBLISHABLE_KEY` תקינים מדד הזמינות נשאר 0 בכוונה; אין לעקוף זאת באמצעות סיסמת DB.
 
 המדדים כוללים זמינות, זמן תגובה, method וקוד סטטוס בלבד. אין בהם JWT, כתובת דוא״ל, payload פיננסי, תוכן snapshot, תנועות או פרטי דוח. `/metrics` אינו עובר דרך Nginx ואינו נחשף ל־host בקובץ Compose הרגיל.
 

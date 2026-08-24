@@ -57,7 +57,7 @@
     <p class="eyebrow">Architecture · home-economy-stabilation</p>
     <h1 data-testid="architecture-title">Home Economy — how the application fits together</h1>
     <p class="stand">A local-first browser application that turns bank and credit-card exports into a private household-finance workspace. Parsing, categorization and forecasting remain on the user’s device. A dormant first-party API and RLS-protected Supabase schema prepare optional authenticated backup without changing the default local path.</p>
-    <p><span class="pill on">TypeScript</span><span class="pill on">Static HTML</span><span class="pill">Vercel API</span><span class="pill">Supabase-ready</span><span class="pill">Local-first</span><span class="pill">HE · EN · AM · FR</span><span class="pill">RTL + LTR</span><span class="pill">WCAG A/AA checks</span></p>
+    <p><span class="pill on">TypeScript</span><span class="pill on">Python FastAPI</span><span class="pill on">Static HTML</span><span class="pill">Vercel API</span><span class="pill">Supabase-ready</span><span class="pill">Local-first</span><span class="pill">HE · EN · AM · FR</span><span class="pill">RTL + LTR</span><span class="pill">WCAG A/AA checks</span></p>
   </div>
   <a class="app-link" data-testid="architecture-app-link" href="./mazan-habait.html">Open application ↗</a>
 </header>
@@ -128,11 +128,11 @@
   <tr><td><code>src/marketing.ts</code></td><td>Capture campaign attribution and local product events.</td><td>Session/local storage</td><td>Financial report content</td></tr>
   <tr><td><code>src/cloud-sync.ts</code></td><td>Bounded cloud contract and <code>SupabaseSnapshotRepository</code>.</td><td>First-party API and access-token callback</td><td>Token persistence or consent UI</td></tr>
   <tr><td><code>src/consent.ts</code></td><td>Versioned local consent acceptance and withdrawal.</td><td>Minimal storage port</td><td>Financial state or immunity claims</td></tr>
-  <tr><td><code>api/snapshots.ts</code></td><td>Verify JWT and mediate snapshot CRUD through RLS.</td><td>Supabase publishable key</td><td>Secret or service-role keys</td></tr>
+  <tr><td><code>server/</code> + <code>api/index.py</code></td><td>FastAPI boundary, Pydantic allowlist and repository-based CRUD through RLS.</td><td>Supabase publishable key and user JWT</td><td>Database passwords or service-role keys</td></tr>
   <tr><td><code>openapi.json</code></td><td>One API contract rendered by the self-hosted Swagger and Scalar explorers.</td><td>Documented first-party routes</td><td>Runtime credentials or duplicated schemas</td></tr>
   <tr><td><code>src/http-status.ts</code></td><td>Single static vocabulary for REST response codes.</td><td>HTTP semantics</td><td>Response bodies or routing</td></tr>
   <tr><td><code>docker-compose.yml</code></td><td>Isolate web, API, Scalar, tests and monitoring services on one local network.</td><td>Health checks and runtime environment</td><td>Production secrets</td></tr>
-  <tr><td><code>monitoring/</code></td><td>Provision Prometheus collection and the Grafana health dashboard.</td><td>Internal metadata-only <code>/metrics</code></td><td>Financial payloads or JWTs</td></tr>
+  <tr><td><code>monitoring/</code></td><td>Provision Prometheus collection and Grafana application/database health dashboards.</td><td>Internal metadata-only <code>/metrics</code></td><td>Database passwords, financial payloads or JWTs</td></tr>
   <tr><td><code>supabase/migrations/*.sql</code></td><td>Tables, grants, constraints and owner-only RLS.</td><td>Supabase Auth identity</td><td>Application rendering</td></tr>
   <tr><td><code>design-system.css</code></td><td>Semantic tokens and reusable component recipes, including interaction, contrast, motion and touch states.</td><td>Page semantic color variables</td><td>Feature-specific layout</td></tr>
 </tbody></table>
@@ -153,7 +153,7 @@
     ├── privacy.ts              identifier redaction and persistence boundary
     └── consent.ts              versioned consent repository
 
-api/snapshots.ts               authenticated first-party boundary
+server/ + api/index.py         authenticated Python first-party boundary
 supabase/migrations/           profile, snapshot, consent + RLS
 docker compose                 web → API ← Prometheus → Grafana
 
@@ -195,13 +195,13 @@ t('recommendationsSummary', {
 <div class="callout good"><b>Failure mode.</b> If local storage is unavailable, the app warns the user and keeps working in memory until the tab closes. A storage failure does not redirect data elsewhere.</div>
 
 <h2 data-testid="architecture-section" id="testing">8 · Testing strategy</h2>
-<p>The suite has two concurrent execution lanes after the build barrier. Vitest covers fast logic and structural contracts while Playwright exercises real HTTP and browser behavior at the same time. The runner waits for both exit codes, then the Docker gate merges their events into a static Allure report served on localhost.</p>
-<div class="flow"><div class="stage"><span class="k">Fast</span><p>Vitest covers agent algorithms, handlers, imports and message formatting without starting a server.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Contracts</span><p>Key parity, named parameters, HTML hooks and design-system rules.</p></div><div class="arrow">→</div><div class="stage"><span class="k">HTTP API</span><p>Playwright sends real requests to verify routing, headers, status codes and anonymous access boundaries.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Browser</span><p>Playwright checks agent approvals, real imports, RTL/LTR, mobile layout, dynamic copy and axe WCAG A/AA rules.</p></div></div>
+<p>The suite has three concurrent execution lanes after the build barrier. Vitest covers browser logic and structural contracts, Pytest covers FastAPI and Supabase repositories, and Playwright exercises real HTTP and browser behavior. The runner waits for every exit code, then the Docker gate merges their events into a static Allure report served on localhost.</p>
+<div class="flow"><div class="stage"><span class="k">Fast</span><p>Vitest covers browser algorithms and contracts; Pytest covers FastAPI handlers, Pydantic models and repositories.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Contracts</span><p>Key parity, named parameters, HTML hooks and design-system rules.</p></div><div class="arrow">→</div><div class="stage"><span class="k">HTTP API</span><p>Playwright sends real requests to verify routing, headers, status codes and anonymous access boundaries.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Browser</span><p>Playwright checks agent approvals, real imports, RTL/LTR, mobile layout, dynamic copy and axe WCAG A/AA rules.</p></div></div>
 <div class="callout good"><b>Safe-to-spend sanity matrix.</b> Unit tests cover the formula, negative runway and month-end date clamping. Browser tests cover missing balance, missing recurring income and projected shortfall in desktop Chromium, Android Chromium and iOS WebKit, and reject <code>NaN</code>, <code>Infinity</code> or a negative allowance as user guidance.</div>
-<pre tabindex="0"><code>npm run build      # TypeScript compilation
+<pre tabindex="0"><code>npm run build      # TypeScript compilation + Python validation
 npm test           # unit + API + contract + component
 npm run test:e2e   # Real HTTP API + desktop, Android and iOS browser journeys
-npm run test:all   # Vitest + Playwright in parallel
+npm run test:all   # Vitest + Pytest + Playwright in parallel
 npm run test:docker # Compose verification + localhost Allure report
 npm run test:docker:stop # stop the test and report servers
 npm run stack:start # application + Prometheus + Grafana</code></pre>
@@ -210,7 +210,7 @@ npm run stack:start # application + Prometheus + Grafana</code></pre>
 <h2 data-testid="architecture-section" id="extend">9 · Extension points</h2>
 <div class="grid"><div class="box"><span class="tag">new locale</span><b>Extend the locale contract</b><span>Add the locale configuration and a complete resource file. Parameter-parity tests make sentence drift visible immediately.</span></div><div class="box"><span class="tag">new institution</span><b>Add an adapter</b><span>Implement the normalized importer contract; keep institution-specific rules outside rendering.</span></div><div class="box"><span class="tag">new agent</span><b>Derive, explain, approve</b><span>Add a pure typed engine to <code>financial-agents.ts</code>, a localized plain-language card, stable test IDs and independent unit/API/component/browser coverage. Any mutation requires an explicit approval action.</span></div><div class="box"><span class="tag">next split</span><b>Continue shrinking the composition root</b><span>Bank ingestion, state validation and categorization are extracted. Workbook binary parsing, forecast calculation and DOM views remain the next safe seams.</span></div></div>
 <div class="callout"><b>Architecture guardrail.</b> Do not enable cloud upload until authentication, server-side consent recording, deletion and recovery journeys, controller contact details, retention policy, threat model and legal review are complete. Local use must remain available after refusal.</div>
-<p class="small"><b>Activation status:</b> account-level work for automated Vercel deployment and the Supabase project is tracked in <code>TODO.md</code>. “Supabase-ready” means the boundary and schema exist; it does not mean cloud storage is enabled.</p>
+<p class="small"><b>Activation status:</b> the linked Supabase project has the three migrations, but Auth, server-side consent enforcement, two-user RLS integration and UI activation remain tracked in <code>TODO.md</code>. “Supabase-ready” does not mean cloud storage is enabled for users.</p>
 </main>
 
 <footer>Home Economy architecture · generated from the current repository structure · <a href="https://github.com/amielnoy/HomeEconomyStabilation#readme" target="_blank" rel="noopener noreferrer">README source ↗</a></footer>
