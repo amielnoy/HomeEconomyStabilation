@@ -1,0 +1,4 @@
+interface:
+  display_name: "Home Economy Design System"
+  short_description: "Evolve the product design system safely"
+  default_prompt: "Improve the Home Economy design system while preserving accessibility, localization, automation selectors, and existing behavior."
