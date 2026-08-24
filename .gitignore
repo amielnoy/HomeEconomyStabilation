@@ -1,10 +1,15 @@
 .vercel
 node_modules/
+coverage/
+.nyc_output/
 *.legacy-backup.html
 playwright-report/
 test-results/
 allure-results/
 allure-report/
+*.log
+*.tsbuildinfo
+.DS_Store
 dist-api/
 dist/swagger-ui/
 dist/scalar/
