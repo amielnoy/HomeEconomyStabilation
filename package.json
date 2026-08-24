@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.app.json && npm run typecheck:strict && npm run build:api && node scripts/copy-api-docs-assets.mjs && node scripts/prepare-vercel-output.mjs",
+    "build": "tsc -p tsconfig.app.json && npm run typecheck:strict && npm run build:api && npm run build:scripts && node dist-scripts/copy-api-docs-assets.js && node dist-scripts/prepare-vercel-output.js",
+    "build:docs": "tsc -p tsconfig.docs.json",
+    "build:scripts": "tsc -p tsconfig.scripts.json",
     "typecheck:strict": "tsc -p tsconfig.strict.json",
     "test": "vitest run --exclude '.vercel/**' --environment jsdom tests/unit tests/api tests/contract tests/component",
     "test:allure": "vitest run --config vitest.allure.config.ts --exclude '.vercel/**' tests/unit tests/api tests/contract tests/component",
@@ -22,6 +24,7 @@
     "stack:stop": "sh scripts/stop-local-stack.sh"
   },
   "devDependencies": {
+    "@types/node": "^24.0.0",
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "1.62.1",
     "@scalar/api-reference": "1.66.1",

@@ -5,6 +5,7 @@ public
 node_modules
 dist
 dist-api
+dist-scripts
 supabase/.temp
 __pycache__
 .pytest_cache

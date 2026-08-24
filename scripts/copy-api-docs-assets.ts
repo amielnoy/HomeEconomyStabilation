@@ -4,10 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const copyFiles = async (sourceRoot, targetRoot, files) => {
+async function copyFiles(sourceRoot: string, targetRoot: string, files: readonly string[]): Promise<void> {
   await mkdir(targetRoot, { recursive: true });
   await Promise.all(files.map((file) => copyFile(resolve(sourceRoot, file), resolve(targetRoot, file))));
-};
+}
 
 await Promise.all([
   copyFiles(

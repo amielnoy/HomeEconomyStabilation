@@ -1,7 +1,8 @@
 import { cpSync, mkdirSync, rmSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = resolve(import.meta.dirname, '..');
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'public');
 const files = [
   'mazan-habait.html',
@@ -12,7 +13,7 @@ const files = [
   'design-system.css',
   'resources',
   'dist',
-];
+] as const;
 
 rmSync(output, { recursive: true, force: true });
 mkdirSync(output, { recursive: true });

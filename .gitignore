@@ -13,6 +13,7 @@ allure-report/
 *.tsbuildinfo
 .DS_Store
 dist-api/
+dist-scripts/
 supabase/.temp/
 __pycache__/
 .pytest_cache/
