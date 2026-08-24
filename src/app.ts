@@ -1,4 +1,5 @@
 import { creditCardImporter, type Workbook, type SpreadsheetCell } from './credit-card-importer.js';
+import { createPrivacySafeSnapshot, sanitizeTransaction } from './privacy.js';
 import { createLocaleFormatters, formatMessage, getLocaleConfig, isSupportedLocale, resolveLocale, type Locale } from './localization.js';
 import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js';
 import { runFinancialAgents, type FinancialAgentResults } from './financial-agents.js';
@@ -782,17 +783,19 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return;
     const p = JSON.parse(raw);
-    S = Object.assign(S, p, { month: null });
+    S = Object.assign(S, p, {
+      tx: Array.isArray(p.tx) ? p.tx.map((transaction) => sanitizeTransaction(transaction)) : [],
+      accounts: [],
+      month: null,
+    });
     if (!Array.isArray(S.cats) || !S.cats.length) S.cats = DEFAULT_CATS;
     if (!Array.isArray(S.rules)) S.rules = DEFAULT_RULES;
+    save(); // migrate older browser state and erase persisted account/report identifiers
   } catch (e) { /* storage blocked or corrupt — start clean */ }
 }
 function save() {
   try {
-    localStorage.setItem(KEY, JSON.stringify({
-      tx: S.tx, overrides: S.overrides, rules: S.rules,
-      cats: S.cats, budgets: S.budgets, accounts: S.accounts,
-    }));
+    localStorage.setItem(KEY, JSON.stringify(createPrivacySafeSnapshot(S)));
   } catch (e) { toast(t('storageSaveError')); }
 }
 
@@ -1976,9 +1979,8 @@ function keepFocusInDrawer(event: KeyboardEvent) {
 /* backup                                                                */
 async function exportBackup() {
   const data = JSON.stringify({
-    app: 'mazan-habait', version: 1, savedAt: new Date().toISOString(),
-    tx: S.tx, overrides: S.overrides, rules: S.rules, cats: S.cats,
-    budgets: S.budgets, accounts: S.accounts,
+    app: 'mazan-habait', version: 2, savedAt: new Date().toISOString(),
+    ...createPrivacySafeSnapshot(S),
   }, null, 2);
   const name = 'mazan-habait-' + iso(new Date()) + '.json';
   let dl = null;
@@ -2001,8 +2003,9 @@ function importBackup(file) {
       if (typeof fr.result !== 'string') throw new Error('bad');
       const p = JSON.parse(fr.result) as Partial<AppState>;
       if (!p || !Array.isArray(p.tx)) throw new Error('bad');
-      S.tx = p.tx; S.overrides = p.overrides || {}; S.rules = p.rules || DEFAULT_RULES;
-      S.cats = p.cats || DEFAULT_CATS; S.budgets = p.budgets || {}; S.accounts = p.accounts || [];
+      S.tx = p.tx.map((transaction) => sanitizeTransaction(transaction));
+      S.overrides = p.overrides || {}; S.rules = p.rules || DEFAULT_RULES;
+      S.cats = p.cats || DEFAULT_CATS; S.budgets = p.budgets || {}; S.accounts = [];
       S.month = null;
       save(); renderDrawer(); render();
       toast(t('backupLoadedCount', { count: S.tx.length }));

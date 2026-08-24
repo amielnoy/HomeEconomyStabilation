@@ -1,5 +1,6 @@
 import { HttpStatus } from './http-status.js';
-export const CLOUD_SNAPSHOT_SCHEMA_VERSION = 1;
+import { isPrivacySafeTransaction } from './privacy.js';
+export const CLOUD_SNAPSHOT_SCHEMA_VERSION = 2;
 export const CLOUD_SNAPSHOT_MAX_BYTES = 1_000_000;
 export class CloudSyncError extends Error {
     code;
@@ -20,7 +21,8 @@ export function isCloudStatePayload(value) {
         && Array.isArray(value.rules) && value.rules.length <= 1_000
         && Array.isArray(value.cats) && value.cats.length <= 1_000
         && isRecord(value.budgets)
-        && Array.isArray(value.accounts) && value.accounts.length <= 100;
+        && !('accounts' in value)
+        && value.tx.every(isPrivacySafeTransaction);
 }
 export function snapshotBytes(value) {
     return new TextEncoder().encode(JSON.stringify(value)).byteLength;

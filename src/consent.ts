@@ -1,5 +1,5 @@
 export const CLOUD_CONSENT_KEY = 'mazan-habait/cloud-consent';
-export const CLOUD_CONSENT_VERSION = 'cloud-sync-v1-2026-08-23';
+export const CLOUD_CONSENT_VERSION = 'cloud-sync-v2-privacy-minimised-2026-08-24';
 
 export interface ConsentAcceptance {
   purpose: 'cloud_sync';
