@@ -1,7 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "rootDir": "."
-  },
-  "include": ["api/**/*.ts", "src/cloud-sync.ts", "src/http-status.ts", "src/privacy.ts", "src/domain-model.ts"]
-}

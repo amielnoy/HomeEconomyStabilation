@@ -6,7 +6,9 @@ import { CLOUD_SNAPSHOT_SCHEMA_VERSION } from '../../src/cloud-sync';
 const root = resolve(__dirname, '../..');
 const migration = readFileSync(resolve(root, 'supabase/migrations/202608230001_create_app_snapshots.sql'), 'utf8');
 const versionMigration = readFileSync(resolve(root, 'supabase/migrations/202608240001_upgrade_snapshot_schema_v2.sql'), 'utf8');
-const api = readFileSync(resolve(root, 'api/snapshots.ts'), 'utf8');
+const config = readFileSync(resolve(root, 'server/config.py'), 'utf8');
+const store = readFileSync(resolve(root, 'server/supabase_store.py'), 'utf8');
+const supportMigration = readFileSync(resolve(root, 'supabase/migrations/202608240002_server_repository_support.sql'), 'utf8');
 
 describe('Supabase persistence contract', () => {
   it('defines the minimal profile, snapshot and consent tables', () => {
@@ -27,15 +29,16 @@ describe('Supabase persistence contract', () => {
   });
 
   it('uses only a publishable key and verifies the user token at the API boundary', () => {
-    expect(api).toContain('SUPABASE_PUBLISHABLE_KEY');
-    expect(api).toContain('auth.getUser(token)');
-    expect(api).not.toMatch(/service[_-]?role/i);
-    expect(api).not.toContain('SUPABASE_SECRET_KEY');
+    expect(config).toContain('SUPABASE_PUBLISHABLE_KEY');
+    expect(store).toContain('/auth/v1/user');
+    expect(`${config}\n${store}`).not.toMatch(/service[_-]?role/i);
+    expect(`${config}\n${store}`).not.toContain('SUPABASE_SECRET_KEY');
   });
 
   it('keeps the database default and write constraint aligned with the runtime snapshot version', () => {
     expect(versionMigration).toContain(`set default ${CLOUD_SNAPSHOT_SCHEMA_VERSION}`);
     expect(versionMigration).toContain(`check (schema_version = ${CLOUD_SNAPSHOT_SCHEMA_VERSION})`);
     expect(versionMigration).toContain('not valid');
+    expect(supportMigration).toContain('validate constraint app_snapshots_schema_version_check');
   });
 });

@@ -14,8 +14,6 @@
     "src/credit-card-importer.ts",
     "src/categorization.ts",
     "src/cloud-sync.ts",
-    "src/http-status.ts",
-    "api/request-guard.ts",
-    "api/snapshots.ts"
+    "src/http-status.ts"
   ]
 }
