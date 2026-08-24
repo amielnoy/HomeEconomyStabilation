@@ -13,7 +13,7 @@ tests_status=0
 report_status=0
 
 npm run build || build_status=$?
-ALLURE_RESULTS_DIR="$RESULTS_DIR" VITEST_SCRIPT=test:allure sh scripts/run-tests-in-parallel.sh || tests_status=$?
+ALLURE_RESULTS_DIR="$RESULTS_DIR" VITEST_SCRIPT=test:allure SERVER_TEST_SCRIPT=test:server:allure sh scripts/run-tests-in-parallel.sh || tests_status=$?
 npx allure generate "$RESULTS_DIR" --output "$REPORT_DIR" --report-name "Home Economy test results" || report_status=$?
 
 if [ "$build_status" -ne 0 ] || [ "$tests_status" -ne 0 ] || [ "$report_status" -ne 0 ]; then

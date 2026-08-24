@@ -11,7 +11,7 @@ const webServers = process.env.PLAYWRIGHT_BASE_URL ? undefined : [
     stderr: 'ignore' as const,
   },
   {
-    command: 'npm run build:api && PORT=8766 node scripts/api-server.mjs',
+    command: 'npm run build:api && python3 -m uvicorn server.app:app --host 127.0.0.1 --port 8766',
     url: 'http://127.0.0.1:8766/api/health',
     reuseExistingServer: true,
     stdout: 'ignore' as const,

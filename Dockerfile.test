@@ -2,8 +2,18 @@ FROM mcr.microsoft.com/playwright:v1.62.1-noble
 
 WORKDIR /workspace
 
+RUN apt-get update \
+  && apt-get install --yes --no-install-recommends python3-venv \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 RUN npm ci
+
+COPY requirements.txt requirements-dev.txt ./
+RUN python3 -m venv /opt/home-economy-venv \
+  && /opt/home-economy-venv/bin/pip install --no-cache-dir -r requirements-dev.txt
+
+ENV PATH="/opt/home-economy-venv/bin:$PATH"
 
 COPY . .
 

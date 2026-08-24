@@ -1,8 +1,15 @@
 .git
 .vercel
+.vercel_python_packages
+public
 node_modules
 dist
 dist-api
+supabase/.temp
+__pycache__
+.pytest_cache
+*.pyc
+.venv
 playwright-report
 test-results
 coverage

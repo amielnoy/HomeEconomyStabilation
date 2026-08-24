@@ -1,4 +1,6 @@
 .vercel
+.vercel_python_packages/
+public/
 node_modules/
 coverage/
 .nyc_output/
@@ -11,6 +13,11 @@ allure-report/
 *.tsbuildinfo
 .DS_Store
 dist-api/
+supabase/.temp/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.venv/
 dist/swagger-ui/
 dist/scalar/
 .env

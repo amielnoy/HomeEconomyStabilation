@@ -1,28 +1,15 @@
-FROM node:24-alpine AS build
+FROM python:3.12-slim
 
 WORKDIR /workspace
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY tsconfig.json tsconfig.api.json tsconfig.api.build.json ./
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 COPY api ./api
-COPY src/cloud-sync.ts ./src/cloud-sync.ts
-COPY src/http-status.ts ./src/http-status.ts
-COPY src/privacy.ts ./src/privacy.ts
-COPY src/domain-model.ts ./src/domain-model.ts
-RUN npm run build:api
+COPY server ./server
 
-FROM node:24-alpine
-
-WORKDIR /workspace
-ENV NODE_ENV=production
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-COPY --from=build /workspace/dist-api ./dist-api
-COPY scripts/api-server.mjs ./scripts/api-server.mjs
-
+ENV PYTHONUNBUFFERED=1
 EXPOSE 3000
 
 HEALTHCHECK --interval=3s --timeout=2s --retries=20 \
-  CMD wget -q -O /dev/null http://127.0.0.1:3000/health || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/health', timeout=1)" || exit 1
 
-CMD ["node", "scripts/api-server.mjs"]
+CMD ["python", "-m", "uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "3000"]
