@@ -64,3 +64,11 @@ test('keeps the marketing experience legible in dark mode', async ({ homePage })
   const background = await homePage.marketing.bodyBackgroundColor();
   expect(background).not.toBe('rgb(237, 241, 241)');
 });
+
+test('keeps the primary action visually distinct and comfortably tappable', async ({ homePage }) => {
+  const styles = await homePage.marketing.readActionStyles();
+
+  expect(styles.primaryBackground).not.toBe(styles.secondaryBackground);
+  expect(styles.primaryColor).not.toBe(styles.primaryBackground);
+  expect(styles.primaryHeight).toBeGreaterThanOrEqual(42);
+});

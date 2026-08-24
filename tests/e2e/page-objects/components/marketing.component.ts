@@ -11,6 +11,13 @@ export interface MarketingEvent {
   details: Record<string, string>;
 }
 
+export interface MarketingActionStyles {
+  primaryBackground: string;
+  secondaryBackground: string;
+  primaryColor: string;
+  primaryHeight: number;
+}
+
 export class MarketingComponent {
   readonly root = this.page.getByTestId('empty');
   readonly title = this.page.getByTestId('marketing-title');
@@ -44,6 +51,22 @@ export class MarketingComponent {
   @step('Read the page background color')
   async bodyBackgroundColor(): Promise<string> {
     return this.page.getByTestId('app-body').evaluate((element) => getComputedStyle(element).backgroundColor);
+  }
+
+  @step('Check the visual hierarchy of the primary action')
+  async readActionStyles(): Promise<MarketingActionStyles> {
+    return this.page.evaluate(() => {
+      const primary = document.querySelector<HTMLElement>('[data-testid="marketing-upload"]');
+      const secondary = document.querySelector<HTMLElement>('[data-testid="marketing-how"]');
+      if (!primary || !secondary) throw new Error('Marketing actions are missing');
+      const primaryStyle = getComputedStyle(primary);
+      return {
+        primaryBackground: primaryStyle.backgroundColor,
+        secondaryBackground: getComputedStyle(secondary).backgroundColor,
+        primaryColor: primaryStyle.color,
+        primaryHeight: primary.getBoundingClientRect().height,
+      };
+    });
   }
 
   private async readStorage<T>(key: string, fallback: T): Promise<T> {

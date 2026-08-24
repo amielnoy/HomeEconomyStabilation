@@ -6,23 +6,28 @@ The system is implemented in `design-system.css` and is intentionally small enou
 
 - `--ds-space-1` through `--ds-space-7`: 4px spacing scale.
 - `--ds-space-8` and `--ds-space-10`: larger section spacing.
-- `--ds-radius-sm`, `--ds-radius-md`, `--ds-radius-lg`, `--ds-radius-pill`: shape scale.
+- `--ds-radius-xs` through `--ds-radius-xl`, plus `--ds-radius-pill`: shape scale.
+- `--ds-control-sm`, `--ds-control-md`, `--ds-control-touch`: control-height scale. The mobile value is 48px.
+- `--ds-text-xs` through `--ds-text-xl` and the leading tokens: interface type scale.
 - `--ds-font-body` and `--ds-font-display`: product typography.
 - `--ds-text`, `--ds-text-secondary`, `--ds-text-muted`: semantic text roles.
 - `--ds-surface`, `--ds-surface-subtle`, `--ds-bg`: surface roles.
 - `--ds-action`, `--ds-action-soft`, `--ds-focus`: interaction roles.
+- `--ds-positive`, `--ds-warning`, `--ds-critical` and their soft counterparts: adaptive status roles for light and dark themes.
 
 ## Primitives
 
-- `.ds-surface`: bordered, elevated surface for a standalone panel.
+- `.ds-surface`: bordered, elevated surface for a standalone panel. Existing `.card` sections share this recipe.
 - `.ds-title`: display heading style.
-- `.ds-button`: action control. Add `data-variant="primary|quiet"` and optionally `data-size="sm"`.
+- `.ds-button`: action control. Add `data-variant="primary|quiet|destructive"` and optionally `data-size="sm"`. Existing `.btn`, `.primary`, `.quiet`, `.destructive`, and `.sm` names are supported as migration aliases.
 - `.ds-field`: text, number, date, and select control.
 - `.ds-field--compact`: compact select/input variant for toolbars.
 - `.ds-status`: semantic status. Add `data-tone="positive|warning|critical"`.
 - `.ds-link-card`: keyboard-accessible linked card for trusted external resources.
 - `.ds-focus`: focus ring utility for custom interactive controls.
 - `.locale-picker`: accessible language selector with a leading globe icon.
+
+All interactive recipes define hover, active, disabled and keyboard-focus states. They respect increased-contrast, forced-colors and reduced-motion preferences. Reusable visual recipes live only in `design-system.css`; the page stylesheet owns composition and responsive layout.
 
 ## Financial agent pattern
 
@@ -104,9 +109,9 @@ The directory links to official pension-adviser and investment-adviser registrie
 
 ## Rules
 
-1. Use semantic tokens instead of raw colors and spacing values.
+1. Use semantic tokens instead of raw colors and spacing values. Raw theme values belong only in the light/dark theme definitions.
 2. Use one surface level per section; do not nest cards inside cards.
-3. Use `ds-button` for actions and `ds-field` for inputs/selects.
+3. Use `ds-button` for new actions and `ds-field` for new inputs/selects. `.btn` is a supported migration alias, not a second recipe.
 4. Every interactive control must retain a visible `:focus-visible` state.
 5. Keep layout recipes in the page stylesheet; keep reusable visual language here.
 6. Respect `prefers-reduced-motion` for transitions and animation.
