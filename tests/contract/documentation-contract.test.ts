@@ -77,6 +77,16 @@ describe('project documentation contract', () => {
     expect(architecture).toContain('web → API ← Prometheus → Grafana');
   });
 
+  it('documents the exact privacy boundary without unsupported compliance claims', () => {
+    const privacy = read('PRIVACY.md');
+    for (const requirement of [
+      'account', 'card', 'CVV', 'references', 'filenames', 'GDPR', 'HIPAA',
+      'not a certification', 'minimised transaction history',
+    ]) expect(privacy).toContain(requirement);
+    expect(read('README.md')).toContain('PRIVACY.md');
+    expect(read('SUPABASE.md')).toContain('PRIVACY.md');
+  });
+
   it('lists every executable test suite in the test plan', () => {
     const testPlan = read('TEST_PLAN.md');
     const collectSuites = (directory: string): string[] => readdirSync(resolve(root, directory), { withFileTypes: true })
@@ -89,7 +99,7 @@ describe('project documentation contract', () => {
     for (const suite of collectSuites('tests')) {
       expect(testPlan, `${suite} is missing from TEST_PLAN.md`).toContain(`\`${suite}\``);
     }
-    for (const guide of ['README.md', 'design-system.md', 'SUPABASE.md', 'MONITORING.md', 'TODO.md']) {
+    for (const guide of ['README.md', 'design-system.md', 'PRIVACY.md', 'SUPABASE.md', 'MONITORING.md', 'TODO.md']) {
       expect(read(guide), `${guide} does not reference the test plan`).toContain('TEST_PLAN.md');
     }
     expect(read('Architecture.html')).toContain('TEST_PLAN.md');

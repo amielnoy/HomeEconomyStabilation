@@ -2,7 +2,7 @@
 
 ## Objective and release gate
 
-The test suite protects the local-first household-finance experience across correctness, localization, accessibility, mobile behavior, security, API contracts and operational infrastructure. A releasable commit must pass `npm run build` and `npm run test:all`. The reproducible local release gate is `npm run test:docker`, which also publishes the combined Allure report on localhost.
+The test suite protects the local-first household-finance experience across correctness, privacy minimisation, localization, accessibility, mobile behavior, security, API contracts and operational infrastructure. A releasable commit must pass `npm run build` and `npm run test:all`. The reproducible local release gate is `npm run test:docker`, which also publishes the combined Allure report on localhost.
 
 No test may use real banking credentials, production JWTs or personally identifying financial data. Browser tests use the checked-in synthetic workbook only. A skipped test is acceptable only when its scenario is intentionally inapplicable to that Playwright project; unexpected skips, flaky retries or missing report output require investigation.
 
@@ -51,7 +51,8 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 | `tests/unit/localization.unit.test.ts` | Supported locale validation, RTL/LTR, UTC formatting and named parameters |
 | `tests/unit/credit-card-importer.unit.test.ts` | Charges, refunds and invalid workbook rows |
 | `tests/unit/marketing.unit.test.ts` | Allowed attribution, first/last touch and bounded local event history |
-| `tests/unit/cloud-sync.unit.test.ts` | Snapshot validation, signed-out failure and authorization-header handling |
+| `tests/unit/privacy.unit.test.ts` | Identifier redaction, privacy-safe snapshots and rejection of unsanitised transactions |
+| `tests/unit/cloud-sync.unit.test.ts` | Privacy-safe schema-v2 snapshot validation, signed-out failure and authorization-header handling |
 | `tests/unit/consent.unit.test.ts` | Versioned consent, malformed records and withdrawal |
 
 ## API suites
@@ -69,12 +70,12 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 
 | File | Coverage |
 |---|---|
-| `tests/contract/design-system-contract.test.ts` | Tokens, focus, reduced motion, typography and directional drawers |
-| `tests/contract/documentation-contract.test.ts` | README, architecture, design system, Supabase, TODO, monitoring and this test plan stay synchronized |
+| `tests/contract/design-system-contract.test.ts` | Semantic tokens, recipe ownership, variants, disabled/focus states, contrast preferences, touch targets, typography and directional drawers |
+| `tests/contract/documentation-contract.test.ts` | README, architecture, design system, privacy, Supabase, TODO, monitoring and this test plan stay synchronized |
 | `tests/contract/importer-contract.test.ts` | Dashboard transaction shape |
 | `tests/contract/localization-contract.test.ts` | Key parity, named-parameter parity and complete HTML/runtime translation coverage |
 | `tests/contract/monitoring.contract.test.ts` | Prometheus, Grafana and combined Allure publication |
-| `tests/contract/openapi.contract.test.ts` | Snapshot operations, bearer security, responses and self-hosted Swagger/Scalar |
+| `tests/contract/openapi.contract.test.ts` | Snapshot operations, privacy-minimised schema v2, bearer security, responses and self-hosted Swagger/Scalar |
 | `tests/contract/security-sanity.contract.test.ts` | Dangerous sinks, HTTPS opener isolation, file types and remote scripts |
 | `tests/contract/supabase-schema.contract.test.ts` | Tables, grants, RLS ownership and publishable-key boundary |
 | `tests/contract/test-id-contract.test.ts` | Stable test IDs for static/dynamic controls and Page Object selector discipline |
@@ -103,12 +104,12 @@ The shared POSIX runner tracks both child process IDs, waits for both exit codes
 | `tests/e2e/financial-agents.e2e.spec.ts` | Eight agents, saving evidence, safe-to-spend, explicit approvals and translation |
 | `tests/e2e/i18n-dynamic.e2e.spec.ts` | Generated English, French and Amharic copy without Hebrew leakage |
 | `tests/e2e/localization.e2e.spec.ts` | Persistence, RTL/LTR, ILS formatting and mobile overflow in every locale |
-| `tests/e2e/marketing-landing.e2e.spec.ts` | Attribution privacy, CTAs, four locales and dark mode |
+| `tests/e2e/marketing-landing.e2e.spec.ts` | Attribution privacy, CTA visual hierarchy and tap size, four locales and dark mode |
 | `tests/e2e/mobile-usability.e2e.spec.ts` | Touch targets and complete Android/iOS browser journey |
 | `tests/e2e/http-api.api.e2e.spec.ts` | Real HTTP health GET/HEAD, method rejection, anonymous snapshot protection and unknown routes |
 | `tests/e2e/savings-directory.e2e.spec.ts` | Empty-state access, 18 links, licensed-adviser registries, requested Dorit Gov Ari profile, support section, WhatsApp channel, French and return journey |
 | `tests/e2e/savings-opportunities.sanity.e2e.spec.ts` | Annual/one-time separation, evidence disclosure and absence of automatic cancellation |
-| `tests/e2e/security-sanity.e2e.spec.ts` | Workbook XSS, malformed backup, opener isolation and no outgoing financial writes |
+| `tests/e2e/security-sanity.e2e.spec.ts` | Workbook XSS, malformed backup, opener isolation, no outgoing financial writes and real-browser bank/card identifier minimisation |
 | `tests/e2e/spending-guide.sanity.e2e.spec.ts` | Missing inputs and projected-shortfall fail-safe behavior |
 | `tests/e2e/support-organizations.sanity.e2e.spec.ts` | Paamonim, Mekimi and WhatsApp URLs, neutral presentation, ordering and four-language copy |
 

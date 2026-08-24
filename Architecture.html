@@ -131,7 +131,7 @@
   <tr><td><code>docker-compose.yml</code></td><td>Isolate web, API, Scalar, tests and monitoring services on one local network.</td><td>Health checks and runtime environment</td><td>Production secrets</td></tr>
   <tr><td><code>monitoring/</code></td><td>Provision Prometheus collection and the Grafana health dashboard.</td><td>Internal metadata-only <code>/metrics</code></td><td>Financial payloads or JWTs</td></tr>
   <tr><td><code>supabase/migrations/*.sql</code></td><td>Tables, grants, constraints and owner-only RLS.</td><td>Supabase Auth identity</td><td>Application rendering</td></tr>
-  <tr><td><code>design-system.css</code></td><td>Tokens and reusable component primitives.</td><td>Page semantic color variables</td><td>Feature-specific layout</td></tr>
+  <tr><td><code>design-system.css</code></td><td>Semantic tokens and reusable component recipes, including interaction, contrast, motion and touch states.</td><td>Page semantic color variables</td><td>Feature-specific layout</td></tr>
 </tbody></table>
 </div>
 <pre tabindex="0"><code>mazan-habait.html
@@ -143,6 +143,7 @@
     ├── localization.ts         locale and message primitives
     ├── marketing.ts            local attribution and events
     ├── cloud-sync.ts           optional snapshot repository
+    ├── privacy.ts              identifier redaction and persistence boundary
     └── consent.ts              versioned consent repository
 
 api/snapshots.ts               authenticated first-party boundary
@@ -160,13 +161,13 @@ localStorage                    user-owned persistence boundary</code></pre>
   <dt>rules</dt><dd>Ordered text-match rules used for repeatable categorization.</dd>
   <dt>cats</dt><dd>User-editable category definitions and financial kind: expense, income or neutral.</dd>
   <dt>budgets</dt><dd>Category ID → monthly ILS ceiling.</dd>
-  <dt>accounts</dt><dd>Account labels detected in imported reports.</dd>
+  <dt>accounts</dt><dd>Account labels detected for the current in-memory session only; excluded from persistence and backup.</dd>
   <dt>month</dt><dd>Current view selection; reset safely when persisted state loads.</dd>
 </dl>
 <div class="grid"><div class="box"><span class="tag">automatic</span><b>Browser persistence</b><span>State is serialized to <code>mazan-habait/v1</code>. A blocked or corrupted store falls back to a clean in-memory session.</span></div><div class="box"><span class="tag">portable</span><b>Backup file</b><span>Export and import provide an explicit user-controlled path between browsers or computers.</span></div></div>
 <h3>Optional cloud data model</h3>
 <div class="grid"><div class="box"><span class="tag">identity</span><b><code>user_profiles</code></b><span>Only user ID and preferred locale; no financial payload.</span></div><div class="box"><span class="tag">state</span><b><code>app_snapshots</code></b><span>One bounded, schema-versioned JSON snapshot per authenticated owner.</span></div><div class="box"><span class="tag">consent</span><b><code>consent_acceptances</code></b><span>Purpose, statement version, locale and server timestamps for acceptance or withdrawal.</span></div></div>
-<div class="callout"><b>Not persisted.</b> Agent findings, forecasts, JWTs, typed names, signatures, IP addresses and device fingerprints are excluded. Derived values are recalculated after restore.</div>
+<div class="callout"><b>Not persisted.</b> Raw reports, account/card numbers, CVV, references, original filenames, agent findings, forecasts, JWTs, typed names, signatures, IP addresses and device fingerprints are excluded. Transaction history is minimised by <code>privacy.ts</code> before browser storage, manual backup or a future schema-v2 cloud snapshot.</div>
 
 <h2 data-testid="architecture-section" id="i18n">6 · Localization architecture</h2>
 <p><code>he.json</code> is the canonical key set. English, Amharic and French must expose the same keys and the same named parameters, while remaining free to reorder parameters inside a sentence.</p>
