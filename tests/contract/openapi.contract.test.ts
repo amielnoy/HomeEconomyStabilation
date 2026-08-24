@@ -31,6 +31,9 @@ describe('Swagger/OpenAPI contract', () => {
     expect(payload.required).not.toContain('accounts');
     expect(payload.properties).not.toHaveProperty('accounts');
     expect(spec.components.schemas.PrivacySafeTransaction.description).toContain('identifiers');
+    expect(spec.components.schemas.PrivacySafeTransaction.additionalProperties).toBe(false);
+    expect(payload.properties.rules.items.$ref).toContain('CategoryRule');
+    expect(payload.properties.cats.items.$ref).toContain('Category');
   });
 
   it('keeps the manual explorer self-hosted and pointed at the checked-in specification', () => {
@@ -54,6 +57,9 @@ describe('Swagger/OpenAPI contract', () => {
     const operations = spec.paths['/api/snapshots'];
     expect(operations.get.responses).toHaveProperty(String(HttpStatus.OK));
     expect(operations.put.responses).toHaveProperty(String(HttpStatus.BAD_REQUEST));
+    expect(operations.put.responses).toHaveProperty(String(HttpStatus.CONTENT_TOO_LARGE));
+    expect(operations.put.responses).toHaveProperty(String(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
+    expect(operations.put.responses).toHaveProperty(String(HttpStatus.TOO_MANY_REQUESTS));
     expect(operations.delete.responses).toHaveProperty(String(HttpStatus.NO_CONTENT));
     for (const operation of Object.values(operations) as Array<{ responses: Record<string, unknown> }>) {
       expect(operation.responses).toHaveProperty(String(HttpStatus.UNAUTHORIZED));

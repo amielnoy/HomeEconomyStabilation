@@ -38,6 +38,13 @@ test('rejects unsupported snapshot methods before processing data', async ({ hom
   await expect(response.json()).resolves.toEqual({ code: 'method_not_allowed' });
 });
 
+test('rejects a non-JSON snapshot before authentication or provider work', async ({ homeEconomyApi }) => {
+  const response = await homeEconomyApi.putSnapshotAsText();
+
+  expect(response.status()).toBe(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+  await expect(response.json()).resolves.toEqual({ code: 'json_content_type_required' });
+});
+
 test('returns a stable not-found response for unknown API routes', async ({ homeEconomyApi }) => {
   const response = await homeEconomyApi.getMissingRoute();
   const body = (await response.body()).toString('utf8');

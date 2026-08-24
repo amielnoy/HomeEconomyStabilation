@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { CLOUD_SNAPSHOT_SCHEMA_VERSION } from '../../src/cloud-sync';
 
 const root = resolve(__dirname, '../..');
 const migration = readFileSync(resolve(root, 'supabase/migrations/202608230001_create_app_snapshots.sql'), 'utf8');
+const versionMigration = readFileSync(resolve(root, 'supabase/migrations/202608240001_upgrade_snapshot_schema_v2.sql'), 'utf8');
 const api = readFileSync(resolve(root, 'api/snapshots.ts'), 'utf8');
 
 describe('Supabase persistence contract', () => {
@@ -29,5 +31,11 @@ describe('Supabase persistence contract', () => {
     expect(api).toContain('auth.getUser(token)');
     expect(api).not.toMatch(/service[_-]?role/i);
     expect(api).not.toContain('SUPABASE_SECRET_KEY');
+  });
+
+  it('keeps the database default and write constraint aligned with the runtime snapshot version', () => {
+    expect(versionMigration).toContain(`set default ${CLOUD_SNAPSHOT_SCHEMA_VERSION}`);
+    expect(versionMigration).toContain(`check (schema_version = ${CLOUD_SNAPSHOT_SCHEMA_VERSION})`);
+    expect(versionMigration).toContain('not valid');
   });
 });

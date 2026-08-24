@@ -29,6 +29,13 @@ export class HomeEconomyApi {
     return this.request.post('/api/snapshots', { data: {} });
   }
 
+  @step('Check that snapshot writes require JSON before authentication')
+  async putSnapshotAsText(): Promise<APIResponse> {
+    return this.request.put('/api/snapshots', {
+      data: 'not-json', headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+
   @step('Request an API route that does not exist')
   async getMissingRoute(): Promise<APIResponse> {
     return this.request.get('/api/not-a-real-route');

@@ -1,16 +1,10 @@
 import { HttpStatus } from './http-status.js';
-import { isPrivacySafeTransaction } from './privacy.js';
+import { isPrivacySafeSnapshot, type PrivacySafeSnapshot } from './privacy.js';
 
 export const CLOUD_SNAPSHOT_SCHEMA_VERSION = 2;
 export const CLOUD_SNAPSHOT_MAX_BYTES = 1_000_000;
 
-export interface CloudStatePayload {
-  tx: unknown[];
-  overrides: Record<string, unknown>;
-  rules: unknown[];
-  cats: unknown[];
-  budgets: Record<string, unknown>;
-}
+export type CloudStatePayload = PrivacySafeSnapshot;
 
 export interface CloudSnapshot {
   schemaVersion: typeof CLOUD_SNAPSHOT_SCHEMA_VERSION;
@@ -31,18 +25,8 @@ export class CloudSyncError extends Error {
   }
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-
 export function isCloudStatePayload(value: unknown): value is CloudStatePayload {
-  if (!isRecord(value)) return false;
-  return Array.isArray(value.tx) && value.tx.length <= 50_000
-    && isRecord(value.overrides)
-    && Array.isArray(value.rules) && value.rules.length <= 1_000
-    && Array.isArray(value.cats) && value.cats.length <= 1_000
-    && isRecord(value.budgets)
-    && !('accounts' in value)
-    && value.tx.every(isPrivacySafeTransaction);
+  return isPrivacySafeSnapshot(value);
 }
 
 export function snapshotBytes(value: unknown): number {
@@ -57,6 +41,7 @@ export class SupabaseSnapshotRepository implements CloudSnapshotClient {
     accessToken: () => Promise<string | null>;
     endpoint?: string;
     fetchImpl?: typeof fetch;
+    timeoutMs?: number;
   }) {
     this.endpoint = input.endpoint || '/api/snapshots';
     this.fetchImpl = input.fetchImpl || fetch;
@@ -68,15 +53,28 @@ export class SupabaseSnapshotRepository implements CloudSnapshotClient {
     if (payload && (!isCloudStatePayload(payload) || snapshotBytes(payload) > CLOUD_SNAPSHOT_MAX_BYTES)) {
       throw new CloudSyncError('invalid_snapshot', 'The snapshot is invalid or too large.', HttpStatus.BAD_REQUEST);
     }
-    const response = await this.fetchImpl(this.endpoint, {
-      method,
-      credentials: 'omit',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...(payload ? { 'Content-Type': 'application/json' } : {}),
-      },
-      body: payload ? JSON.stringify({ schemaVersion: CLOUD_SNAPSHOT_SCHEMA_VERSION, payload }) : undefined,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.input.timeoutMs ?? 10_000);
+    let response: Response;
+    try {
+      response = await this.fetchImpl(this.endpoint, {
+        method,
+        credentials: 'omit',
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(payload ? { 'Content-Type': 'application/json' } : {}),
+        },
+        body: payload ? JSON.stringify({ schemaVersion: CLOUD_SNAPSHOT_SCHEMA_VERSION, payload }) : undefined,
+      });
+    } catch (cause) {
+      if (controller.signal.aborted) {
+        throw new CloudSyncError('cloud_timeout', 'Cloud sync timed out.', HttpStatus.GATEWAY_TIMEOUT);
+      }
+      throw new CloudSyncError('cloud_network_failed', 'Cloud sync is currently unavailable.');
+    } finally {
+      clearTimeout(timeout);
+    }
     const body = response.status === HttpStatus.NO_CONTENT ? null : await response.json().catch(() => null) as Record<string, unknown> | null;
     if (!response.ok) {
       const code = typeof body?.code === 'string' ? body.code : 'cloud_request_failed';
@@ -111,6 +109,7 @@ export function createCloudSnapshotClient(input: {
   accessToken: () => Promise<string | null>;
   endpoint?: string;
   fetchImpl?: typeof fetch;
+  timeoutMs?: number;
 }): CloudSnapshotClient {
   return new SupabaseSnapshotRepository(input);
 }

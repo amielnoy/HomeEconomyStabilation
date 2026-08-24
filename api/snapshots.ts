@@ -6,6 +6,7 @@ import {
   isCloudStatePayload,
   snapshotBytes,
 } from '../src/cloud-sync.js';
+import { guardSnapshotRequest } from './request-guard.js';
 
 interface ApiRequest {
   method?: string;
@@ -51,6 +52,24 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   response.setHeader('Allow', 'GET, PUT, DELETE');
   if (!['GET', 'PUT', 'DELETE'].includes(request.method || '')) return error(response, HttpStatus.METHOD_NOT_ALLOWED, 'method_not_allowed');
 
+  const guardFailure = guardSnapshotRequest(request);
+  if (guardFailure) {
+    if (guardFailure.retryAfter) response.setHeader('Retry-After', String(guardFailure.retryAfter));
+    return error(response, guardFailure.status, guardFailure.code);
+  }
+
+  const body = request.method === 'PUT' ? (typeof request.body === 'string' ? (() => {
+    try { return JSON.parse(request.body); } catch { return null; }
+  })() : request.body) : null;
+  if (request.method === 'PUT') {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return error(response, HttpStatus.BAD_REQUEST, 'invalid_snapshot');
+    const candidate = body as Record<string, unknown>;
+    if (candidate.schemaVersion !== CLOUD_SNAPSHOT_SCHEMA_VERSION || !isCloudStatePayload(candidate.payload)
+        || snapshotBytes(candidate.payload) > CLOUD_SNAPSHOT_MAX_BYTES) {
+      return error(response, HttpStatus.BAD_REQUEST, 'invalid_snapshot');
+    }
+  }
+
   const config = readSupabaseConfig();
   if (!config) return error(response, HttpStatus.SERVICE_UNAVAILABLE, 'cloud_not_configured');
   const token = bearerToken(request.headers.authorization);
@@ -79,15 +98,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     return;
   }
 
-  const body = typeof request.body === 'string' ? (() => {
-    try { return JSON.parse(request.body); } catch { return null; }
-  })() : request.body;
-  if (!body || typeof body !== 'object' || Array.isArray(body)) return error(response, HttpStatus.BAD_REQUEST, 'invalid_snapshot');
   const candidate = body as Record<string, unknown>;
-  if (candidate.schemaVersion !== CLOUD_SNAPSHOT_SCHEMA_VERSION || !isCloudStatePayload(candidate.payload)
-      || snapshotBytes(candidate.payload) > CLOUD_SNAPSHOT_MAX_BYTES) {
-    return error(response, HttpStatus.BAD_REQUEST, 'invalid_snapshot');
-  }
 
   const { data, error: writeError } = await supabase.from('app_snapshots').upsert({
     user_id: authData.user.id,

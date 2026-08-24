@@ -13,6 +13,32 @@ describe('Supabase snapshot repository', () => {
     expect(isCloudStatePayload({ ...payload(), tx: 'not-an-array' })).toBe(false);
     expect(isCloudStatePayload({ ...payload(), accounts: ['04-279-661711'] })).toBe(false);
     expect(isCloudStatePayload({ ...payload(), tx: [{ ref: '4111111111111111', src: 'card.csv' }] })).toBe(false);
+    expect(isCloudStatePayload({ ...payload(), tx: [], unexpected: true })).toBe(false);
+  });
+
+  it('maps non-OK, malformed and timed-out provider responses to stable errors', async () => {
+    const unavailable = new SupabaseSnapshotRepository({
+      accessToken: async () => 'token',
+      fetchImpl: vi.fn(async () => new Response('{"code":"provider_down"}', { status: 502 })) as typeof fetch,
+    });
+    await expect(unavailable.load()).rejects.toMatchObject({ code: 'provider_down', status: 502 });
+
+    const timeout = new SupabaseSnapshotRepository({
+      accessToken: async () => 'token', timeoutMs: 1,
+      fetchImpl: vi.fn((_url, init) => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+      })) as typeof fetch,
+    });
+    await expect(timeout.load()).rejects.toMatchObject({ code: 'cloud_timeout', status: 504 });
+  });
+
+  it('uses DELETE without a request payload', async () => {
+    const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      expect(init).toMatchObject({ method: 'DELETE', body: undefined });
+      return new Response(null, { status: 204 });
+    });
+    const repository = new SupabaseSnapshotRepository({ accessToken: async () => 'token', fetchImpl: fetchImpl as typeof fetch });
+    await expect(repository.remove()).resolves.toBeUndefined();
   });
 
   it('fails before a network request when the user is signed out', async () => {

@@ -1,5 +1,5 @@
 import { HttpStatus } from './http-status.js';
-import { isPrivacySafeTransaction } from './privacy.js';
+import { isPrivacySafeSnapshot } from './privacy.js';
 export const CLOUD_SNAPSHOT_SCHEMA_VERSION = 2;
 export const CLOUD_SNAPSHOT_MAX_BYTES = 1_000_000;
 export class CloudSyncError extends Error {
@@ -12,17 +12,8 @@ export class CloudSyncError extends Error {
         this.name = 'CloudSyncError';
     }
 }
-const isRecord = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 export function isCloudStatePayload(value) {
-    if (!isRecord(value))
-        return false;
-    return Array.isArray(value.tx) && value.tx.length <= 50_000
-        && isRecord(value.overrides)
-        && Array.isArray(value.rules) && value.rules.length <= 1_000
-        && Array.isArray(value.cats) && value.cats.length <= 1_000
-        && isRecord(value.budgets)
-        && !('accounts' in value)
-        && value.tx.every(isPrivacySafeTransaction);
+    return isPrivacySafeSnapshot(value);
 }
 export function snapshotBytes(value) {
     return new TextEncoder().encode(JSON.stringify(value)).byteLength;
@@ -43,15 +34,30 @@ export class SupabaseSnapshotRepository {
         if (payload && (!isCloudStatePayload(payload) || snapshotBytes(payload) > CLOUD_SNAPSHOT_MAX_BYTES)) {
             throw new CloudSyncError('invalid_snapshot', 'The snapshot is invalid or too large.', HttpStatus.BAD_REQUEST);
         }
-        const response = await this.fetchImpl(this.endpoint, {
-            method,
-            credentials: 'omit',
-            headers: {
-                Authorization: `Bearer ${token}`,
-                ...(payload ? { 'Content-Type': 'application/json' } : {}),
-            },
-            body: payload ? JSON.stringify({ schemaVersion: CLOUD_SNAPSHOT_SCHEMA_VERSION, payload }) : undefined,
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), this.input.timeoutMs ?? 10_000);
+        let response;
+        try {
+            response = await this.fetchImpl(this.endpoint, {
+                method,
+                credentials: 'omit',
+                signal: controller.signal,
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    ...(payload ? { 'Content-Type': 'application/json' } : {}),
+                },
+                body: payload ? JSON.stringify({ schemaVersion: CLOUD_SNAPSHOT_SCHEMA_VERSION, payload }) : undefined,
+            });
+        }
+        catch (cause) {
+            if (controller.signal.aborted) {
+                throw new CloudSyncError('cloud_timeout', 'Cloud sync timed out.', HttpStatus.GATEWAY_TIMEOUT);
+            }
+            throw new CloudSyncError('cloud_network_failed', 'Cloud sync is currently unavailable.');
+        }
+        finally {
+            clearTimeout(timeout);
+        }
         const body = response.status === HttpStatus.NO_CONTENT ? null : await response.json().catch(() => null);
         if (!response.ok) {
             const code = typeof body?.code === 'string' ? body.code : 'cloud_request_failed';

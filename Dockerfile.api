@@ -7,6 +7,8 @@ COPY tsconfig.json tsconfig.api.json tsconfig.api.build.json ./
 COPY api ./api
 COPY src/cloud-sync.ts ./src/cloud-sync.ts
 COPY src/http-status.ts ./src/http-status.ts
+COPY src/privacy.ts ./src/privacy.ts
+COPY src/domain-model.ts ./src/domain-model.ts
 RUN npm run build:api
 
 FROM node:24-alpine
