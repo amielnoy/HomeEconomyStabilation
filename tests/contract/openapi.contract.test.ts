@@ -7,6 +7,8 @@ const root = resolve(__dirname, '../..');
 const spec = JSON.parse(readFileSync(resolve(root, 'openapi.json'), 'utf8'));
 const docs = readFileSync(resolve(root, 'api-docs.html'), 'utf8');
 const scalarDocs = readFileSync(resolve(root, 'scalar-docs.html'), 'utf8');
+const docsSource = readFileSync(resolve(root, 'src/api-docs.ts'), 'utf8');
+const scalarSource = readFileSync(resolve(root, 'src/scalar-docs.ts'), 'utf8');
 
 describe('Swagger/OpenAPI contract', () => {
   it('documents the public Vercel health operation without authentication', () => {
@@ -37,18 +39,20 @@ describe('Swagger/OpenAPI contract', () => {
   });
 
   it('keeps the manual explorer self-hosted and pointed at the checked-in specification', () => {
-    expect(docs).toContain('/openapi.json');
+    expect(docsSource).toContain('/openapi.json');
     expect(docs).toContain('/dist/swagger-ui/swagger-ui-bundle.js');
+    expect(docs).toContain('/dist/api-docs.js');
     expect(docs).not.toMatch(/https?:\/\//);
     expect(docs).toContain('/scalar-docs.html');
 
-    expect(scalarDocs).toContain('/openapi.json');
+    expect(scalarSource).toContain('/openapi.json');
     expect(scalarDocs).toContain('/dist/scalar/standalone.js');
-    expect(scalarDocs).toContain("persistAuth: false");
-    expect(scalarDocs).toContain('telemetry: false');
-    expect(scalarDocs).toContain("showDeveloperTools: 'never'");
-    expect(scalarDocs).toContain('agent: { disabled: true }');
-    expect(scalarDocs).toContain('mcp: { disabled: true }');
+    expect(scalarDocs).toContain('/dist/scalar-docs.js');
+    expect(scalarSource).toContain('persistAuth: false');
+    expect(scalarSource).toContain('telemetry: false');
+    expect(scalarSource).toContain("showDeveloperTools: 'never'");
+    expect(scalarSource).toContain('agent: { disabled: true }');
+    expect(scalarSource).toContain('mcp: { disabled: true }');
     expect(scalarDocs).toContain('/api-docs.html');
     expect(scalarDocs).not.toMatch(/https?:\/\//);
   });

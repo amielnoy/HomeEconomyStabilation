@@ -3,8 +3,12 @@ FROM node:24-alpine AS build
 WORKDIR /workspace
 COPY package.json package-lock.json ./
 RUN npm ci
-COPY scripts/copy-api-docs-assets.mjs scripts/copy-api-docs-assets.mjs
-RUN node scripts/copy-api-docs-assets.mjs
+COPY tsconfig.json tsconfig.docs.json tsconfig.scripts.json ./
+COPY src/api-docs.ts src/scalar-docs.ts ./src/
+COPY scripts/copy-api-docs-assets.ts scripts/prepare-vercel-output.ts ./scripts/
+RUN npm run build:docs \
+  && npm run build:scripts \
+  && node dist-scripts/copy-api-docs-assets.js
 
 FROM nginx:1.29-alpine
 
@@ -14,6 +18,8 @@ COPY api-docs.html /usr/share/nginx/html/api-docs.html
 COPY openapi.json /usr/share/nginx/html/openapi.json
 COPY --from=build /workspace/dist/scalar /usr/share/nginx/html/dist/scalar
 COPY --from=build /workspace/dist/swagger-ui /usr/share/nginx/html/dist/swagger-ui
+COPY --from=build /workspace/dist/api-docs.js /usr/share/nginx/html/dist/api-docs.js
+COPY --from=build /workspace/dist/scalar-docs.js /usr/share/nginx/html/dist/scalar-docs.js
 
 EXPOSE 80
 

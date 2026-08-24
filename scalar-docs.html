@@ -14,20 +14,6 @@
   <a class="docs-switch" data-testid="swagger-docs-link" href="/api-docs.html">Open Swagger UI</a>
   <div id="scalar-api-reference" data-testid="scalar-api-reference"></div>
   <script src="/dist/scalar/standalone.js"></script>
-  <script>
-    Scalar.createApiReference('#scalar-api-reference', {
-      url: '/openapi.json',
-      theme: 'kepler',
-      layout: 'modern',
-      showDeveloperTools: 'never',
-      hideClientButton: true,
-      agent: { disabled: true },
-      mcp: { disabled: true },
-      persistAuth: false,
-      telemetry: false,
-      withDefaultFonts: false,
-      modelsSectionLabel: 'Schemas'
-    });
-  </script>
+  <script type="module" src="/dist/scalar-docs.js"></script>
 </body>
 </html>

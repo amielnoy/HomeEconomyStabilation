@@ -14,6 +14,9 @@
     "src/credit-card-importer.ts",
     "src/categorization.ts",
     "src/cloud-sync.ts",
-    "src/http-status.ts"
+    "src/http-status.ts",
+    "src/architecture.ts",
+    "src/api-docs.ts",
+    "src/scalar-docs.ts"
   ]
 }

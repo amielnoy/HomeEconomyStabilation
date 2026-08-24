@@ -129,7 +129,7 @@
   <tr><td><code>src/cloud-sync.ts</code></td><td>Bounded cloud contract and <code>SupabaseSnapshotRepository</code>.</td><td>First-party API and access-token callback</td><td>Token persistence or consent UI</td></tr>
   <tr><td><code>src/consent.ts</code></td><td>Versioned local consent acceptance and withdrawal.</td><td>Minimal storage port</td><td>Financial state or immunity claims</td></tr>
   <tr><td><code>server/</code> + <code>api/index.py</code></td><td>FastAPI boundary, Pydantic allowlist and repository-based CRUD through RLS.</td><td>Supabase publishable key and user JWT</td><td>Database passwords or service-role keys</td></tr>
-  <tr><td><code>openapi.json</code></td><td>One API contract rendered by the self-hosted Swagger and Scalar explorers.</td><td>Documented first-party routes</td><td>Runtime credentials or duplicated schemas</td></tr>
+  <tr><td><code>openapi.json</code> + <code>src/*-docs.ts</code></td><td>One API contract rendered by self-hosted Swagger and Scalar through compiled TypeScript modules.</td><td>Documented first-party routes</td><td>Runtime credentials, inline JavaScript or duplicated schemas</td></tr>
   <tr><td><code>src/http-status.ts</code></td><td>Single static vocabulary for REST response codes.</td><td>HTTP semantics</td><td>Response bodies or routing</td></tr>
   <tr><td><code>docker-compose.yml</code></td><td>Isolate web, API, Scalar, tests and monitoring services on one local network.</td><td>Health checks and runtime environment</td><td>Production secrets</td></tr>
   <tr><td><code>monitoring/</code></td><td>Provision Prometheus collection and Grafana application/database health dashboards.</td><td>Internal metadata-only <code>/metrics</code></td><td>Database passwords, financial payloads or JWTs</td></tr>
@@ -215,18 +215,6 @@ npm run stack:start # application + Prometheus + Grafana</code></pre>
 
 <footer>Home Economy architecture · generated from the current repository structure · <a href="https://github.com/amielnoy/HomeEconomyStabilation#readme" target="_blank" rel="noopener noreferrer">README source ↗</a></footer>
 </div>
-<script>
-  const links = [...document.querySelectorAll('.rail a')];
-  const sections = links.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
-  const observer = new IntersectionObserver(entries => {
-    const visible = entries.filter(entry => entry.isIntersecting).sort((a,b) => b.intersectionRatio-a.intersectionRatio)[0];
-    if (!visible) return;
-    links.forEach(link => {
-      if (link.getAttribute('href') === '#' + visible.target.id) link.setAttribute('aria-current','true');
-      else link.removeAttribute('aria-current');
-    });
-  }, { rootMargin:'-18% 0px -70% 0px', threshold:[0,.2,.6] });
-  sections.forEach(section => observer.observe(section));
-</script>
+<script type="module" src="dist/architecture.js"></script>
 </body>
 </html>
