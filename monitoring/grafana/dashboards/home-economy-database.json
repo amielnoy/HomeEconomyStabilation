@@ -1,0 +1,32 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "mappings": [{ "options": { "0": { "color": "red", "text": "Unavailable" }, "1": { "color": "green", "text": "Available" } }, "type": "value" }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 }, "id": 1,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "expr": "home_economy_supabase_up", "refId": "A" }], "title": "Supabase availability", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 9, "x": 6, "y": 0 }, "id": 2,
+      "targets": [{ "expr": "home_economy_supabase_probe_duration_seconds", "legendFormat": "health probe", "refId": "A" }], "title": "Supabase health latency", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 }, "id": 3,
+      "targets": [{ "expr": "sum by (operation, status) (rate(home_economy_supabase_requests_total[5m]))", "legendFormat": "{{operation}} · {{status}}", "refId": "A" }], "title": "Database operations by status", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 }, "id": 4,
+      "targets": [{ "expr": "home_economy_supabase_request_duration_seconds", "legendFormat": "{{operation}}", "refId": "A" }], "title": "Latest database operation latency", "type": "timeseries"
+    }
+  ],
+  "refresh": "10s", "schemaVersion": 42, "tags": ["home-economy", "supabase", "privacy-safe"],
+  "templating": { "list": [] }, "time": { "from": "now-6h", "to": "now" }, "timezone": "browser",
+  "title": "Home Economy Database", "uid": "home-economy-database", "version": 1
+}

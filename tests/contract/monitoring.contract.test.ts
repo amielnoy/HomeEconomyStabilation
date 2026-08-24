@@ -20,15 +20,32 @@ describe('monitoring contract', () => {
     ]);
   });
 
+  it('provisions a privacy-safe Supabase dashboard without database credentials', () => {
+    const dashboard = JSON.parse(read('monitoring/grafana/dashboards/home-economy-database.json'));
+    const metrics = read('server/metrics.py');
+    const compose = read('docker-compose.yml');
+
+    expect(dashboard.uid).toBe('home-economy-database');
+    expect(dashboard.panels.map((panel: { title: string }) => panel.title)).toEqual([
+      'Supabase availability', 'Supabase health latency',
+      'Database operations by status', 'Latest database operation latency',
+    ]);
+    expect(metrics).toContain('home_economy_supabase_up');
+    expect(metrics).toContain('home_economy_supabase_requests_total');
+    expect(metrics).not.toContain('user_id');
+    expect(compose).not.toContain('SUPABASE_DB_PASSWORD');
+    expect(compose).not.toContain('DATABASE_URL');
+  });
+
   it('scrapes internal metrics that probe the application, Swagger, Scalar and API', () => {
     const prometheus = read('monitoring/prometheus.yml');
-    const server = read('scripts/api-server.mjs');
+    const server = read('server/metrics.py');
 
     expect(prometheus).toContain('targets: ["api:3000"]');
     expect(prometheus).toContain('metrics_path: /metrics');
-    expect(server).toContain("probe('application'");
-    expect(server).toContain("probe('swagger'");
-    expect(server).toContain("probe('scalar'");
+    expect(server).toContain('_probe("application"');
+    expect(server).toContain('_probe("swagger"');
+    expect(server).toContain('_probe("scalar"');
     expect(server).toContain('endpoint="api"');
     expect(server).toContain('home_economy_endpoint_up');
     expect(server).toContain('home_economy_http_requests_total');
@@ -48,7 +65,7 @@ describe('monitoring contract', () => {
     expect(runner).toContain('npm run test:docker:stop');
     expect(runner).toContain('compose down --remove-orphans');
     expect(runner).toContain('compose up --detach --force-recreate --wait allure');
-    expect(containerRunner).toContain('VITEST_SCRIPT=test:allure sh scripts/run-tests-in-parallel.sh');
+    expect(containerRunner).toContain('VITEST_SCRIPT=test:allure SERVER_TEST_SCRIPT=test:server:allure sh scripts/run-tests-in-parallel.sh');
     expect(containerRunner).toContain('npx allure generate');
   });
 
@@ -65,7 +82,7 @@ describe('monitoring contract', () => {
     expect(dockerignore.split(/\r?\n/)).not.toContain('.github');
   });
 
-  it('runs Vitest and Playwright concurrently in local, CI and Docker release gates', () => {
+  it('runs Vitest, Pytest and Playwright concurrently in local, CI and Docker release gates', () => {
     const packageJson = JSON.parse(read('package.json'));
     const parallelRunner = read('scripts/run-tests-in-parallel.sh');
     const containerRunner = read('scripts/run-tests-and-generate-allure.sh');
@@ -74,12 +91,14 @@ describe('monitoring contract', () => {
 
     expect(packageJson.scripts['test:all']).toBe('sh scripts/run-tests-in-parallel.sh');
     expect(parallelRunner).toContain('npm run "$VITEST_SCRIPT" &');
+    expect(parallelRunner).toContain('npm run "$SERVER_TEST_SCRIPT" &');
     expect(parallelRunner).toContain('npm run test:e2e &');
     expect(parallelRunner).toContain('wait "$vitest_pid"');
+    expect(parallelRunner).toContain('wait "$server_pid"');
     expect(parallelRunner).toContain('wait "$playwright_pid"');
-    expect(parallelRunner).toContain('vitest=$vitest_status playwright=$playwright_status');
-    expect(containerRunner).toContain('VITEST_SCRIPT=test:allure sh scripts/run-tests-in-parallel.sh');
-    expect(workflow).toContain('Run Vitest and Playwright in parallel');
+    expect(parallelRunner).toContain('vitest=$vitest_status pytest=$server_status playwright=$playwright_status');
+    expect(containerRunner).toContain('SERVER_TEST_SCRIPT=test:server:allure');
+    expect(workflow).toContain('Run Vitest, Pytest and Playwright in parallel');
     expect(workflow).toContain('run: npm run test:all');
     expect(playwrightConfig).toContain('workers: process.env.CI ? 2 : undefined');
   });
