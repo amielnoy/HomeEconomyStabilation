@@ -17,4 +17,9 @@ export class UploadComponent {
   async uploadBankReport(file: FilePayload): Promise<void> {
     await this.bankReportInput.setInputFiles(file);
   }
+
+  @step('Upload a credit-card report')
+  async uploadCreditCardReport(file: FilePayload): Promise<void> {
+    await this.creditCardInput.setInputFiles(file);
+  }
 }

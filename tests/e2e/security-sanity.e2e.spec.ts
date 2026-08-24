@@ -61,3 +61,23 @@ test('keeps imported financial data on the device without outgoing write request
   await expect(homePage.dashboard.accountSummary).toContainText('04-279-661711');
   expect(outgoingWrites).toEqual([]);
 });
+
+test('does not persist bank-account, card, reference or report identifiers', async ({ homePage }) => {
+  await homePage.upload.uploadSampleBankReport();
+  await homePage.upload.uploadCreditCardReport({
+    name: 'card-4111111111111111.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from([
+      'תאריך עסקה,שם בית עסק,סכום עסקה,מספר כרטיס',
+      '20/08/2026,Shop,42,4111111111111111',
+    ].join('\n')),
+  });
+
+  const persisted = await homePage.dashboard.readPersistedState();
+  const serialized = JSON.stringify(persisted);
+  expect(persisted).not.toHaveProperty('accounts');
+  expect(serialized).not.toContain('04-279-661711');
+  expect(serialized).not.toContain('4111111111111111');
+  expect(serialized).not.toContain('.csv');
+  expect((persisted.tx as Array<{ ref: string }>).every((transaction) => transaction.ref === '')).toBe(true);
+});

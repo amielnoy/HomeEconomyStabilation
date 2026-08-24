@@ -134,6 +134,11 @@ export class DashboardComponent {
     return this.page.evaluate(() => JSON.parse(localStorage.getItem('mazan-habait/v1') || '{}').budgets || {});
   }
 
+  @step('Read the privacy-safe browser snapshot')
+  async readPersistedState(): Promise<Record<string, unknown>> {
+    return this.page.evaluate(() => JSON.parse(localStorage.getItem('mazan-habait/v1') || '{}'));
+  }
+
   @step('Open the recommendations')
   async openRecommendations(): Promise<void> {
     if (!await this.recommendationButton.isVisible()) await this.page.getByTestId('mobile-menu-toggle').click();

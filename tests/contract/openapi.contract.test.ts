@@ -25,6 +25,14 @@ describe('Swagger/OpenAPI contract', () => {
     }
   });
 
+  it('documents only the privacy-minimised schema-v2 cloud payload', () => {
+    const payload = spec.components.schemas.CloudStatePayload;
+    expect(spec.components.schemas.SnapshotInput.properties.schemaVersion.const).toBe(2);
+    expect(payload.required).not.toContain('accounts');
+    expect(payload.properties).not.toHaveProperty('accounts');
+    expect(spec.components.schemas.PrivacySafeTransaction.description).toContain('identifiers');
+  });
+
   it('keeps the manual explorer self-hosted and pointed at the checked-in specification', () => {
     expect(docs).toContain('/openapi.json');
     expect(docs).toContain('/dist/swagger-ui/swagger-ui-bundle.js');
