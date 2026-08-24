@@ -38,4 +38,3 @@ export interface AppState {
   accounts: string[];
   month: string | null;
 }
-

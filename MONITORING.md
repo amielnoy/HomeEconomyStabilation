@@ -9,6 +9,8 @@
 - `home_economy_process_uptime_seconds` — זמן הפעילות של תהליך ה־API.
 - `home_economy_http_requests_total` — מספר תגובות לפי method וקוד HTTP.
 
+המדד האחרון כולל גם דחיות `413`,‏ `415` ו־`429`, ולכן אפשר לזהות עומס, payload גדול או שימוש שגוי בחוזה בלי לשמור כתובת IP,‏ token או גוף בקשה. הגבלת הקצב המקומית של `/api/snapshots` היא שכבת sanity בלבד; היא אינה משותפת בין Vercel instances ואינה תחליף ל־Vercel Firewall.
+
 Prometheus אוסף כל 10 שניות ושומר עד שבעה ימים ב־volume מקומי. Grafana מקבל אוטומטית datasource ו־dashboard בשם **Home Economy Health**.
 
 ## הפעלה וכיבוי
@@ -45,7 +47,7 @@ npm run stack:start
 
 המדדים כוללים זמינות, זמן תגובה, method וקוד סטטוס בלבד. אין בהם JWT, כתובת דוא״ל, payload פיננסי, תוכן snapshot, תנועות או פרטי דוח. `/metrics` אינו עובר דרך Nginx ואינו נחשף ל־host בקובץ Compose הרגיל.
 
-הניטור המקומי אינו מנטר אוטומטית את Vercel production. לפני הפעלה תפעולית יש לבחור שירות ניטור חיצוני, להגדיר התראות, הרשאות, TLS, שמירה וגיבוי, ולהימנע מחשיפת Prometheus או Grafana לאינטרנט ללא שכבת אימות.
+הניטור המקומי אינו מנטר אוטומטית את Vercel production. לפני הפעלה תפעולית יש לבחור שירות ניטור חיצוני, להגדיר התראות לזמינות, 5xx ו־429, הרשאות, TLS, שמירה וגיבוי, ולהימנע מחשיפת Prometheus או Grafana לאינטרנט ללא שכבת אימות. אין להוסיף כתובת IP או מזהה משתמש כ־Prometheus label משום שהדבר גם פוגע בפרטיות וגם יוצר cardinality בלתי חסומה.
 
 Vercel חושף בדיקת זמינות ציבורית ומינימלית ב־`https://home-economy-stabilation.vercel.app/api/health`. היא מחזירה סטטוס שירות בלבד, ללא Supabase, נתונים פיננסיים או פרטי משתמש. היא אינה תחליף ל־Prometheus או Grafana המקומיים ואינה מעידה ש־Supabase הוגדר בהצלחה.
 

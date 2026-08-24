@@ -58,6 +58,16 @@ The eight financial agents use a page-level pattern built from the same tokens:
 
 Agent cards do not perform remote calls. Findings are derived, while learned rules and suggested budgets require an explicit action before persistence. A quiet state is always rendered instead of leaving an empty card, so users can distinguish “checked and clear” from “not loaded”.
 
+## Transaction categorization pattern
+
+Each transaction row uses the native `.ds-field`-compatible category select identified by `transaction-category-select`. The visible selection follows a predictable policy: an explicit user override wins, then an approved matching rule, then incoming-money detection, and finally the honest `other` fallback.
+
+- Transfers or withdrawals explicitly described as moving money between accounts use the neutral savings/transfers category rather than being counted as spending.
+- Alimony descriptions use the household/home category. A blank or ambiguous outgoing description remains `other`; the interface must not imply confidence that the available evidence does not support.
+- Changing the select is an explicit user action and may feed the learning agent. A proposed reusable rule still requires separate approval.
+- Category meaning is conveyed by translated text as well as the colored dot. Color never replaces the selected label.
+- Existing persisted rule sets are merged with new safe defaults by match/category identity, preserving user rules and manual overrides.
+
 ## Consent pattern
 
 `.consent-card` presents optional cloud-sync disclosure inside settings. It is informative infrastructure, not a precondition for local use.
