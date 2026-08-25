@@ -1,4 +1,4 @@
-import { CLOUD_CONSENT_VERSION } from './consent.js';
+import { CLOUD_CONSENT_VERSION, type ConsentPort } from './consent.js';
 import { CloudSyncError } from './cloud-sync.js';
 import { HttpStatus } from './http-status.js';
 import { isSupportedLocale, type Locale } from './localization.js';
@@ -104,6 +104,9 @@ export class SupabaseProfileRepository {
   }
 }
 
+/* The remote half of ConsentPort. Its ConsentAcceptance carries a withdrawnAt that
+   the browser store has no use for, so it satisfies the port structurally rather
+   than by declaration; the shared shape is what the callers depend on. */
 export class SupabaseConsentRepository {
   private readonly client: AuthenticatedJsonClient;
   private readonly endpoint: string;
