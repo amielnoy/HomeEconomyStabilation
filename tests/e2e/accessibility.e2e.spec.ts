@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from './fixtures';
+import { richBankReport } from './reports';
 import type { BasePage } from './page-objects/base.page';
 
 async function expectNoSeriousAccessibilityViolations(pageObject: BasePage, context: string) {
@@ -24,9 +25,17 @@ test('empty state and language controls meet WCAG A/AA checks', async ({ homePag
 
 test('data dashboard, settings dialog and savings directory meet WCAG A/AA checks', async ({ homePage }) => {
   await homePage.language.choose('fr');
-  await homePage.upload.uploadSampleBankReport();
+  /* A thin report leaves the savings, anomaly and recurring sections empty, so axe
+     never reaches them. This one has the history every agent needs. */
+  await homePage.upload.uploadBankReport(richBankReport());
   await expect(homePage.dashboard.root).toBeVisible();
+  await expect(homePage.page.getByTestId('savings-opportunity').first()).toBeVisible();
+  await expect(homePage.page.getByTestId('recurring-row').first()).toBeVisible();
   await expectNoSeriousAccessibilityViolations(homePage, 'populated French dashboard');
+
+  await homePage.dashboard.categoryTableToggle.click();
+  await expectNoSeriousAccessibilityViolations(homePage, 'category table view');
+  await homePage.dashboard.categoryTableToggle.click();
 
   await homePage.settings.open();
   await expect(homePage.settings.root).toBeVisible();
