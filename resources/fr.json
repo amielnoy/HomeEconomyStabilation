@@ -445,5 +445,9 @@
     "עריכה": "Modifier",
     "טבלה": "Tableau",
     "גרף": "Graphique"
-  }
+  },
+  "chartAsTable": "Afficher les données en tableau",
+  "waterlineTableSummary": "Revenus et dépenses par mois, en tableau",
+  "forecastTableSummary": "Solde projeté par semaine, en tableau",
+  "month": "Mois"
 }

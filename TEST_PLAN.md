@@ -117,6 +117,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | File | Coverage |
 |---|---|
 | `tests/e2e/accessibility.e2e.spec.ts` | axe WCAG A/AA checks for empty, populated, settings, agents and directory states |
+| `tests/e2e/chart-accessibility.e2e.spec.ts` | Both charts publish their figures as data tables, with row headers and the projection range |
 | `tests/e2e/api-docs.e2e.spec.ts` | Self-hosted Swagger and Scalar loading the same specification and every health, snapshot, profile and consent operation |
 | `tests/e2e/architecture.e2e.spec.ts` | Architecture content, responsive layout and accessibility |
 | `tests/e2e/cloud-consent.e2e.spec.ts` | Consent acceptance and withdrawal without upload |

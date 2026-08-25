@@ -31,19 +31,20 @@ export class ScalarDocsPage extends BasePage {
    * merely collapsed. Walking the document to the end mounts them all, and works the
    * same on desktop and mobile, where the sidebar group buttons are hidden behind the
    * menu and duplicated between two sidebars.
+   *
+   * The stopping condition is the groups themselves rather than a settled page height:
+   * a section that is still mounting leaves the height unchanged for a frame, and on
+   * WebKit that plateau arrived before Profile and Consent existed.
    */
   @step('Scroll through the reference so every operation group is mounted')
   async revealAllOperations(): Promise<void> {
-    await this.page.evaluate(async () => {
-      const settle = () => new Promise((resolve) => { setTimeout(resolve, 180); });
-      let previousHeight = -1;
-      for (let attempt = 0; attempt < 25; attempt += 1) {
-        window.scrollTo(0, document.body.scrollHeight);
-        await settle();
-        if (document.body.scrollHeight === previousHeight) break;
-        previousHeight = document.body.scrollHeight;
-      }
-      window.scrollTo(0, 0);
-    });
+    const groups = [this.snapshotEndpoints, this.profileEndpoints, this.consentEndpoints];
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const mounted = await Promise.all(groups.map((group) => group.count()));
+      if (mounted.every((count) => count > 0)) break;
+      await this.page.evaluate(() => { window.scrollTo(0, document.body.scrollHeight); });
+      await this.page.waitForTimeout(180);
+    }
+    await this.page.evaluate(() => { window.scrollTo(0, 0); });
   }
 }

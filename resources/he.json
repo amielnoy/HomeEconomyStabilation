@@ -362,5 +362,9 @@
   "cat.savings": "חיסכון והעברות",
   "cat.fees": "עמלות וריבית",
   "cat.other": "אחר",
-  "cat.income": "הכנסות"
+  "cat.income": "הכנסות",
+  "chartAsTable": "הצגת הנתונים כטבלה",
+  "waterlineTableSummary": "נכנס מול יצא לפי חודש, כטבלה",
+  "forecastTableSummary": "תחזית היתרה לפי שבוע, כטבלה",
+  "month": "חודש"
 }

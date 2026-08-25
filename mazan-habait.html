@@ -283,6 +283,9 @@ button{ cursor:pointer; }
 .swatch{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-inline-end:6px; vertical-align:-1px; }
 
 /* ============================================================ charts ===== */
+.chart-data{ margin-top:8px; }
+.chart-data > summary{ font-size:12.5px; color:var(--muted); cursor:pointer; }
+.chart-data table{ margin-top:6px; }
 .chartwrap{ position:relative; overflow-x:auto; }
 svg.chart{ display:block; width:100%; height:auto; overflow:visible; }
 .tick{ font-size:11px; fill:var(--muted); font-variant-numeric:tabular-nums; }
@@ -393,8 +396,11 @@ body.drawer-open{ overflow:hidden; }
 .consent-actions{ display:flex; gap:8px; flex-wrap:wrap; }
 .consent-actions .btn:disabled{ cursor:not-allowed; opacity:.55; }
 .rulerow, .budrow{
-  display:flex; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line);
+  display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line);
 }
+/* Three controls in one row leaves the last of them a 40px sliver on a phone.
+   Let them wrap and claim a tappable width instead. */
+.rulerow select{ flex:1 1 44px; }
 .rulerow input, .budrow input, .rulerow select{
   border:1px solid var(--line-2); background:var(--surface); border-radius:8px;
   padding:6px 9px; font-size:13.5px; min-width:0;
@@ -460,16 +466,12 @@ body.drawer-open{ overflow:hidden; }
   .btn,.btn.sm,.ds-button[data-size="sm"],.mchip,.ds-button,.ds-field,
   .filters input[type=search],.filters select,
   .rulerow input,.budrow input,.rulerow select,
-  .settings-section > summary,
-  .spending-guide-side summary,
-  .agent-opportunity summary,
+  summary,
   .catsel,
   input,select,textarea{
     min-height:48px;
   }
-  .spending-guide-side summary,.agent-opportunity summary{
-    display:flex; align-items:center;
-  }
+  summary{ display:flex; align-items:center; }
   /* Anything under 16px makes iOS zoom the page on focus, in any orientation.
      !important because the design-system field classes are more specific. */
   input,select,textarea{ font-size:16px!important; }
@@ -852,6 +854,10 @@ body.drawer-open{ overflow:hidden; }
           <span id="wl-note" style="margin-inline-start:auto;color:var(--muted)" data-testid="wl-note"></span>
         </div>
         <div class="chartwrap" tabindex="0"><svg class="chart" id="wl" role="img" aria-label="נכנס מול יצא, חודש מול חודש" data-i18n-aria-label="incomeVsExpensesChart" data-testid="wl"></svg><div class="tip" id="wl-tip" data-testid="wl-tip"></div></div>
+        <details class="chart-data" data-testid="wl-data">
+          <summary data-i18n="chartAsTable">הצגת הנתונים כטבלה</summary>
+          <div class="tblwrap" id="wl-table" role="region" data-i18n-aria-label="waterlineTableSummary" data-testid="wl-table" tabindex="0"></div>
+        </details>
       </div>
     </section>
 
@@ -869,6 +875,10 @@ body.drawer-open{ overflow:hidden; }
         </header>
         <p class="note" id="fc-note" data-testid="fc-note"></p>
         <div class="chartwrap" tabindex="0"><svg class="chart" id="fc" role="img" aria-label="יתרה בפועל והמשך צפוי" data-i18n-aria-label="forecastChart" data-testid="fc"></svg><div class="tip" id="fc-tip" data-testid="fc-tip"></div></div>
+        <details class="chart-data" data-testid="fc-data">
+          <summary data-i18n="chartAsTable">הצגת הנתונים כטבלה</summary>
+          <div class="tblwrap" id="fc-table" role="region" data-i18n-aria-label="forecastTableSummary" data-testid="fc-table" tabindex="0"></div>
+        </details>
       </section>
     </div>
 

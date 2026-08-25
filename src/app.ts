@@ -42,6 +42,22 @@ const el = (tag: string, attrs: Record<string, unknown> = {}, kids: Node | strin
   if (kids) for (const k of (Array.isArray(kids) ? kids : [kids])) if (k != null) n.append(k);
   return n;
 };
+/* An SVG with one aria-label tells a screen-reader user that a chart exists and
+   nothing about what it shows. Each chart therefore publishes the same figures as a
+   table, in the document rather than hidden from sighted readers. */
+const renderDataTable = (
+  host: DomElement,
+  headers: readonly string[],
+  rows: ReadonlyArray<readonly string[]>,
+) => {
+  host.textContent = '';
+  if (!rows.length) return;
+  const table = el('table');
+  table.append(el('thead', {}, el('tr', {}, headers.map((label) => el('th', { text: label, scope: 'col' })))));
+  table.append(el('tbody', {}, rows.map((row) => el('tr', {}, row.map((value, column) =>
+    el(column === 0 ? 'th' : 'td', { text: value, ...(column === 0 ? { scope: 'row' } : { class: 'n' }) }))))));
+  host.append(table);
+};
 const renderTooltip = (tip: DomElement, heading: string, rows: Array<[string, string]>) => {
   tip.textContent = '';
   tip.append(el('div', { class: 't-h', text: heading }));
@@ -873,6 +889,10 @@ function drawWaterline(months: readonly string[]) {
     }), { textContent: MONTH_SHORT.format(new Date(d.mk + '-01T00:00:00Z')) }));
   });
 
+  renderDataTable($('#wl-table'),
+    [t('month'), t('incomeShort'), t('expensesShort'), t('netShort')],
+    data.map((d) => [monthLabel(d.mk), money(d.in), money(d.out), moneyS(d.net)]));
+
   $('#wl-note').textContent = show.length > 1
     ? t('monthsInHistory', { count: show.length })
     : t('oneMonthHistory');
@@ -990,6 +1010,13 @@ function renderForecast() {
   });
   hit.addEventListener('pointerleave', () => { tip.classList.remove('on'); cross.setAttribute('opacity', String(0)); });
   svg.append(hit);
+
+  /* Weekly rather than daily: a 90-day projection is 90 rows, which is a worse
+     experience than the chart it stands in for. */
+  renderDataTable($('#fc-table'),
+    [t('date'), t('expectedBalance'), t('range')],
+    f.points.filter((_, index) => index % 7 === 0 || index === f.points.length - 1)
+      .map((p) => [DDMMYY.format(new Date(p.t)), money(p.bal), `${money(p.lo)}–${money(p.hi)}`]));
 
   const nRec = f.rec.length;
   const thin = f.historyDays < 45;

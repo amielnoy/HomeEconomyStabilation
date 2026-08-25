@@ -1,5 +1,12 @@
 import { expect, test } from './fixtures';
 
+/* Deliberately below the touch minimum. Each entry is an exemption someone has to
+   justify, rather than a control that was quietly left out of a list. */
+const TOUCH_TARGET_EXCEPTIONS = [
+  // Wrapped by a full-width <label> that carries the tap area.
+  '#cloud-consent-check',
+] as const;
+
 test.describe('mobile browser usability', () => {
   test.skip(({ isMobile }) => !isMobile, 'Runs on the iOS and Android projects only');
 
@@ -50,6 +57,9 @@ test.describe('mobile browser usability', () => {
     await expect(homePage.dashboard.root).toBeVisible();
     expect(await homePage.hasHorizontalOverflow()).toBe(false);
     expect(await homePage.touchTargetsBelow(homePage.mobileDashboardControls)).toEqual([]);
+    /* And every other interactive element, so a new control cannot slip in under the
+       minimum just because nobody remembered to add it to a list. */
+    expect(await homePage.undersizedTouchTargets({ exceptions: TOUCH_TARGET_EXCEPTIONS })).toEqual([]);
     const transactionTableRegion = homePage.page.getByTestId('tx-table-scroll');
     await expect(transactionTableRegion).toBeVisible();
     await expect(transactionTableRegion).toHaveAccessibleName('טבלת תנועות');

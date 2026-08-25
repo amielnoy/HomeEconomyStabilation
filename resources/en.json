@@ -445,5 +445,9 @@
     "אסמכתא": "Reference",
     "טבלה": "Table",
     "גרף": "Chart"
-  }
+  },
+  "chartAsTable": "Show the data as a table",
+  "waterlineTableSummary": "Income against spending by month, as a table",
+  "forecastTableSummary": "Projected balance by week, as a table",
+  "month": "Month"
 }
