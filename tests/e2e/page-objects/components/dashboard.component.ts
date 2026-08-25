@@ -142,6 +142,12 @@ export class DashboardComponent {
     await this.page.reload();
   }
 
+  @step('Read the selected month total outflow')
+  async readMonthlyOutflow(): Promise<number> {
+    const text = await this.page.getByTestId('t-out').innerText();
+    return Number.parseFloat(text.replace(/[^\d.-]/g, ''));
+  }
+
   @step('Read every safe-to-spend value')
   async spendingGuideText(): Promise<string> {
     return this.spendingGuide.innerText();

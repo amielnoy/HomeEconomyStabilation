@@ -236,9 +236,25 @@ const catById = (id) => {
 function signed(t) { return t.in - t.out; }
 
 /* --------------------------------------------------------- aggregation -- */
+/* A card settlement on the bank statement and the card statement's own line items
+   are the same money described twice. Once card detail has been imported, the
+   aggregate charge is what it actually is — a transfer between the household's own
+   accounts — so the spending is counted once, where it is itemised. Without card
+   detail the aggregate is the only record there is, and stays an expense. */
 function decorate() {
   S.tx.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  for (const t of S.tx) { t.cat = autoCat(t); t.kind = catById(t.cat).kind; }
+  const cardDates = S.tx.filter((t) => t.source === 'card').map((t) => dOf(t.date).getTime());
+  // A card period is settled by the bank in arrears, so the window runs past the
+  // newest card line rather than stopping level with it.
+  const settledFrom = cardDates.length ? Math.min(...cardDates) : Infinity;
+  const settledUntil = cardDates.length ? Math.max(...cardDates) + 45 * DAY : -Infinity;
+  for (const t of S.tx) {
+    t.cat = autoCat(t);
+    t.kind = catById(t.cat).kind;
+    if (t.source === 'card' || t.cat !== 'credit' || t.out <= 0) continue;
+    const at = dOf(t.date).getTime();
+    if (at >= settledFrom && at <= settledUntil) t.kind = 'neutral';
+  }
 }
 function monthsPresent() {
   const set = new Set(S.tx.map((t) => monthKey(t.date)));

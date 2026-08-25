@@ -122,6 +122,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/e2e/cloud-consent.e2e.spec.ts` | Consent acceptance and withdrawal without upload |
 | `tests/e2e/cloud-metadata.sanity.api.e2e.spec.ts` | Anonymous profile/consent refusal, malformed metadata rejection, no-store responses and stable method contracts |
 | `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import, evidence-based transfer/alimony categorization, honest unknown fallback, upload availability and recommendations |
+| `tests/e2e/card-reconciliation.e2e.spec.ts` | A card settlement and its itemised card lines are counted once, not twice |
 | `tests/e2e/financial-agents.e2e.spec.ts` | Eight agents, saving evidence, safe-to-spend, explicit approvals and translation |
 | `tests/e2e/i18n-dynamic.e2e.spec.ts` | Generated English, French and Amharic copy without Hebrew leakage |
 | `tests/e2e/localization.e2e.spec.ts` | Persistence, RTL/LTR, ILS formatting and mobile overflow in every locale |
