@@ -7,9 +7,11 @@
 - `home_economy_endpoint_up` — זמינות `application`,‏ `swagger`,‏ `scalar` ו־`api`.
 - `home_economy_endpoint_duration_seconds` — זמן הבדיקה האחרון של נקודות הקצה.
 - `home_economy_process_uptime_seconds` — זמן הפעילות של תהליך ה־API.
-- `home_economy_http_requests_total` — מספר תגובות לפי method וקוד HTTP.
+- `home_economy_http_requests_total` — מספר תגובות לפי שם route תחום מראש, method וקוד HTTP. השמות האפשריים הם `health`,‏ `snapshots`,‏ `profile`,‏ `cloud_consent`,‏ `container_health`,‏ `metrics` ו־`other`; הנתיב הגולמי לעולם אינו label.
+- `home_economy_supabase_requests_total` — פעולות Supabase לפי operation מרשימת allowlist וקוד ספק, כולל auth, profile, consent ו־snapshot; ערך לא מוכר מקובץ כ־`other`.
+- `home_economy_supabase_request_duration_seconds` — משך הפעולה האחרון לכל operation תחומה.
 
-המדד האחרון כולל גם דחיות `413`,‏ `415` ו־`429`, ולכן אפשר לזהות עומס, payload גדול או שימוש שגוי בחוזה בלי לשמור כתובת IP,‏ token או גוף בקשה. הגבלת הקצב המקומית של `/api/snapshots` היא שכבת sanity בלבד; היא אינה משותפת בין Vercel instances ואינה תחליף ל־Vercel Firewall.
+המדד האחרון כולל גם דחיות `413`,‏ `415` ו־`429`, ולכן אפשר לזהות עומס, payload גדול או שימוש שגוי בחוזה בלי לשמור כתובת IP,‏ token או גוף בקשה. נתיבי snapshot, profile ו־consent חולקים הגבלת קצב מקומית שהיא שכבת sanity בלבד; היא אינה משותפת בין Vercel instances ואינה תחליף ל־Vercel Firewall.
 
 Prometheus אוסף כל 10 שניות ושומר עד שבעה ימים ב־volume מקומי. Grafana מקבל אוטומטית datasource ו־dashboard בשם **Home Economy Health**.
 
@@ -45,11 +47,11 @@ npm run stack:start
 
 ## גבול פרטיות
 
-Grafana טוען גם את הדשבורד `Home Economy Database`. הוא מציג זמינות Supabase, זמן בדיקת health, קצב פעולות לפי operation/status וה־latency האחרון. המדדים נוצרים ב־API דרך publishable key ו־JWT המשתמש בעת פעולה רגילה; Grafana ו־Prometheus אינם מקבלים סיסמת PostgreSQL ואינם קוראים טבלאות או payloads ישירות.
+Grafana טוען גם את הדשבורד `Home Economy Database` בגרסה 2. הוא מציג זמינות וזמן בדיקת health, שיעור שגיאות ספק, כתיבות snapshot שנחסמו ב־`403` עקב חוסר הסכמה, תגובות API לפי profile/consent/snapshot, פעולות Supabase לפי status, פעילות נפרדת לפי תחום וה־latency האחרון לכל operation. המדדים נוצרים ב־API דרך publishable key ו־JWT המשתמש בעת פעולה רגילה; Grafana ו־Prometheus אינם מקבלים סיסמת PostgreSQL ואינם קוראים טבלאות או payloads ישירות.
 
 הדשבורד נטען אוטומטית מהקובץ `monitoring/grafana/dashboards/home-economy-database.json` לתיקיית `Home Economy`. ללא `SUPABASE_URL` ו־`SUPABASE_PUBLISHABLE_KEY` תקינים מדד הזמינות נשאר 0 בכוונה; אין לעקוף זאת באמצעות סיסמת DB.
 
-המדדים כוללים זמינות, זמן תגובה, method וקוד סטטוס בלבד. אין בהם JWT, כתובת דוא״ל, payload פיננסי, תוכן snapshot, תנועות או פרטי דוח. `/metrics` אינו עובר דרך Nginx ואינו נחשף ל־host בקובץ Compose הרגיל.
+המדדים כוללים זמינות, זמן תגובה, שם route/operation קבוע מראש, method וקוד סטטוס בלבד. אין בהם נתיב גולמי, JWT, מזהה משתמש, כתובת דוא״ל, payload פיננסי, תוכן snapshot, תנועות או פרטי דוח. `/metrics` אינו עובר דרך Nginx ואינו נחשף ל־host בקובץ Compose הרגיל.
 
 הניטור המקומי אינו מנטר אוטומטית את Vercel production. לפני הפעלה תפעולית יש לבחור שירות ניטור חיצוני, להגדיר התראות לזמינות, 5xx ו־429, הרשאות, TLS, שמירה וגיבוי, ולהימנע מחשיפת Prometheus או Grafana לאינטרנט ללא שכבת אימות. אין להוסיף כתובת IP או מזהה משתמש כ־Prometheus label משום שהדבר גם פוגע בפרטיות וגם יוצר cardinality בלתי חסומה.
 

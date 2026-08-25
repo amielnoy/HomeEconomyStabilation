@@ -2,7 +2,7 @@
 
 ## סטטוס
 
-שלוש המיגרציות הוחלו בפרויקט Supabase המקושר והיסטוריית ה־CLI המקומית והמרוחקת תואמת. סנכרון הענן עדיין אינו פעיל בממשק: האפליקציה ממשיכה לקרוא ולנתח דוחות מקומית בלבד. אישור ההצהרה בהגדרות נשמר במכשיר ואינו מעלה נתונים; חיבור אמיתי יחייב Supabase Auth, JWT תקף והסכמה פעילה בשרת.
+שלוש המיגרציות הוחלו בפרויקט Supabase המקושר והיסטוריית ה־CLI המקומית והמרוחקת תואמת. סנכרון הענן עדיין אינו פעיל בממשק: האפליקציה ממשיכה לקרוא ולנתח דוחות מקומית בלבד. ה־API והלקוחות תומכים בשמירת שפת הפרופיל ובהסכמה גרסתית ב־Supabase, וכל כתיבת snapshot נבדקת מול הסכמה פעילה בשרת; חיבור הממשק עדיין מחייב Supabase Auth ו־JWT תקף.
 
 הקמת הפרויקט והפעלתו מנוהלות כמשימות מפורשות ב־[`TODO.md`](TODO.md). אין לסמן את הענן כפעיל לפני שכל שערי האבטחה, הפרטיות וה־integration ברשימה הושלמו.
 
@@ -19,11 +19,12 @@
 ## מחלקות וגבולות
 
 - `SupabaseSnapshotRepository` בצד הדפדפן מממש את `CloudSnapshotClient`. הוא מקבל callback ל־access token ואינו שומר אותו.
+- `SupabaseProfileRepository` ו־`SupabaseConsentRepository` שומרים שפה והסכמה דרך `/api/profile` ו־`/api/consents/cloud-sync`, ומאמתים את תשובת השרת לפני שימוש.
 - `SupabaseRestClient` ב־Python מאמת משתמש דרך `/auth/v1/user` וניגש ל־PostgREST עם ה־JWT שלו.
 - `UserProfileRepository`,‏ `SnapshotRepository` ו־`ConsentRepository` מרכזים קריאה, יצירה, עדכון ומחיקה עם סינון owner מפורש בנוסף ל־RLS.
 - `LocalConsentRepository` קורא, מתעד ומבטל הסכמה מקומית לפי `CLOUD_CONSENT_VERSION`.
 - `CloudSyncError` מחזיר קוד ומצב יציבים בלי לחשוף הודעות פנימיות של Supabase.
-- `/api/snapshots` מאמת method, קצב, media type, גודל ומבנה לפני אימות המשתמש ופעולת ספק יקרה. לאחר מכן הוא מאמת configuration,‏ Bearer token ומשתמש לפני קריאה או כתיבה.
+- `/api/snapshots` מאמת method, קצב, media type, גודל ומבנה לפני אימות המשתמש ופעולת ספק יקרה. לאחר מכן הוא מאמת configuration,‏ Bearer token ומשתמש; `PUT` נכתב רק כשקיימת הסכמה פעילה לגרסה הנוכחית. נתיבי הפרופיל וההסכמה מאמתים גוף קטן ומוגבל ומשתמשים באותו גבול אימות וקצב.
 - `AppStateCodec` ו־DTO מבוסס allowlist דוחים שדות לא מוכרים; `SupabaseSnapshotRepository` מפעיל timeout מפורש ואינו מבצע retry אוטומטי לכתיבה.
 - `runFinancialAgents` נשאר pure; תוצאות סוכנים אינן חלק ממודל ההתמדה.
 
@@ -55,17 +56,16 @@ npm run build
 
 בסביבה חדשה מריצים לפי שם ובסדר את כל קובצי ה־migration בפרויקט Supabase, ומגדירים את שני המשתנים גם ב־Vercel. המיגרציה השנייה קובעת default ו־constraint לגרסה 2 כ־`NOT VALID`; השלישית מתקינה trigger לפרופיל ומאמתת את ה־constraint רק כשאין רשומות legacy. בפרויקט הפיתוח המקושר שלושתן כבר הוחלו. אפשר לבדוק את ה־API רק עם JWT אמיתי של משתמש מאומת.
 
-לבדיקה ידנית פותחים את Swagger ב־`/api-docs.html` או את Scalar ב־`/scalar-docs.html`. ב־Scalar בוחרים פעולה ולוחצים **Test Request**; לפעולות snapshot משתמשים במנגנון Authentication כדי להזין Bearer JWT של משתמש בדיקה. שני הממשקים נטענים מנכסים מקומיים ומכסים את `GET /api/health` ואת `GET`,‏ `PUT` ו־`DELETE /api/snapshots`; Scalar מוגדר בלי telemetry ובלי שמירת authentication. החוזה המשותף, הניתן גם לייבוא לכלי API אחרים, נמצא ב־`openapi.json`.
+לבדיקה ידנית פותחים את Swagger ב־`/api-docs.html` או את Scalar ב־`/scalar-docs.html`. ב־Scalar בוחרים פעולה ולוחצים **Test Request**; לפעולות המאומתות משתמשים במנגנון Authentication כדי להזין Bearer JWT של משתמש בדיקה. שני הממשקים נטענים מנכסים מקומיים ומכסים health, snapshot, profile ו־consent; Scalar מוגדר בלי telemetry ובלי שמירת authentication. לפני `PUT /api/snapshots` יש לקבל את ההצהרה באמצעות `PUT /api/consents/cloud-sync`. החוזה המשותף נמצא ב־`openapi.json`.
 
 ## הפעלה עתידית
 
 לפני הפעלת הכפתור במוצר יש להשלים, לפי הסדר:
 
 1. Supabase Auth וניהול session מאובטח.
-2. תיעוד ההסכמה גם ב־`consent_acceptances` ולא רק מקומית.
-3. בדיקת הסכמה פעילה לפני כל `PUT` ראשון.
-4. פעולות מפורשות: „סנכרון עכשיו”, „שחזור” ו„מחיקה מהענן”.
-5. reconciliation שלא דורס מצב מקומי חדש יותר ללא אישור.
-6. בדיקות integration מול פרויקט Supabase ייעודי שאינו production.
+2. חיבור `SupabaseProfileRepository` ו־`SupabaseConsentRepository` ל־session ולפקדי הממשק (ההתמדה והאכיפה בשרת כבר קיימות).
+3. פעולות מפורשות: „סנכרון עכשיו”, „שחזור” ו„מחיקה מהענן”.
+4. reconciliation שלא דורס מצב מקומי חדש יותר ללא אישור.
+5. בדיקות integration מול פרויקט Supabase ייעודי שאינו production.
 
 כל בדיקות ה־API, האבטחה, ההסכמה וה־RLS הנדרשות לפני ההפעלה ממופות ב־[TEST_PLAN.md](TEST_PLAN.md). אין להשתמש ב־JWT של production או בנתונים פיננסיים אמיתיים בבדיקות ידניות או אוטומטיות.
