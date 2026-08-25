@@ -1,32 +1,64 @@
 {
   "annotations": { "list": [] },
-  "editable": true,
+  "editable": false,
   "graphTooltip": 1,
   "panels": [
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": { "defaults": { "mappings": [{ "options": { "0": { "color": "red", "text": "Unavailable" }, "1": { "color": "green", "text": "Available" } }, "type": "value" }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
       "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 }, "id": 1,
-      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "values": false } },
       "targets": [{ "expr": "home_economy_supabase_up", "refId": "A" }], "title": "Supabase availability", "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
-      "gridPos": { "h": 6, "w": 9, "x": 6, "y": 0 }, "id": 2,
+      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 }, "id": 2,
       "targets": [{ "expr": "home_economy_supabase_probe_duration_seconds", "legendFormat": "health probe", "refId": "A" }], "title": "Supabase health latency", "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 }, "id": 3,
-      "targets": [{ "expr": "sum by (operation, status) (rate(home_economy_supabase_requests_total[5m]))", "legendFormat": "{{operation}} · {{status}}", "refId": "A" }], "title": "Database operations by status", "type": "timeseries"
+      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "reqps", "min": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.01 }] } }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 }, "id": 3,
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "values": false } },
+      "targets": [{ "expr": "sum(rate(home_economy_supabase_requests_total{status!~\"2..\"}[5m])) or vector(0)", "refId": "A" }], "title": "Supabase error rate", "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 }, "id": 4,
-      "targets": [{ "expr": "home_economy_supabase_request_duration_seconds", "legendFormat": "{{operation}}", "refId": "A" }], "title": "Latest database operation latency", "type": "timeseries"
+      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "short", "min": 0, "decimals": 0 }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 }, "id": 4,
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "values": false } },
+      "targets": [{ "expr": "sum(increase(home_economy_http_requests_total{route=\"snapshots\",status=\"403\"}[1h])) or vector(0)", "refId": "A" }], "title": "Snapshot writes blocked by consent · 1h", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 }, "id": 5,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [{ "expr": "sum by (route, status) (rate(home_economy_http_requests_total{route=~\"snapshots|profile|cloud_consent\"}[5m]))", "legendFormat": "{{route}} · HTTP {{status}}", "refId": "A" }], "title": "Cloud API responses by route and status", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 }, "id": 6,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [{ "expr": "sum by (operation, status) (rate(home_economy_supabase_requests_total[5m]))", "legendFormat": "{{operation}} · {{status}}", "refId": "A" }], "title": "Supabase operations by status", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 }, "id": 7,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "expr": "sum(rate(home_economy_supabase_requests_total{operation=~\"snapshot_.*\"}[5m]))", "legendFormat": "snapshots", "refId": "A" },
+        { "expr": "sum(rate(home_economy_supabase_requests_total{operation=~\"consent_.*\"}[5m]))", "legendFormat": "consent", "refId": "B" },
+        { "expr": "sum(rate(home_economy_supabase_requests_total{operation=~\"profile_.*\"}[5m]))", "legendFormat": "profile", "refId": "C" },
+        { "expr": "sum(rate(home_economy_supabase_requests_total{operation=\"auth_verify\"}[5m]))", "legendFormat": "auth verification", "refId": "D" }
+      ], "title": "Supabase activity by data domain", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" }, "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 }, "id": 8,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [{ "expr": "home_economy_supabase_request_duration_seconds", "legendFormat": "{{operation}}", "refId": "A" }], "title": "Latest Supabase operation latency", "type": "timeseries"
     }
   ],
-  "refresh": "10s", "schemaVersion": 42, "tags": ["home-economy", "supabase", "privacy-safe"],
+  "refresh": "10s", "schemaVersion": 42,
+  "tags": ["home-economy", "supabase", "profile", "consent", "privacy-safe"],
   "templating": { "list": [] }, "time": { "from": "now-6h", "to": "now" }, "timezone": "browser",
-  "title": "Home Economy Database", "uid": "home-economy-database", "version": 1
+  "title": "Home Economy Database", "uid": "home-economy-database", "version": 2
 }
