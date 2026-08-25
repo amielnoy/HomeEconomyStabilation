@@ -59,6 +59,9 @@ body{
   font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
 }
 .app{ direction:inherit; max-width:1160px; margin:0 auto; padding:0 20px 96px; }
+/* text-wrap, scrollbar-width and overscroll-behavior below are progressive
+   enhancements: a browser that predates them simply wraps, scrolls and chains
+   the way it always did, so no fallback is needed. */
 h1,h2,h3{ font-family:var(--ds-font-display); font-weight:700; margin:0; text-wrap:balance; }
 button,input,select,label{ font:inherit; color:inherit; }
 button{ cursor:pointer; }
@@ -103,6 +106,9 @@ button{ cursor:pointer; }
 .preview-bars{ display:grid; gap:10px; }
 .preview-bars::before,.preview-bars span{ content:""; display:block; height:10px; border-radius:999px; background:var(--surface-3); }
 .preview-bars span{ width:var(--preview-width); background:var(--accent); opacity:.82; }
+.preview-bars span:nth-of-type(1){ --preview-width:82%; }
+.preview-bars span:nth-of-type(2){ --preview-width:61%; }
+.preview-bars span:nth-of-type(3){ --preview-width:43%; }
 .preview-insight{ display:flex; gap:10px; align-items:flex-start; margin-top:24px; padding:13px; border-radius:12px; background:var(--surface); }
 .preview-insight .ai-dot{ flex:none; width:9px; height:9px; margin-top:6px; border-radius:50%; background:var(--accent); }
 .preview-insight strong,.preview-insight small{ display:block; }
@@ -170,6 +176,9 @@ button{ cursor:pointer; }
 .card h2{ font-size:18px; }
 .card .note{ font-size:12.5px; color:var(--muted); margin:2px 0 16px; max-width:62ch; }
 .card .tools{ margin-inline-start:auto; display:flex; gap:6px; align-items:center; }
+.card .tools .note{ margin:0; }
+/* The recurring and transactions cards stand alone between the grids. */
+#recurring,#transactions{ margin-top:16px; }
 
 /* ============================================================ hero ======= */
 .hero{
@@ -281,6 +290,9 @@ button{ cursor:pointer; }
   padding-bottom:8px; flex-wrap:wrap;
 }
 .swatch{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-inline-end:6px; vertical-align:-1px; }
+.swatch.income{ background:var(--good); }
+.swatch.expense{ background:var(--crit); }
+#wl-note{ margin-inline-start:auto; color:var(--muted); }
 
 /* ============================================================ charts ===== */
 .chart-data{ margin-top:8px; }
@@ -336,6 +348,13 @@ td{ padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:middle
 tbody tr:hover{ background:var(--surface-2); }
 td.n{ font-variant-numeric:tabular-nums; white-space:nowrap; }
 td.desc{ max-width:340px; }
+/* Fixed columns so a long description cannot squeeze the amount, balance
+   and reference out of the row. */
+#tx th:nth-child(1){ width:92px; }
+#tx th:nth-child(3){ width:150px; }
+#tx th:nth-child(4){ width:96px; }
+#tx th:nth-child(5){ width:104px; }
+#tx th:nth-child(6){ width:110px; }
 .dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-inline-end:7px; vertical-align:1px; flex:none; }
 td.catcell{ white-space:nowrap; }
 td.catcell > *{ vertical-align:middle; }
@@ -367,6 +386,7 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
   border-inline-end:1px solid var(--line); padding:22px 24px 60px;
 }
 .drawer.on{ transform:none; }
+.drawer > header .x{ margin-inline-start:auto; }
 .drawer > header{
   display:flex; align-items:center; gap:12px; position:sticky; inset-block-start:-22px;
   z-index:2; margin:-22px -24px 12px; padding:22px 24px 14px;
@@ -385,6 +405,8 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
 .settings-section[open] > summary::after{ transform:rotate(180deg); }
 .settings-section-content{ padding:0 2px 20px; }
 .settings-section-content > :first-child{ margin-top:2px; }
+.settings-data-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+#dr-addrule,#dr-addcat{ margin-top:10px; }
 body.drawer-open{ overflow:hidden; }
 .consent-card{ padding:16px; border:1px solid var(--accent-line); border-radius:12px; background:var(--surface); }
 .consent-card p{ margin:0 0 9px; color:var(--ink-2); font-size:13px; }
@@ -524,7 +546,9 @@ body.drawer-open{ overflow:hidden; }
 }
 
 @media (max-width:600px){
-  body{ -webkit-text-size-adjust:100%; }
+  /* Prefixed for iOS Safari, unprefixed for Chromium; both stop a rotated phone
+     from inflating the text of a page that already sizes itself. */
+  body{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
   .app{
     padding-inline-start:max(16px,env(safe-area-inset-left));
     padding-inline-end:max(16px,env(safe-area-inset-right));
@@ -576,10 +600,7 @@ body.drawer-open{ overflow:hidden; }
     padding-inline:16px;
   }
   .toast{ inset-block-end:calc(16px + env(safe-area-inset-bottom)); }
-  .tblwrap,.chartwrap,.monthbar{
-    -webkit-overflow-scrolling:touch;
-    overscroll-behavior-inline:contain;
-  }
+  .tblwrap,.chartwrap,.monthbar{ overscroll-behavior-inline:contain; }
   .table-scroll-hint{ display:block; }
 }
 </style>
@@ -615,8 +636,8 @@ body.drawer-open{ overflow:hidden; }
       </label>
       <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
       <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
-        <button class="btn" id="btn-recommendations" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
-        <button class="btn" id="btn-savings" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
+        <button class="btn" id="btn-recommendations" type="button" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
+        <button class="btn" id="btn-savings" type="button" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
         <label class="locale-picker" data-testid="language-picker">
           <span class="vh" data-i18n="languageLabel">שפת ממשק</span>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M2.8 10h14.4M10 2.5c2 2.1 3 4.6 3 7.5s-1 5.4-3 7.5c-2-2.1-3-4.6-3-7.5s1-5.4 3-7.5Z" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -627,8 +648,8 @@ body.drawer-open{ overflow:hidden; }
             <option value="fr">Français</option>
           </select>
         </label>
-        <button class="btn" id="btn-set" aria-haspopup="dialog" aria-controls="drawer" aria-expanded="false" data-i18n="settings" data-testid="btn-set">הגדרות</button>
-        <button class="btn" id="btn-backup" data-i18n="backup" data-testid="btn-backup">גיבוי</button>
+        <button class="btn" id="btn-set" type="button" aria-haspopup="dialog" aria-controls="drawer" aria-expanded="false" data-i18n="settings" data-testid="btn-set">הגדרות</button>
+        <button class="btn" id="btn-backup" type="button" data-i18n="backup" data-testid="btn-backup">גיבוי</button>
       </div>
     </div>
   </header>
@@ -653,7 +674,7 @@ body.drawer-open{ overflow:hidden; }
       <div class="marketing-preview" data-testid="marketing-preview" aria-hidden="true">
         <div class="preview-head"><span data-i18n="previewTitle">התמונה החודשית שלך</span><span class="preview-status" data-i18n="previewReady">מוכן לבדיקה</span></div>
         <div class="preview-balance"><span data-i18n="previewBalance">מאזן חודשי</span><strong>+ ₪ —</strong></div>
-        <div class="preview-bars"><span style="--preview-width:82%"></span><span style="--preview-width:61%"></span><span style="--preview-width:43%"></span></div>
+        <div class="preview-bars"><span></span><span></span><span></span></div>
         <div class="preview-insight"><span class="ai-dot"></span><div><strong data-i18n="previewInsight">הצעד הבא, ברור יותר</strong><small data-i18n="previewInsightNote">המלצות נבנות מהנתונים שלך בלבד</small></div></div>
       </div>
     </div>
@@ -695,7 +716,7 @@ body.drawer-open{ overflow:hidden; }
         <h2 id="directory-h" data-i18n="directoryTitle" data-testid="directory-h">פנסיה, השתלמות והשקעות</h2>
         <p data-i18n="directoryIntro">כלים רשמיים להשוואה, ארגוני סיוע וקישורים לחברות מנהלות בישראל.</p>
       </div>
-      <button class="btn sm" id="btn-directory-back" data-i18n="backToDashboard" data-testid="btn-directory-back">חזרה לתמונת מצב</button>
+      <button class="btn sm" id="btn-directory-back" type="button" data-i18n="backToDashboard" data-testid="btn-directory-back">חזרה לתמונת מצב</button>
     </header>
 
     <aside class="directory-notice" data-testid="directory-disclaimer" aria-label="מידע חשוב" data-i18n-aria-label="importantInfo">
@@ -810,7 +831,7 @@ body.drawer-open{ overflow:hidden; }
     <section class="recommendations" id="recommendations" hidden aria-labelledby="rec-screen-h" data-testid="recommendations">
       <header class="recommendations-head">
         <div><h2 id="rec-screen-h" data-i18n="recommendationTitle" data-testid="rec-screen-h">המלצות פעולה</h2><p id="rec-screen-note" data-testid="rec-screen-note"></p></div>
-        <button class="btn sm" id="btn-dashboard" data-i18n="backToDashboard" data-testid="btn-dashboard">חזרה לתמונת מצב</button>
+        <button class="btn sm" id="btn-dashboard" type="button" data-i18n="backToDashboard" data-testid="btn-dashboard">חזרה לתמונת מצב</button>
       </header>
       <div class="recommendation-list" id="recommendation-list" data-testid="recommendation-list"></div>
     </section>
@@ -849,9 +870,9 @@ body.drawer-open{ overflow:hidden; }
       </div>
       <div class="waterline">
         <div class="wl-legend">
-          <span><span class="swatch" style="background:var(--good)"></span><span data-i18n="incomeShort">נכנס</span></span>
-          <span><span class="swatch" style="background:var(--crit)"></span><span data-i18n="expensesShort">יצא</span></span>
-          <span id="wl-note" style="margin-inline-start:auto;color:var(--muted)" data-testid="wl-note"></span>
+          <span><span class="swatch income"></span><span data-i18n="incomeShort">נכנס</span></span>
+          <span><span class="swatch expense"></span><span data-i18n="expensesShort">יצא</span></span>
+          <span id="wl-note" data-testid="wl-note"></span>
         </div>
         <div class="chartwrap" tabindex="0"><svg class="chart" id="wl" role="img" aria-label="נכנס מול יצא, חודש מול חודש" data-i18n-aria-label="incomeVsExpensesChart" data-testid="wl"></svg><div class="tip" id="wl-tip" data-testid="wl-tip"></div></div>
         <details class="chart-data" data-testid="wl-data">
@@ -886,7 +907,7 @@ body.drawer-open{ overflow:hidden; }
     <div class="grid g2">
       <section class="card" aria-labelledby="bd-h">
         <header><h2 id="bd-h" data-i18n="budgets" data-testid="bd-h">תקרות תקציב</h2>
-          <div class="tools"><button class="btn sm" id="btn-bud" data-i18n="edit" data-testid="btn-bud">עריכה</button></div>
+          <div class="tools"><button class="btn sm" id="btn-bud" type="button" data-i18n="edit" data-testid="btn-bud">עריכה</button></div>
         </header>
         <p class="note" id="bd-note" data-testid="bd-note"></p>
         <div id="bd-list" data-testid="bd-list"></div>
@@ -894,7 +915,7 @@ body.drawer-open{ overflow:hidden; }
 
       <section class="card" aria-labelledby="cat-h">
       <header><h2 id="cat-h" data-i18n="categories" data-testid="cat-h">לאן הכסף הולך</h2>
-        <div class="tools"><button class="btn sm" id="btn-cattbl" aria-pressed="false" data-i18n="table" data-testid="btn-cattbl">טבלה</button></div>
+        <div class="tools"><button class="btn sm" id="btn-cattbl" type="button" aria-pressed="false" data-i18n="table" data-testid="btn-cattbl">טבלה</button></div>
       </header>
       <p class="note" id="cat-note" data-testid="cat-note"></p>
       <div id="cat-list" data-testid="cat-list"></div>
@@ -903,16 +924,16 @@ body.drawer-open{ overflow:hidden; }
     </div>
 
     <!-- recurring ------------------------------------------------------- -->
-    <section class="card" aria-labelledby="rc-h" style="margin-top:16px">
+    <section class="card" id="recurring" aria-labelledby="rc-h" data-testid="recurring">
       <header><h2 id="rc-h" data-i18n="recurring" data-testid="rc-h">חיובים חוזרים שזוהו</h2></header>
       <p class="note" id="rc-note" data-testid="rc-note"></p>
       <div class="tblwrap" id="rc-list" role="region" aria-labelledby="rc-h" tabindex="0" data-testid="rc-list"></div>
     </section>
 
     <!-- transactions ---------------------------------------------------- -->
-    <section class="card" aria-labelledby="tx-h" style="margin-top:16px">
+    <section class="card" id="transactions" aria-labelledby="tx-h" data-testid="transactions">
       <header><h2 id="tx-h" data-i18n="transactions" data-testid="tx-h">תנועות</h2>
-        <div class="tools"><span class="note" id="tx-count" style="margin:0" data-testid="tx-count"></span></div>
+        <div class="tools"><span class="note" id="tx-count" data-testid="tx-count"></span></div>
       </header>
       <div class="filters">
         <input type="search" id="q" placeholder="חיפוש בתיאור הפעולה או באסמכתא" data-i18n-placeholder="searchTransactions" aria-label="חיפוש תנועות" data-i18n-aria-label="searchTransactionsLabel" data-testid="q">
@@ -929,8 +950,8 @@ body.drawer-open{ overflow:hidden; }
       </div>
       <p class="table-scroll-hint" id="tx-scroll-hint" data-i18n="transactionTableScrollHint" data-testid="tx-scroll-hint">החליקו לצדדים כדי לראות את כל העמודות.</p>
       <div class="tblwrap" role="region" aria-label="טבלת תנועות" data-i18n-aria-label="transactionTableRegionLabel" aria-describedby="tx-scroll-hint" tabindex="0" data-testid="tx-table-scroll"><table id="tx" data-testid="tx"><thead><tr>
-        <th style="width:92px" data-i18n="date">תאריך</th><th data-i18n="description">תיאור פעולה</th><th style="width:150px" data-i18n="category">קטגוריה</th>
-        <th style="width:96px" data-i18n="amount">סכום</th><th style="width:104px" data-i18n="balance">יתרה</th><th style="width:110px" data-i18n="reference">אסמכתא</th>
+        <th data-i18n="date">תאריך</th><th data-i18n="description">תיאור פעולה</th><th data-i18n="category">קטגוריה</th>
+        <th data-i18n="amount">סכום</th><th data-i18n="balance">יתרה</th><th data-i18n="reference">אסמכתא</th>
       </tr></thead><tbody id="tx-body" data-testid="tx-body"></tbody></table></div>
     </section>
 
@@ -946,7 +967,7 @@ body.drawer-open{ overflow:hidden; }
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="dr-h" inert data-testid="drawer">
   <header>
     <h2 id="dr-h" data-i18n="settings" data-testid="dr-h">הגדרות</h2>
-    <button class="x" id="dr-close" aria-label="סגירה" data-i18n-aria-label="close" style="margin-inline-start:auto" data-testid="dr-close">✕</button>
+    <button class="x" id="dr-close" type="button" aria-label="סגירה" data-i18n-aria-label="close" data-testid="dr-close">✕</button>
   </header>
 
   <details class="settings-section" data-testid="settings-section-budgets">
@@ -963,11 +984,11 @@ body.drawer-open{ overflow:hidden; }
       <h3 data-testid="settings-translated-content" data-i18n="automaticRules">כללי שיוך אוטומטי</h3>
       <p data-testid="settings-translated-content" class="note" data-i18n="automaticRulesNote">כל תנועה מקבלת את הקטגוריה של הכלל הראשון שהתיאור שלה מכיל. שינוי קטגוריה ידני בטבלת התנועות גובר על הכללים.</p>
       <div id="dr-rules" data-testid="dr-rules"></div>
-      <button class="btn sm" id="dr-addrule" style="margin-top:10px" data-i18n="addRule" data-testid="dr-addrule">הוספת כלל</button>
+      <button class="btn sm" id="dr-addrule" type="button" data-i18n="addRule" data-testid="dr-addrule">הוספת כלל</button>
       <h3 data-testid="settings-translated-content" data-i18n="categoryPlural">קטגוריות</h3>
       <p data-testid="settings-translated-content" class="note" data-i18n="categoriesNote">שמונה הקטגוריות הראשונות נושאות צבע ייעודי בגרפים; קטגוריות נוספות מוצגות באפור.</p>
       <div id="dr-cats" data-testid="dr-cats"></div>
-      <button class="btn sm" id="dr-addcat" style="margin-top:10px" data-i18n="addCategory" data-testid="dr-addcat">הוספת קטגוריה</button>
+      <button class="btn sm" id="dr-addcat" type="button" data-i18n="addCategory" data-testid="dr-addcat">הוספת קטגוריה</button>
     </div>
   </details>
 
@@ -975,10 +996,10 @@ body.drawer-open{ overflow:hidden; }
     <summary data-i18n="dataAndPrivacy" data-testid="settings-translated-content">נתונים ופרטיות</summary>
     <div class="settings-section-content">
       <p class="note" id="dr-stats" data-testid="dr-stats"></p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap" data-testid="settings-data-actions">
-        <button class="btn sm" id="dr-export" data-i18n="exportBackup" data-testid="dr-export">ייצוא גיבוי</button>
+      <div class="settings-data-actions" data-testid="settings-data-actions">
+        <button class="btn sm" id="dr-export" type="button" data-i18n="exportBackup" data-testid="dr-export">ייצוא גיבוי</button>
         <label class="btn sm" data-testid="backup-import-trigger"><span data-i18n="importBackup">טעינת גיבוי</span><input type="file" id="dr-import" accept=".json,application/json" hidden data-testid="dr-import"></label>
-        <button class="btn sm destructive" id="dr-wipe" data-i18n="deleteAll" data-testid="dr-wipe">מחיקת הכל</button>
+        <button class="btn sm destructive" id="dr-wipe" type="button" data-i18n="deleteAll" data-testid="dr-wipe">מחיקת הכל</button>
       </div>
       <h3 data-testid="settings-translated-content" data-i18n="cloudConsentTitle">הסכמה לסנכרון ענן אופציונלי</h3>
       <section class="consent-card" aria-labelledby="cloud-consent-heading" data-testid="cloud-consent">
