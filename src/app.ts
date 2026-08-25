@@ -108,9 +108,9 @@ function applyLocale() {
   const localeSelect = document.querySelector<HTMLSelectElement>('#locale-select')!;
   localeSelect.value = locale;
   localeSelect.setAttribute('aria-label', t('languageLabel'));
-  // Enabled only once there is something to recommend on; otherwise the control
-  // looks live and answers a click with "no data yet".
-  document.querySelector<HTMLButtonElement>('#btn-recommendations')!.disabled = !S.tx.length;
+  // Deliberately always enabled: with no data the button is a guided path to the
+  // upload rather than a dead end, and a disabled control explains nothing. The
+  // markup no longer ships `disabled`, so this no longer has to undo it.
   const formatters = createLocaleFormatters(locale);
   ILS0 = formatters.money0;
   ILS2 = formatters.money2;
@@ -406,7 +406,6 @@ function render() {
   decorate();
   invalidateAgentResults();
   fillCatFilter();
-  document.querySelector<HTMLButtonElement>('#btn-recommendations')!.disabled = !S.tx.length;
   const months = monthsPresent();
   $('#savings-directory').hidden = !directoryOpen;
   if (!S.tx.length) {

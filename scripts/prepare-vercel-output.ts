@@ -12,6 +12,7 @@ const files = [
   'openapi.json',
   'favicon.svg',
   'design-system.css',
+  'fonts',
   'resources',
   'dist',
 ] as const;

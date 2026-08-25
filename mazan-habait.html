@@ -5,9 +5,7 @@
 <meta data-testid="viewport-meta" name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title data-i18n="title">מאזן הבית</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700&family=Frank+Ruhl+Libre:wght@500;700&family=Noto+Sans+Ethiopic:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="design-system.css">
 <style>
 /* ============================================================ tokens ===== */
@@ -615,7 +613,7 @@ body.drawer-open{ overflow:hidden; }
       </label>
       <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
       <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
-        <button class="btn" id="btn-recommendations" disabled data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
+        <button class="btn" id="btn-recommendations" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
         <button class="btn" id="btn-savings" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
         <label class="locale-picker" data-testid="language-picker">
           <span class="vh" data-i18n="languageLabel">שפת ממשק</span>
@@ -928,7 +926,7 @@ body.drawer-open{ overflow:hidden; }
 
     <footer class="foot">
       <p id="foot-note" data-testid="foot-note"></p>
-      <p data-i18n="privacyFooter">תנועות מצומצמות נשמרות רק בדפדפן ואינן נשלחות לשרת. מספרי חשבון וכרטיס, CVV, אסמכתאות ושמות קבצים אינם נשמרים. סנכרון ענן עתידי יהיה אופציונלי ורק לאחר כניסה והסכמה מפורשת.</p>
+      <p data-i18n="privacyFooter">תנועות מצומצמות, קטגוריות, כללים ותקציבים נשמרים רק בדפדפן ואינם נשלחים לשרת. מספרי חשבון וכרטיס, CVV, אסמכתאות ושמות קבצים אינם נשמרים. נשמרים בדפדפן גם מקור ההגעה לאתר (פרמטרי utm ו־gclid) ועד 50 אירועי שימוש אחרונים; גם הם אינם נשלחים לשרת. הגופנים מאוחסנים באתר עצמו ואין פנייה לשירות חיצוני. סנכרון ענן עתידי יהיה אופציונלי ורק לאחר כניסה והסכמה מפורשת.</p>
     </footer>
   </main>
 </div>

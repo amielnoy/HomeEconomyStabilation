@@ -88,7 +88,7 @@
   "filterByCategory": "Filter by category",
   "filterByDirection": "Filter by direction",
   "range": "Range",
-  "privacyFooter": "Minimised transactions stay only in this browser and are not sent to a server. Account and card numbers, CVV, references and filenames are not stored. Future cloud sync will be optional and require sign-in and explicit consent.",
+  "privacyFooter": "Minimised transactions, categories, rules and budgets are stored only in this browser and are never sent to a server. Account and card numbers, CVV, references and file names are not stored. The browser also keeps how you reached the site (utm parameters and gclid) and your last 50 usage events; these are not sent anywhere either. Fonts are served from this site, so no third-party request is made. Any future cloud sync will be optional, and only after signing in and giving explicit consent.",
   "close": "Close",
   "monthlyBudgetLimits": "Monthly budget limits",
   "monthlyBudgetLimitsNote": "Leave a limit empty to exclude it from tracking. The limit is compared with spending in the selected month.",

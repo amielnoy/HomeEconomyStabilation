@@ -88,7 +88,7 @@
   "filterByCategory": "Filtrer par catégorie",
   "filterByDirection": "Filtrer par sens",
   "range": "Période",
-  "privacyFooter": "Les opérations minimisées restent uniquement dans ce navigateur et ne sont pas envoyées à un serveur. Les numéros de compte et de carte, le CVV, les références et les noms de fichiers ne sont pas conservés. La future synchronisation cloud sera facultative et soumise à un consentement explicite.",
+  "privacyFooter": "Les opérations minimisées, catégories, règles et budgets sont conservées uniquement dans ce navigateur et ne sont jamais envoyées à un serveur. Les numéros de compte et de carte, le CVV, les références et les noms de fichiers ne sont pas conservés. Le navigateur conserve aussi la façon dont vous êtes arrivé sur le site (paramètres utm et gclid) et vos 50 derniers événements d'usage ; eux non plus ne sont envoyés nulle part. Les polices sont servies par ce site, sans aucune requête tierce. Une future synchronisation cloud sera facultative, après connexion et consentement explicite.",
   "close": "Fermer",
   "monthlyBudgetLimits": "Plafonds budgétaires mensuels",
   "monthlyBudgetLimitsNote": "Laissez un plafond vide pour ne pas le suivre. Le montant est comparé aux dépenses du mois sélectionné.",
