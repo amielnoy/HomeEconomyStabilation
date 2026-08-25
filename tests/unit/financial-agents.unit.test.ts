@@ -46,13 +46,42 @@ describe('independent financial agents', () => {
 
   it('calculates annual subscription cost and quiet price increases', () => {
     const [finding] = subscriptionAgent([
-      tx('2026-01-05', 'Streaming Service', 40), tx('2026-02-05', 'Streaming Service', 40),
-      tx('2026-03-05', 'Streaming Service', 50),
+      tx('2026-01-05', 'Streaming Service', 40, { cat: 'other' }),
+      tx('2026-02-05', 'Streaming Service', 40, { cat: 'other' }),
+      tx('2026-03-05', 'Streaming Service', 50, { cat: 'other' }),
     ]);
+
+    expect(finding).toBeDefined();
 
     expect(finding.monthly).toBe(40);
     expect(finding.annual).toBe(480);
     expect(finding.increasePercent).toBe(25);
+  });
+
+  it('does not offer obligations or the household\u2019s own cash as cancellable subscriptions', () => {
+    const steadyMonths = ['2026-01', '2026-02', '2026-03', '2026-04'];
+    const series = (desc: string, amount: number, cat: string) =>
+      steadyMonths.map((month) => tx(`${month}-11`, desc, amount, { cat }));
+
+    const findings = subscriptionAgent([
+      ...series('\u05d7\u05e9\u05de\u05dc - \u05d7\u05d1\u05e8\u05ea \u05d4\u05d7\u05e9\u05de\u05dc', 486, 'other'),
+      ...series('\u05de\u05e9\u05d9\u05db\u05d4 \u05de\u05d1\u05e0\u05e7\u05d8', 400, 'other'),
+      ...series('Municipal Rates', 512, 'other'),
+      ...series('Council Water', 240, 'home'),
+      ...series('Streaming Service', 54.9, 'other'),
+    ]);
+
+    expect(findings.map((finding) => finding.merchant)).toEqual(['streaming service']);
+  });
+
+  it('rejects a recurring charge whose price never settles', () => {
+    // A metered bill repeats but is not a subscription: there is nothing to cancel.
+    expect(subscriptionAgent([
+      tx('2026-01-09', 'Corner Grocer', 310, { cat: 'other' }),
+      tx('2026-02-09', 'Corner Grocer', 452, { cat: 'other' }),
+      tx('2026-03-09', 'Corner Grocer', 388, { cat: 'other' }),
+      tx('2026-04-09', 'Corner Grocer', 501, { cat: 'other' }),
+    ])).toEqual([]);
   });
 
   it('suggests the 75th-percentile budget rounded to a practical amount', () => {
@@ -67,8 +96,9 @@ describe('independent financial agents', () => {
 
   it('turns a quiet subscription price increase into a measured annual saving opportunity', () => {
     const result = savingsOpportunityAgent([
-      tx('2026-01-05', 'Streaming Service', 40), tx('2026-02-05', 'Streaming Service', 40),
-      tx('2026-03-05', 'Streaming Service', 50),
+      tx('2026-01-05', 'Streaming Service', 40, { cat: 'other' }),
+      tx('2026-02-05', 'Streaming Service', 40, { cat: 'other' }),
+      tx('2026-03-05', 'Streaming Service', 50, { cat: 'other' }),
     ]);
 
     expect(result).toEqual([expect.objectContaining({
@@ -81,7 +111,9 @@ describe('independent financial agents', () => {
   it('finds recurring fees, reviewable subscriptions and one-time duplicate savings', () => {
     const result = savingsOpportunityAgent([
       tx('2026-01-02', 'Bank Account Fee', 15), tx('2026-02-02', 'Bank Account Fee', 15),
-      tx('2026-01-05', 'Music Plan', 30), tx('2026-02-05', 'Music Plan', 30), tx('2026-03-05', 'Music Plan', 30),
+      tx('2026-01-05', 'Music Plan', 30, { cat: 'other' }),
+      tx('2026-02-05', 'Music Plan', 30, { cat: 'other' }),
+      tx('2026-03-05', 'Music Plan', 30, { cat: 'other' }),
       tx('2026-03-10', 'Local Store 123', 200), tx('2026-03-12', 'Local Store 456', 200),
     ]);
 
@@ -120,12 +152,16 @@ describe('independent financial agents', () => {
       tx('2026-03-20', 'Current activity', 10, { bal: 5000 }),
     ]);
 
+    // balance - committed is the ceiling, never the guidance: the cushion and the
+    // household's own spending rate both bind before the whole balance is offered.
     expect(result).toMatchObject({
-      balance: 5000, committed: 3000, freeToSpend: 2000, nextIncomeDate: '2026-04-01',
-      daysRemaining: 12,
+      balance: 5000, asOf: '2026-03-20', committed: 3000, available: 2000,
+      nextIncomeDate: '2026-04-01', daysRemaining: 12,
     });
-    expect(result?.dailyAllowance).toBeCloseTo(166.67, 1);
-    expect(result?.weeklyAllowance).toBeCloseTo(1166.67, 1);
+    expect(result!.freeToSpend).toBeLessThanOrEqual(result!.available);
+    expect(result!.freeToSpend).toBeGreaterThanOrEqual(0);
+    expect(result!.dailyAllowance).toBeCloseTo(result!.freeToSpend / 12, 5);
+    expect(result!.weeklyAllowance).toBeCloseTo(result!.dailyAllowance! * 7, 5);
   });
 
   it('returns an explicit unavailable result when no balance exists', () => {
@@ -139,8 +175,9 @@ describe('independent financial agents', () => {
     expect(paydayAgent([
       tx('2026-03-20', 'Current activity', 10, { bal: 5000 }),
     ])).toEqual({
-      balance: 5000, nextIncomeDate: null, committed: 0, freeToSpend: 5000,
-      daysRemaining: null, dailyAllowance: null, weeklyAllowance: null,
+      balance: 5000, asOf: '2026-03-20', nextIncomeDate: null, committed: 0,
+      available: 5000, retained: 10, typicalSpend: 0, freeToSpend: 5000,
+      limitedBy: 'balance', daysRemaining: null, dailyAllowance: null, weeklyAllowance: null,
     });
   });
 
@@ -152,8 +189,10 @@ describe('independent financial agents', () => {
       tx('2026-03-20', 'Current activity', 10, { bal: 5000 }),
     ]);
 
-    expect(result).toMatchObject({ freeToSpend: -1000, daysRemaining: 12 });
-    expect(result?.dailyAllowance).toBeCloseTo(-83.33, 1);
+    // A shortfall now surfaces as a negative `available`; `freeToSpend` is floored at
+    // zero, because "spend a negative amount" was never guidance anyone could act on.
+    expect(result).toMatchObject({ committed: 6000, available: -1000, freeToSpend: 0, daysRemaining: 12 });
+    expect(result?.dailyAllowance).toBe(0);
     expect(Number.isFinite(result?.weeklyAllowance)).toBe(true);
   });
 

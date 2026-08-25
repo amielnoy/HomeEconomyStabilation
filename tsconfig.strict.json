@@ -13,6 +13,7 @@
     "src/bank-importer.ts",
     "src/credit-card-importer.ts",
     "src/categorization.ts",
+    "src/financial-agents.ts",
     "src/cloud-sync.ts",
     "src/cloud-metadata.ts",
     "src/http-status.ts",

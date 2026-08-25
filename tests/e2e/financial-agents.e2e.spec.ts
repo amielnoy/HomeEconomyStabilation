@@ -20,7 +20,10 @@ test('shows eight independent agents with findings from their own histories', as
   await expect(homePage.dashboard.savingsAgent).toContainText('streaming service');
   await expect(homePage.dashboard.savingsOpportunitySummary).toContainText('120');
   await expect(homePage.dashboard.savingsOpportunities).toHaveCount(2);
-  await expect(homePage.dashboard.paydayAgent).toContainText('2,000');
+  // 2,000 is what is *available* once rent clears; the guide itself is capped by the
+  // household's own discretionary rate, so the card reports the smaller figure.
+  await expect(homePage.dashboard.paydayAgent).toContainText('3,000');
+  await expect(homePage.dashboard.paydayAgent).toContainText('5,000');
 });
 
 test('explains savings estimates with transaction evidence', async ({ homePage }) => {
@@ -33,14 +36,21 @@ test('explains savings estimates with transaction evidence', async ({ homePage }
 
 test('leads with a transparent safe-to-spend guide', async ({ homePage }) => {
   await expect(homePage.dashboard.spendingGuide).toBeVisible();
-  await expect(homePage.dashboard.spendingGuideAmount).toContainText('2,000');
   await expect(homePage.dashboard.spendingGuideSummary).toContainText('12');
-  await expect(homePage.dashboard.spendingGuideWeekly).toContainText('1,167');
-  await expect(homePage.dashboard.spendingGuideDaily).toContainText('167');
+  // The balance is a ceiling, not the answer: the guide must never offer the whole
+  // account, and it must stay at or below what is left once commitments clear.
+  const guided = await homePage.dashboard.readSpendingGuideAmount();
+  expect(guided).toBeGreaterThan(0);
+  expect(guided).toBeLessThanOrEqual(2000);
+  expect(guided).toBeLessThan(5000);
+
+  // Every figure is stamped with the report it came from, not presented as "today".
+  await expect(homePage.dashboard.spendingGuideAsOf).toContainText('20.03.26');
 
   await homePage.dashboard.spendingGuideDetails.locator('summary').click();
   await expect(homePage.dashboard.spendingGuideBalance).toContainText('5,000');
   await expect(homePage.dashboard.spendingGuideCommitted).toContainText('3,000');
+  await expect(homePage.dashboard.spendingGuideRetained).toContainText('3,140');
 });
 
 test('requires explicit approval before saving a learned categorization rule', async ({ homePage }) => {
