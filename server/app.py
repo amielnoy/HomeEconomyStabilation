@@ -12,7 +12,7 @@ from starlette.concurrency import run_in_threadpool
 from .config import bearer_token, read_supabase_config
 from .metrics import record_response, render_metrics
 from .models import CloudConsentInput, ConsentAcceptance, ProfileInput, SnapshotInput, UserProfile
-from .request_guard import SnapshotRequestGuard
+from .request_guard import GuardFailure, SnapshotRequestGuard
 from .supabase_store import (
     ConsentRepository,
     SnapshotRepository,
@@ -30,6 +30,10 @@ _SMALL_BODY_LIMIT = 1_024
 
 def _error(status: int, code: str, headers: dict[str, str] | None = None) -> JSONResponse:
     return JSONResponse({"code": code}, status_code=status, headers=headers)
+
+
+def _retry_after(failure: GuardFailure) -> dict[str, str] | None:
+    return {"Retry-After": str(failure.retry_after)} if failure.retry_after else None
 
 
 def _client_key(request: Request) -> str:
@@ -125,14 +129,23 @@ async def snapshots(request: Request) -> Response:
         content_length=request.headers.get("content-length"),
     )
     if failure:
-        headers = {"Retry-After": str(failure.retry_after)} if failure.retry_after else None
-        return _error(failure.status, failure.code, headers)
+        return _error(failure.status, failure.code, _retry_after(failure))
 
-    snapshot_input: SnapshotInput | None = None
+    # Size is cheap to check and bounds the read; parsing is not, so it waits until
+    # the caller has proved who they are.
+    raw_body = b""
     if request.method == "PUT":
         raw_body = await request.body()
         if len(raw_body) > 1_010_000:
             return _error(413, "snapshot_too_large")
+
+    authenticated = await _authenticated_client(request)
+    if isinstance(authenticated, JSONResponse):
+        return authenticated
+    client, user_id = authenticated
+
+    snapshot_input: SnapshotInput | None = None
+    if request.method == "PUT":
         try:
             snapshot_input = SnapshotInput.model_validate_json(raw_body)
             if len(snapshot_input.payload.model_dump_json(by_alias=True).encode("utf-8")) > 1_000_000:
@@ -140,10 +153,6 @@ async def snapshots(request: Request) -> Response:
         except (ValidationError, ValueError):
             return _error(400, "invalid_snapshot")
 
-    authenticated = await _authenticated_client(request)
-    if isinstance(authenticated, JSONResponse):
-        return authenticated
-    client, user_id = authenticated
     repository = SnapshotRepository(client, user_id)
 
     try:
@@ -173,12 +182,9 @@ async def snapshots(request: Request) -> Response:
 async def profile(request: Request) -> Response:
     if request.method not in {"GET", "PUT"}:
         return _error(405, "method_not_allowed", {"Allow": "GET, PUT"})
-    failure = _guard.check(
-        method="GET", client_key=_client_key(request), content_type=None,
-        content_length=request.headers.get("content-length"),
-    )
+    failure = _guard.rate_limit_only(client_key=_client_key(request))
     if failure:
-        return _error(failure.status, failure.code, {"Retry-After": str(failure.retry_after)})
+        return _error(failure.status, failure.code, _retry_after(failure))
     profile_input = await _small_json_body(request, ProfileInput) if request.method == "PUT" else None
     if isinstance(profile_input, JSONResponse):
         return profile_input
@@ -200,12 +206,9 @@ async def profile(request: Request) -> Response:
 async def cloud_consent(request: Request) -> Response:
     if request.method not in {"GET", "PUT", "DELETE"}:
         return _error(405, "method_not_allowed", {"Allow": "GET, PUT, DELETE"})
-    failure = _guard.check(
-        method="GET", client_key=_client_key(request), content_type=None,
-        content_length=request.headers.get("content-length"),
-    )
+    failure = _guard.rate_limit_only(client_key=_client_key(request))
     if failure:
-        return _error(failure.status, failure.code, {"Retry-After": str(failure.retry_after)})
+        return _error(failure.status, failure.code, _retry_after(failure))
     consent_input = await _small_json_body(request, CloudConsentInput) if request.method == "PUT" else None
     if isinstance(consent_input, JSONResponse):
         return consent_input

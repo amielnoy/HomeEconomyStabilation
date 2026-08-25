@@ -59,6 +59,16 @@ class SnapshotRequestGuard:
             return GuardFailure(413, "snapshot_too_large")
         return None
 
+    def rate_limit_only(self, *, client_key: str, now: float | None = None) -> GuardFailure | None:
+        """Routes that validate their own bodies still want the shared rate limit.
+
+        Passing method="GET" to check() achieved this by accident and read as though
+        the request really were a GET; this says what is meant.
+        """
+        return self.check(
+            method="GET", client_key=client_key, content_type=None, content_length=None, now=now,
+        )
+
     def reset(self) -> None:
         with self._lock:
             self._buckets.clear()

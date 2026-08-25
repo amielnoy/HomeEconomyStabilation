@@ -46,6 +46,33 @@ def record_supabase_response(operation: str, status: int, duration: float) -> No
         _SUPABASE_DURATIONS[bounded_operation] = duration
 
 
+PROBE_TTL_SECONDS = 30.0
+_PROBE_CACHE: dict[str, tuple[float, object]] = {}
+
+
+def _cached(key: str, produce, now: float | None = None):
+    """Serve a probe result for PROBE_TTL_SECONDS.
+
+    Every scrape used to fire four live outbound requests at a 2s timeout each, so an
+    unauthenticated caller could hold the endpoint open for eight seconds and hammer
+    the probed services at whatever rate they liked.
+    """
+    current = monotonic() if now is None else now
+    with _LOCK:
+        cached = _PROBE_CACHE.get(key)
+        if cached and current - cached[0] < PROBE_TTL_SECONDS:
+            return cached[1]
+    value = produce()
+    with _LOCK:
+        _PROBE_CACHE[key] = (current, value)
+    return value
+
+
+def reset_probe_cache() -> None:
+    with _LOCK:
+        _PROBE_CACHE.clear()
+
+
 def _probe_supabase() -> tuple[int, float]:
     config = read_supabase_config()
     if not config:
@@ -74,12 +101,16 @@ def _probe(name: str, url: str) -> tuple[str, int, float]:
 def render_metrics() -> str:
     web_origin = environ.get("MONITOR_WEB_ORIGIN", "http://web")
     scalar_origin = environ.get("MONITOR_SCALAR_ORIGIN", web_origin)
-    probes = [
-        _probe("application", f"{web_origin}/mazan-habait.html"),
-        _probe("swagger", f"{web_origin}/api-docs.html"),
-        _probe("scalar", f"{scalar_origin}/scalar-docs.html"),
+    targets = [
+        ("application", f"{web_origin}/mazan-habait.html"),
+        ("swagger", f"{web_origin}/api-docs.html"),
+        ("scalar", f"{scalar_origin}/scalar-docs.html"),
     ]
-    database_up, database_duration = _probe_supabase()
+    probes = [
+        _cached(f"endpoint:{name}:{url}", lambda name=name, url=url: _probe(name, url))
+        for name, url in targets
+    ]
+    database_up, database_duration = _cached("supabase", _probe_supabase)
     lines = [
         "# HELP home_economy_process_uptime_seconds API process uptime.",
         "# TYPE home_economy_process_uptime_seconds gauge",

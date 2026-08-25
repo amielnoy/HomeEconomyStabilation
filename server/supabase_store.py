@@ -106,18 +106,11 @@ class UserProfileRepository:
         return UserProfile.model_validate(rows[0]) if rows else None
 
     def save(self, locale: Locale) -> UserProfile:
-        existing = self.read()
-        if existing:
-            rows = self._client.table_request(
-                "PATCH", "user_profiles", operation="profile_write",
-                params={"user_id": f"eq.{self._user_id}", "select": "*"},
-                json={"preferred_locale": locale}, prefer="return=representation",
-            )
-        else:
-            rows = self._client.table_request(
-                "POST", "user_profiles", operation="profile_write", params={"select": "*"},
-                json={"user_id": self._user_id, "preferred_locale": locale}, prefer="return=representation",
-            )
+        rows = self._client.table_request(
+            "POST", "user_profiles", operation="profile_write", params={"select": "*"},
+            json={"user_id": self._user_id, "preferred_locale": locale},
+            prefer="return=representation,resolution=merge-duplicates",
+        )
         if not rows:
             raise SupabaseDataError("profile_write")
         return UserProfile.model_validate(rows[0])
@@ -140,20 +133,14 @@ class SnapshotRepository:
         return StoredSnapshot(row["schema_version"], row["payload"], row["updated_at"])
 
     def save(self, payload: CloudStatePayload) -> StoredSnapshot:
-        current = self.read()
-        body = {"payload": payload.persistence_dict(), "schema_version": 2}
-        if current:
-            rows = self._client.table_request(
-                "PATCH", "app_snapshots", operation="snapshot_write",
-                params={"user_id": f"eq.{self._user_id}", "select": "payload,schema_version,updated_at"},
-                json=body, prefer="return=representation",
-            )
-        else:
-            rows = self._client.table_request(
-                "POST", "app_snapshots", operation="snapshot_write",
-                params={"select": "payload,schema_version,updated_at"},
-                json={"user_id": self._user_id, **body}, prefer="return=representation",
-            )
+        # One upsert rather than read-then-insert-or-update: half the round trips, and
+        # no window in which two concurrent writes both decide the row does not exist.
+        rows = self._client.table_request(
+            "POST", "app_snapshots", operation="snapshot_write",
+            params={"select": "payload,schema_version,updated_at"},
+            json={"user_id": self._user_id, "payload": payload.persistence_dict(), "schema_version": 2},
+            prefer="return=representation,resolution=merge-duplicates",
+        )
         if not rows:
             raise SupabaseDataError("snapshot_write")
         row = rows[0]
@@ -182,26 +169,16 @@ class ConsentRepository:
 
     def accept(self, statement_version: str, locale: Locale) -> ConsentAcceptance:
         accepted_at = datetime.now(timezone.utc).isoformat()
-        current = self.read(statement_version)
-        filters = {
-            "user_id": f"eq.{self._user_id}", "purpose": "eq.cloud_sync",
-            "statement_version": f"eq.{statement_version}", "select": "*",
-        }
-        if current:
-            rows = self._client.table_request(
-                "PATCH", "consent_acceptances", operation="consent_write", params=filters,
-                json={"locale": locale, "accepted_at": accepted_at, "withdrawn_at": None},
-                prefer="return=representation",
-            )
-        else:
-            rows = self._client.table_request(
-                "POST", "consent_acceptances", operation="consent_write", params={"select": "*"},
-                json={
-                    "user_id": self._user_id, "purpose": "cloud_sync",
-                    "statement_version": statement_version, "locale": locale,
-                    "accepted_at": accepted_at, "withdrawn_at": None,
-                }, prefer="return=representation",
-            )
+        # (user_id, purpose, statement_version) is the primary key, so re-accepting
+        # merges onto the existing row and re-accepting after withdrawal clears it.
+        rows = self._client.table_request(
+            "POST", "consent_acceptances", operation="consent_write", params={"select": "*"},
+            json={
+                "user_id": self._user_id, "purpose": "cloud_sync",
+                "statement_version": statement_version, "locale": locale,
+                "accepted_at": accepted_at, "withdrawn_at": None,
+            }, prefer="return=representation,resolution=merge-duplicates",
+        )
         if not rows:
             raise SupabaseDataError("consent_write")
         return ConsentAcceptance.model_validate(rows[0])

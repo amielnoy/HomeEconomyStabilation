@@ -22,14 +22,19 @@ def test_health_supports_get_head_and_stable_method_refusal() -> None:
     assert refusal.json() == {"code": "method_not_allowed"}
 
 
-def test_snapshot_boundary_rejects_media_and_invalid_payload_before_configuration() -> None:
+def test_snapshot_boundary_rejects_media_before_doing_any_work() -> None:
     wrong_media = client.put("/api/snapshots", content="not-json", headers={"content-type": "text/plain"})
     assert wrong_media.status_code == 415
     assert wrong_media.json() == {"code": "json_content_type_required"}
 
+
+def test_snapshot_payload_is_not_parsed_for_an_unauthenticated_caller(monkeypatch) -> None:
+    """Validating a megabyte of JSON is work; a stranger should not be able to demand it."""
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_PUBLISHABLE_KEY", raising=False)
     invalid = client.put("/api/snapshots", json={"schemaVersion": 2, "payload": {"tx": "wrong"}})
-    assert invalid.status_code == 400
-    assert invalid.json() == {"code": "invalid_snapshot"}
+    assert invalid.status_code == 503
+    assert invalid.json() == {"code": "cloud_not_configured"}
 
 
 def test_snapshot_boundary_fails_closed_without_server_configuration(monkeypatch) -> None:
