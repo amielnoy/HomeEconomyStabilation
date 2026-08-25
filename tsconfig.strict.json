@@ -7,12 +7,16 @@
     "exactOptionalPropertyTypes": false
   },
   "include": [
+    "src/app.ts",
     "src/domain-model.ts",
     "src/privacy.ts",
     "src/state-repository.ts",
     "src/bank-importer.ts",
     "src/credit-card-importer.ts",
     "src/categorization.ts",
+    "src/consent.ts",
+    "src/localization.ts",
+    "src/marketing.ts",
     "src/spreadsheet-reader.ts",
     "src/financial-agents.ts",
     "src/cloud-sync.ts",

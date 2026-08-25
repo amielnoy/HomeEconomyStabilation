@@ -13,7 +13,8 @@ import { RuleBasedTransactionCategorizer } from './categorization.js';
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
 interface DomElement extends HTMLElement { value: string; files: FileList | null; reset(): void; }
 interface ClaudeWindow extends Window { claude?: { use(name: string): Promise<DownloadApi> }; }
-interface Resources extends Record<string, string | boolean | Record<string, string>> { replace?: Record<string, string>; }
+type ResourceValue = string | boolean | Record<string, string>;
+interface Resources { [key: string]: ResourceValue | undefined; replace?: Record<string, string>; }
 let locale: Locale = resolveLocale(localStorage.getItem('mazan-habait/locale'));
 let resources: Resources = {};
 let directoryOpen = window.location.hash === '#savings-directory';
@@ -64,22 +65,22 @@ let DDMM = new Intl.DateTimeFormat('he-IL', { day: '2-digit', month: '2-digit' }
 let DDMMYY = new Intl.DateTimeFormat('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
 let MONTH_LONG = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'numeric' });
 let MONTH_SHORT = new Intl.DateTimeFormat('he-IL', { month: 'short' });
-const money = (v) => ILS0.format(Math.round(v || 0));
-const money2 = (v) => ILS2.format(v || 0);
-const moneyS = (v) => ILS0S.format(Math.round(v || 0));
-const money2S = (v) => ILS2S.format(v || 0);
+const money = (v: number) => ILS0.format(Math.round(v || 0));
+const money2 = (v: number) => ILS2.format(v || 0);
+const moneyS = (v: number) => ILS0S.format(Math.round(v || 0));
+const money2S = (v: number) => ILS2S.format(v || 0);
 
 const DAY = 86400000;
-const iso = (d) => d.toISOString().slice(0, 10);
-const dOf = (isoStr) => new Date(isoStr + 'T00:00:00Z');
-const monthKey = (isoStr) => isoStr.slice(0, 7);
-const monthLabel = (mk) => MONTH_LONG.format(new Date(mk + '-01T00:00:00Z'));
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const median = (arr) => {
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+const dOf = (isoStr: string) => new Date(isoStr + 'T00:00:00Z');
+const monthKey = (isoStr: string) => isoStr.slice(0, 7);
+const monthLabel = (mk: string | null) => mk ? MONTH_LONG.format(new Date(mk + '-01T00:00:00Z')) : '';
+const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const median = (arr: number[]): number => {
   if (!arr.length) return 0;
   const a = [...arr].sort((x, y) => x - y);
   const m = a.length >> 1;
-  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  return a.length % 2 ? a[m]! : (a[m - 1]! + a[m]!) / 2;
 };
 
 const t = (key: string, params: Record<string, string | number> = {}): string => {
@@ -127,7 +128,7 @@ function applyLocale() {
 /* Slot order is fixed and never cycled: the first eight categories carry the
    validated categorical hues, anything past them takes the neutral. */
 const SLOT = ['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--s5)','var(--s6)','var(--s7)','var(--s8)'];
-const catColor = (cats, id) => {
+const catColor = (cats: readonly Category[], id: string | undefined) => {
   if (id === 'income') return 'var(--good)';
   const i = cats.filter((c) => c.id !== 'income').findIndex((c) => c.id === id);
   return i >= 0 && i < 8 ? SLOT[i] : 'var(--s0)';
@@ -167,7 +168,7 @@ const DEFAULT_RULES = [
   ['משכורת', 'income'], ['שכר', 'income'], ['ביטוח לאומי', 'income'], ['קצבה', 'income'],
   ['משיכה לחשבון הבנק', 'savings'], ['העברה לחשבון', 'savings'], ['העברה בנקאית', 'savings'],
   ['מזונות', 'home'],
-].map(([match, cat], i): Rule => ({ id: 'r' + i, match, cat }));
+].map(([match, cat], i): Rule => ({ id: 'r' + i, match: match!, cat: cat! }));
 
 /* --------------------------------------------------------------- state -- */
 const KEY = 'mazan-habait/v1';
@@ -198,8 +199,8 @@ function save() {
 }
 
 /* --------------------------------------------------------------- toast -- */
-let toastT;
-function toast(msg) {
+let toastT: ReturnType<typeof setTimeout> | undefined;
+function toast(msg: string) {
   const t = $('#toast');
   t.textContent = msg;
   t.classList.add('on');
@@ -226,14 +227,16 @@ const transactionCategorizer = new RuleBasedTransactionCategorizer();
 function autoCat(transaction: BankTransaction) {
   return transactionCategorizer.categorize(transaction, S.overrides, S.rules);
 }
-const catById = (id) => {
+/** A category with no ceiling set reads as zero rather than undefined. */
+const budgetOf = (id: string) => S.budgets[id] ?? 0;
+const catById = (id: string | undefined) => {
   const category = S.cats.find((c) => c.id === id) || { id, name: id, kind: 'expense' };
   return { ...category, name: String(resources[`cat.${id}`] ?? category.name) };
 };
 
 /* Amount, signed: outflow negative. Neutral categories are movements, not
    spending, so they are excluded from the income/expense totals. */
-function signed(t) { return t.in - t.out; }
+function signed(t: BankTransaction) { return t.in - t.out; }
 
 /* --------------------------------------------------------- aggregation -- */
 /* A card settlement on the bank statement and the card statement's own line items
@@ -260,9 +263,9 @@ function monthsPresent() {
   const set = new Set(S.tx.map((t) => monthKey(t.date)));
   return [...set].sort().reverse();
 }
-function txOfMonth(mk) { return S.tx.filter((t) => monthKey(t.date) === mk); }
+function txOfMonth(mk: string | null) { return S.tx.filter((t) => monthKey(t.date) === mk); }
 
-function totals(list) {
+function totals(list: readonly BankTransaction[]) {
   let inn = 0, out = 0, moved = 0;
   for (const t of list) {
     if (t.kind === 'neutral') { moved += Math.abs(signed(t)); continue; }
@@ -270,7 +273,7 @@ function totals(list) {
   }
   return { in: inn, out, net: inn - out, moved };
 }
-function byCategory(list) {
+function byCategory(list: readonly BankTransaction[]) {
   const m = new Map();
   for (const t of list) {
     if (t.kind === 'income' || t.kind === 'neutral') continue;
@@ -300,10 +303,10 @@ function balanceSeries() {
   const dates = [...byDate.keys()].sort();
   if (!dates.length) return [];
   const series = [];
-  let cur = byDate.get(dates[0]);
-  for (let d = dOf(dates[0]).getTime(); d <= dOf(dates[dates.length - 1]).getTime(); d += DAY) {
+  let cur = byDate.get(dates[0]!)!;
+  for (let d = dOf(dates[0]!).getTime(); d <= dOf(dates[dates.length - 1]!).getTime(); d += DAY) {
     const k = iso(new Date(d));
-    if (byDate.has(k)) cur = byDate.get(k);
+    if (byDate.has(k)) cur = byDate.get(k)!;
     series.push({ t: d, bal: cur });
   }
   return series;
@@ -312,7 +315,7 @@ function balanceSeries() {
 /* ---------------------------------------------------------- recurring --- */
 /* A charge is recurring when the same normalised payee shows up in at least
    two distinct months with a comparable amount. */
-function normPayee(desc) {
+function normPayee(desc: string) {
   return desc
     .replace(/\d{3,}/g, '')
     .replace(/[^֐-׿a-zA-Z ]/g, ' ')
@@ -330,7 +333,7 @@ function recurring() {
     groups.get(k).push(t);
   }
   const out = [];
-  for (const [k, list] of groups) {
+  for (const [k, list] of groups as Map<string, BankTransaction[]>) {
     const months = new Set(list.map((t) => monthKey(t.date)));
     if (months.size < 2) continue;
     const amounts = list.map((t) => Math.abs(signed(t)));
@@ -341,21 +344,21 @@ function recurring() {
     out.push({
       key: k,
       dir: k.startsWith('in:') ? 'in' : 'out',
-      label: list[0].desc,
-      cat: list[0].cat,
+      label: list[0]!.desc,
+      cat: list[0]!.cat,
       amount: med,
       day: Math.round(median(days)),
       count: list.length,
       months: months.size,
       steady: spread < 0.15,
-      last: list[0].date,
+      last: list[0]!.date,
     });
   }
   return out.sort((a, b) => b.amount * b.months - a.amount * a.months);
 }
 
 /* ----------------------------------------------------------- forecast --- */
-function forecast(horizonDays) {
+function forecast(horizonDays: number) {
   const cb = currentBalance();
   if (!cb) return null;
   const rec = recurring();
@@ -415,7 +418,9 @@ function render() {
   }
   $('#empty').hidden = true;
   $('#main').hidden = directoryOpen;
-  if (!S.month || !months.includes(S.month)) S.month = months[0];
+  if (!S.month || !months.includes(S.month)) S.month = months[0] ?? null;
+  const month = S.month;
+  if (!month) return;
 
   renderMonths(months);
   renderSpendingGuide();
@@ -626,9 +631,9 @@ function renderAttention() {
   if (cb && cb.bal < 0) items.push({ kind: 'crit', title: t('negativeBalance'), text: t('amountAsOfDate', { amount: money(cb.bal), date: DDMMYY.format(dOf(cb.date)) }) });
 
   const spend = new Map(byCategory(txOfMonth(S.month)));
-  for (const c of S.cats.filter((x) => x.kind === 'expense' && S.budgets[x.id] > 0)) {
-    const pct = (spend.get(c.id) || 0) / S.budgets[c.id];
-    if (pct > 1) items.push({ kind: 'crit', title: t('budgetExceeded'), text: t('categoryAmount', { category: catById(c.id).name, amount: money((spend.get(c.id) || 0) - S.budgets[c.id]) }) });
+  for (const c of S.cats.filter((x) => x.kind === 'expense' && budgetOf(x.id) > 0)) {
+    const pct = (spend.get(c.id) || 0) / budgetOf(c.id);
+    if (pct > 1) items.push({ kind: 'crit', title: t('budgetExceeded'), text: t('categoryAmount', { category: catById(c.id).name, amount: money((spend.get(c.id) || 0) - budgetOf(c.id)) }) });
     else if (pct > .8) items.push({ kind: 'warn', title: t('budgetNearLimit'), text: t('categoryPercentUsed', { category: catById(c.id).name, percent: Math.round(pct * 100) }) });
   }
 
@@ -662,19 +667,19 @@ function renderRecommendations() {
   const recommendations: Recommendation[] = [];
   const monthTransactions = txOfMonth(S.month);
   const spend = new Map(byCategory(monthTransactions));
-  const accountLabel = S.accounts.length ? t('accountLabel', { accounts: S.accounts[0] }) : t('customer');
+  const accountLabel = S.accounts[0] ? t('accountLabel', { accounts: S.accounts[0] }) : t('customer');
 
   const balance = currentBalance();
   if (balance?.bal != null && balance.bal < 0) {
     recommendations.push({ level: 'critical', title: t('recNegativeTitle'), detail: t('recNegativeDetail', { account: accountLabel, amount: money(balance.bal) }), impact: t('recNegativeImpact'), action: t('reviewCashFlow'), target: '#fc-h' });
   }
 
-  for (const category of S.cats.filter((item) => item.kind === 'expense' && S.budgets[item.id] > 0)) {
+  for (const category of S.cats.filter((item) => item.kind === 'expense' && budgetOf(item.id) > 0)) {
     const used = spend.get(category.id) || 0;
-    const ratio = used / S.budgets[category.id];
+    const ratio = used / budgetOf(category.id);
     const categoryName = catById(category.id).name;
-    if (ratio > 1) recommendations.push({ level: 'critical', title: t('recReduceCategoryTitle', { category: categoryName }), detail: t('recBudgetExceededDetail', { amount: money(used - S.budgets[category.id]) }), impact: t('recBudgetExceededImpact', { amount: money(used - S.budgets[category.id]) }), action: t('openBudget'), target: '#bd-h' });
-    else if (ratio > .8) recommendations.push({ level: 'warning', title: t('recWatchCategoryTitle', { category: categoryName }), detail: t('recBudgetUsedDetail', { percent: Math.round(ratio * 100) }), impact: t('recBudgetRemainingImpact', { amount: money(S.budgets[category.id] - used) }), action: t('openBudget'), target: '#bd-h' });
+    if (ratio > 1) recommendations.push({ level: 'critical', title: t('recReduceCategoryTitle', { category: categoryName }), detail: t('recBudgetExceededDetail', { amount: money(used - budgetOf(category.id)) }), impact: t('recBudgetExceededImpact', { amount: money(used - budgetOf(category.id)) }), action: t('openBudget'), target: '#bd-h' });
+    else if (ratio > .8) recommendations.push({ level: 'warning', title: t('recWatchCategoryTitle', { category: categoryName }), detail: t('recBudgetUsedDetail', { percent: Math.round(ratio * 100) }), impact: t('recBudgetRemainingImpact', { amount: money(budgetOf(category.id) - used) }), action: t('openBudget'), target: '#bd-h' });
   }
 
   const uncategorised = monthTransactions.filter((transaction) => transaction.cat === 'other').length;
@@ -682,7 +687,7 @@ function renderRecommendations() {
 
   const recurringCharges = recurring().filter((item) => item.dir === 'out');
   if (recurringCharges.length) {
-    const largest = recurringCharges[0];
+    const largest = recurringCharges[0]!;
     recommendations.push({ level: 'info', title: t('recReviewRecurringTitle'), detail: t('recReviewRecurringDetail', { merchant: largest.label, amount: money(largest.amount) }), impact: t('recReviewRecurringImpact'), action: t('reviewCharges'), target: '#rc-h' });
   }
 
@@ -753,7 +758,7 @@ function showSavingsDirectory() {
   $('#savings-directory').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function renderMonths(months) {
+function renderMonths(months: readonly string[]) {
   const nav = $('#months');
   nav.textContent = '';
   for (const mk of months) {
@@ -767,7 +772,7 @@ function renderMonths(months) {
 }
 
 /* ------------------------------------------------------------- hero ----- */
-function renderHero(months) {
+function renderHero(months: readonly string[]) {
   const list = txOfMonth(S.month);
   const tot = totals(list);
   const cb = currentBalance();
@@ -781,9 +786,10 @@ function renderHero(months) {
   $('#t-net').textContent = moneyS(tot.net);
   $('#t-net').className = 'val sm num ' + (tot.net >= 0 ? 'pos' : 'neg');
 
-  const idx = months.indexOf(S.month);
-  const prev = idx >= 0 && idx + 1 < months.length ? totals(txOfMonth(months[idx + 1])) : null;
-  const delta = (cur, was) => {
+  const idx = S.month ? months.indexOf(S.month) : -1;
+  const previousMonth = idx >= 0 ? months[idx + 1] : undefined;
+  const prev = previousMonth ? totals(txOfMonth(previousMonth)) : null;
+  const delta = (cur: number, was: number | null | undefined) => {
     if (!prev || !was) return '';
     const pct = Math.round(((cur - was) / was) * 100);
     if (!isFinite(pct) || pct === 0) return t('sameAsPreviousMonth');
@@ -800,11 +806,11 @@ function renderHero(months) {
 
 /* Income above the line, spending below it — one shared ₪ scale, so the
    month whose bar hangs lower than it rises is the month that ate savings. */
-function drawWaterline(months) {
+function drawWaterline(months: readonly string[]) {
   const svg = $('#wl');
   const tip = $('#wl-tip');
   svg.textContent = '';
-  const narrow = (svg.parentElement.clientWidth || 900) < 560;
+  const narrow = (svg.parentElement?.clientWidth || 900) < 560;
   const show = months.slice(0, narrow ? 6 : 12).reverse();   // oldest → newest
   const data = show.map((mk) => ({ mk, ...totals(txOfMonth(mk)) }));
   const max = Math.max(1, ...data.map((d) => Math.max(d.in, d.out)));
@@ -817,7 +823,7 @@ function drawWaterline(months) {
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('height', String(H));
 
-  const y = (v) => zero - (v / max) * (plotH / 2 - 6);
+  const y = (v: number) => zero - (v / max) * (plotH / 2 - 6);
 
   // gridlines + right-hand value axis
   for (const frac of [-1, -0.5, 0, 0.5, 1]) {
@@ -863,7 +869,7 @@ function drawWaterline(months) {
 
     svg.append(Object.assign(s('text', {
       x: cx, y: H - 8, class: 'tick', 'text-anchor': 'middle',
-      style: isSel ? 'fill:var(--ink);font-weight:700' : null,
+      ...(isSel ? { style: 'fill:var(--ink);font-weight:700' } : {}),
     }), { textContent: MONTH_SHORT.format(new Date(d.mk + '-01T00:00:00Z')) }));
   });
 
@@ -886,15 +892,15 @@ function renderForecast() {
   const all = [...histShown.map((p) => ({ t: p.t, v: p.bal })), ...f.points.map((p) => ({ t: p.t, v: p.bal }))];
   const lo = Math.min(0, ...all.map((p) => p.v), ...f.points.map((p) => p.lo));
   const hi = Math.max(...all.map((p) => p.v), ...f.points.map((p) => p.hi));
-  const t0 = all[0].t, t1 = all[all.length - 1].t;
+  const t0 = all[0]!.t, t1 = all[all.length - 1]!.t;
 
-  const narrow = (svg.parentElement.clientWidth || 900) < 560;
+  const narrow = (svg.parentElement?.clientWidth || 900) < 560;
   const W = narrow ? 420 : 900, H = narrow ? 280 : 250;
   const padT = 14, padB = 26, padR = narrow ? 52 : 64, padL = 8;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('height', String(H));
-  const X = (t) => padL + ((t - t0) / Math.max(1, t1 - t0)) * (W - padL - padR);
-  const Y = (v) => padT + (1 - (v - lo) / Math.max(1, hi - lo)) * (H - padT - padB);
+  const X = (t: number) => padL + ((t - t0) / Math.max(1, t1 - t0)) * (W - padL - padR);
+  const Y = (v: number) => padT + (1 - (v - lo) / Math.max(1, hi - lo)) * (H - padT - padB);
 
   for (let i = 0; i <= 4; i++) {
     const v = lo + ((hi - lo) * i) / 4;
@@ -943,7 +949,7 @@ function renderForecast() {
   svg.append(s('circle', { cx: X(f.start), cy: Y(f.startBal), r: 4.5, fill: 'var(--accent)', stroke: 'var(--surface)', 'stroke-width': 2 }));
 
   // end label, direct
-  const last = f.points[f.points.length - 1];
+  const last = f.points[f.points.length - 1]!;
   const endTxt = s('text', { x: X(last.t) - 6, y: Y(last.bal) - 10, class: 'tick', 'text-anchor': 'end', style: 'fill:var(--ink);font-weight:700;font-size:12px' });
   endTxt.textContent = money(last.bal);
   svg.append(endTxt);
@@ -967,14 +973,14 @@ function renderForecast() {
     const r = svg.getBoundingClientRect();
     const vx = ((ev.clientX - r.left) / r.width) * W;             // client px -> viewBox x
     const tt = t0 + ((vx - padL) / (W - padL - padR)) * (t1 - t0);
-    let best = hitAll[0], bd = Infinity;
+    let best = hitAll[0]!, bd = Infinity;
     for (const p of hitAll) { const d = Math.abs(p.t - tt); if (d < bd) { bd = d; best = p; } }
     cross.setAttribute('x1', String(X(best.t))); cross.setAttribute('x2', String(X(best.t))); cross.setAttribute('opacity', String(.8));
     const ev2 = f.events.filter((e) => e.t === best.t);
     const rows: Array<[string, string]> = [
       [best.kind === 'fc' ? t('expectedBalance') : t('balance'), money(best.v)],
     ];
-    if (best.kind === 'fc' && best.hi - best.lo > 1) rows.push([t('range'), `${money(best.lo)}–${money(best.hi)}`]);
+    if (best.kind === 'fc' && best.hi != null && best.lo != null && best.hi - best.lo > 1) rows.push([t('range'), `${money(best.lo)}–${money(best.hi)}`]);
     for (const event of ev2) rows.push([event.label.slice(0, 22), moneyS(event.amount)]);
     renderTooltip(tip, DDMMYY.format(new Date(best.t)), rows);
     tip.classList.add('on');
@@ -1004,19 +1010,19 @@ function renderBudgets() {
   box.textContent = '';
   const list = txOfMonth(S.month);
   const spend = new Map(byCategory(list));
-  const tracked = S.cats.filter((c) => c.kind === 'expense' && S.budgets[c.id] > 0);
+  const tracked = S.cats.filter((c) => c.kind === 'expense' && budgetOf(c.id) > 0);
 
   if (!tracked.length) {
     $('#bd-note').textContent = t('budgetsNotConfiguredNote');
     box.append(el('div', { class: 'empty-row', text: t('noBudgetLimits') }));
     return;
   }
-  const totalCap = tracked.reduce((a, c) => a + S.budgets[c.id], 0);
+  const totalCap = tracked.reduce((a, c) => a + budgetOf(c.id), 0);
   const totalSpent = tracked.reduce((a, c) => a + (spend.get(c.id) || 0), 0);
   $('#bd-note').textContent = t('budgetTrackingSummary', { spent: money(totalSpent), cap: money(totalCap), month: monthLabel(S.month) });
 
   for (const c of tracked) {
-    const cap = S.budgets[c.id];
+    const cap = budgetOf(c.id);
     const used = spend.get(c.id) || 0;
     const pct = used / cap;
     const state = pct > 1 ? 'over' : pct > 0.8 ? 'warn' : 'ok';
@@ -1053,13 +1059,13 @@ function renderCategories() {
     box.append(el('div', { class: 'empty-row', text: t('noData') }));
     return;
   }
-  const top = rows[0];
+  const top = rows[0]!;
   $('#cat-note').textContent = t('categorySpendingSummary', {
     total: money(total), month: monthLabel(S.month), category: catById(top[0]).name,
     percent: Math.round((top[1] / total) * 100),
   });
 
-  const max = rows[0][1];
+  const max = rows[0]![1];
   for (const [cid, v] of rows) {
     box.append(el('div', { class: 'catrow', 'data-testid': 'category-row' }, [
       el('div', { class: 'top' }, [
@@ -1152,7 +1158,7 @@ function renderTx() {
     const sel = el('select', { class: 'catsel', 'aria-label': t('categoryForTransaction', { description: transaction.desc }), 'data-testid': 'transaction-category-select' });
     for (const c of S.cats) sel.append(el('option', { value: c.id, text: catById(c.id).name, selected: c.id === transaction.cat }));
     sel.addEventListener('change', () => {
-      S.overrides[transaction.id] = sel.value;
+      if (transaction.id) S.overrides[transaction.id] = sel.value;
       save(); render();
       toast(t('categoryUpdatedToast'));
     });
@@ -1178,7 +1184,7 @@ function renderFoot() {
   const srcs = new Set(S.tx.map((t) => t.src));
   $('#foot-note').textContent = t('historySummary', {
     transactions: S.tx.length, reports: srcs.size,
-    from: DDMMYY.format(dOf(dates[0])), to: DDMMYY.format(dOf(dates[dates.length - 1])),
+    from: DDMMYY.format(dOf(dates[0]!)), to: DDMMYY.format(dOf(dates[dates.length - 1]!)),
   });
 }
 
@@ -1191,7 +1197,7 @@ function renderDrawer() {
   for (const c of S.cats.filter((c) => c.kind === 'expense')) {
     const inp = el('input', {
       type: 'number', min: '0', step: '50', inputmode: 'numeric',
-      value: S.budgets[c.id] || '', placeholder: t('none'),
+      value: budgetOf(c.id) || '', placeholder: t('none'),
       'aria-label': t('monthlyLimitForCategory', { category: catById(c.id).name }), 'data-testid': 'budget-limit-input',
     });
     inp.addEventListener('change', () => {
@@ -1209,10 +1215,10 @@ function renderDrawer() {
   r.textContent = '';
   S.rules.forEach((rule, i) => {
     const m = el('input', { type: 'text', value: rule.match, 'aria-label': t('matchingText'), 'data-testid': 'rule-match-input' });
-    m.addEventListener('change', () => { S.rules[i].match = clean(m.value); save(); render(); });
+    m.addEventListener('change', () => { S.rules[i]!.match = clean(m.value); save(); render(); });
     const sel = el('select', { 'aria-label': t('category'), 'data-testid': 'rule-category-select' });
     for (const c of S.cats) sel.append(el('option', { value: c.id, text: catById(c.id).name, selected: c.id === rule.cat }));
-    sel.addEventListener('change', () => { S.rules[i].cat = sel.value; save(); render(); });
+    sel.addEventListener('change', () => { S.rules[i]!.cat = sel.value; save(); render(); });
     r.append(el('div', { class: 'rulerow', 'data-testid': 'settings-rule-row' }, [
       m, el('span', { style: 'color:var(--muted)', text: '←' }), sel,
       el('button', {
@@ -1226,11 +1232,11 @@ function renderDrawer() {
   cbox.textContent = '';
   S.cats.forEach((c, i) => {
     const nm = el('input', { type: 'text', value: catById(c.id).name, 'aria-label': t('categoryName'), 'data-testid': 'category-name-input' });
-    nm.addEventListener('change', () => { S.cats[i].name = clean(nm.value) || c.id; save(); renderDrawer(); render(); });
+    nm.addEventListener('change', () => { S.cats[i]!.name = clean(nm.value) || c.id; save(); renderDrawer(); render(); });
     const kind = el('select', { 'aria-label': t('type'), 'data-testid': 'category-type-select' });
     for (const [v, labelKey] of [['expense', 'expenseSingular'], ['income', 'incomeSingular'], ['neutral', 'transfer']] as const)
       kind.append(el('option', { value: v, text: t(labelKey), selected: c.kind === v }));
-    kind.addEventListener('change', () => { S.cats[i].kind = kind.value as Category['kind']; save(); renderDrawer(); render(); });
+    kind.addEventListener('change', () => { S.cats[i]!.kind = kind.value as Category['kind']; save(); renderDrawer(); render(); });
     cbox.append(el('div', { class: 'rulerow', 'data-testid': 'settings-category-row' }, [
       el('span', { class: 'dot', style: `background:${catColor(S.cats, c.id)};margin-inline-end:2px` }),
       nm, kind,
@@ -1251,7 +1257,7 @@ function renderDrawer() {
     ? t('storedDataSummary', {
       transactions: S.tx.length, months: new Set(S.tx.map((transaction) => monthKey(transaction.date))).size,
       overrides: Object.keys(S.overrides).length,
-      range: dates.length ? DDMMYY.format(dOf(dates[0])) + ' – ' + DDMMYY.format(dOf(dates[dates.length - 1])) : '',
+      range: dates.length ? DDMMYY.format(dOf(dates[0]!)) + ' – ' + DDMMYY.format(dOf(dates[dates.length - 1]!)) : '',
     })
     : t('noStoredData');
   renderCloudConsent();
@@ -1325,8 +1331,8 @@ function keepFocusInDrawer(event: KeyboardEvent) {
   const focusable = $$('#drawer button:not([disabled]), #drawer input:not([disabled]), #drawer select:not([disabled]), #drawer summary, #drawer label[tabindex]')
     .filter((node) => node.getClientRects().length > 0);
   if (!focusable.length) return;
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
+  const first = focusable[0]!;
+  const last = focusable[focusable.length - 1]!;
   if (event.shiftKey && document.activeElement === first) {
     event.preventDefault();
     last.focus();
@@ -1350,7 +1356,7 @@ async function exportBackup() {
   if (dl) {
     try { await dl.save({ filename: name, data }); toast(t('backupSaved')); return; }
     catch (err) {
-      if (err && err.code === 'declined') { toast(t('backupCancelled')); return; }
+      if (err && (err as { code?: string }).code === 'declined') { toast(t('backupCancelled')); return; }
     }
   }
   try { await navigator.clipboard.writeText(data); toast(t('backupCopied')); }
@@ -1413,7 +1419,7 @@ function wire() {
   $('#file').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files) handleFiles(input.files); input.value = ''; });
   $('#card-file').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files) handleFiles(input.files, 'card'); input.value = ''; });
   const drop = $('#drop');
-  const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
+  const stop = (e: Event) => { e.preventDefault(); e.stopPropagation(); };
   ['dragenter', 'dragover'].forEach((n) => document.addEventListener(n, (e) => {
     stop(e); if (drop) drop.classList.add('over');
   }));
@@ -1516,7 +1522,7 @@ function wire() {
   });
 
   $('#dr-addrule').addEventListener('click', () => {
-    S.rules.unshift({ id: 'r' + Date.now(), match: '', cat: S.cats[0].id });
+    S.rules.unshift({ id: 'r' + Date.now(), match: '', cat: S.cats[0]?.id ?? 'other' });
     save(); renderDrawer();
     const first = $('#dr-rules input'); if (first) first.focus();
   });
