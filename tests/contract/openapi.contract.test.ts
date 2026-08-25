@@ -27,6 +27,18 @@ describe('Swagger/OpenAPI contract', () => {
     }
   });
 
+  it('documents authenticated profile and consent persistence', () => {
+    expect(Object.keys(spec.paths['/api/profile']).sort()).toEqual(['get', 'put']);
+    expect(Object.keys(spec.paths['/api/consents/cloud-sync']).sort()).toEqual(['delete', 'get', 'put']);
+    for (const path of ['/api/profile', '/api/consents/cloud-sync']) {
+      for (const operation of Object.values(spec.paths[path]) as Array<{ security: unknown }>) {
+        expect(operation.security).toEqual([{ bearerAuth: [] }]);
+      }
+    }
+    expect(spec.paths['/api/snapshots'].put.responses).toHaveProperty(String(HttpStatus.FORBIDDEN));
+    expect(spec.components.schemas.Consent.properties.statementVersion.const).toBe('cloud-sync-v2-privacy-minimised-2026-08-24');
+  });
+
   it('documents only the privacy-minimised schema-v2 cloud payload', () => {
     const payload = spec.components.schemas.CloudStatePayload;
     expect(spec.components.schemas.SnapshotInput.properties.schemaVersion.const).toBe(2);

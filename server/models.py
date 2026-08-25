@@ -93,6 +93,16 @@ class SnapshotInput(BaseModel):
     payload: CloudStatePayload
 
 
+class ProfileInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    preferred_locale: Locale = Field(alias="preferredLocale")
+
+
+class CloudConsentInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    locale: Locale
+
+
 class UserProfile(BaseModel):
     user_id: str
     preferred_locale: Locale

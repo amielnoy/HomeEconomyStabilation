@@ -3,6 +3,7 @@ export class HttpStatus {
   static readonly NO_CONTENT = 204;
   static readonly BAD_REQUEST = 400;
   static readonly UNAUTHORIZED = 401;
+  static readonly FORBIDDEN = 403;
   static readonly NOT_FOUND = 404;
   static readonly METHOD_NOT_ALLOWED = 405;
   static readonly CONTENT_TOO_LARGE = 413;
