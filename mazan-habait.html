@@ -709,6 +709,7 @@ body.drawer-open{ overflow:hidden; }
         <p class="spending-guide-kicker" data-i18n="spendingGuideKicker">המספר שכדאי לדעת עכשיו</p>
         <h2 id="spending-guide-h" data-i18n="spendingGuideTitle" data-testid="spending-guide-h">כמה בטוח להוציא עד ההכנסה הבאה</h2>
         <div class="spending-guide-amount num" id="spending-guide-amount" aria-live="polite" data-testid="spending-guide-amount">—</div>
+        <p class="spending-guide-asof" id="spending-guide-asof" data-testid="spending-guide-asof"></p>
         <p class="spending-guide-summary" id="spending-guide-summary" data-testid="spending-guide-summary"></p>
       </div>
       <div class="spending-guide-side" id="spending-guide-content" data-testid="spending-guide-content">
@@ -719,8 +720,9 @@ body.drawer-open{ overflow:hidden; }
         <details data-testid="spending-guide-details">
           <summary data-i18n="howCalculated">איך חישבנו?</summary>
           <div class="spending-guide-breakdown">
-            <div><span data-i18n="currentBalance">יתרה נוכחית</span><strong class="num" id="spending-guide-balance" data-testid="spending-guide-balance">—</strong></div>
+            <div><span data-i18n="balanceOnReport">יתרה בדוח האחרון</span><strong class="num" id="spending-guide-balance" data-testid="spending-guide-balance">—</strong></div>
             <div><span data-i18n="expectedCommitments">חיובים קבועים צפויים</span><strong class="num" id="spending-guide-committed" data-testid="spending-guide-committed">—</strong></div>
+            <div><span data-i18n="retainedCushion">כרית ביטחון מומלצת (חודש הוצאות)</span><strong class="num" id="spending-guide-retained" data-testid="spending-guide-retained">—</strong></div>
             <div><span data-i18n="nextExpectedIncome">הכנסה הבאה צפויה</span><strong id="spending-guide-date" data-testid="spending-guide-date">—</strong></div>
           </div>
         </details>

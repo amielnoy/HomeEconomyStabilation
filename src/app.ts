@@ -770,6 +770,20 @@ function toast(msg) {
   toastT = setTimeout(() => t.classList.remove('on'), 3400);
 }
 
+/* ------------------------------------------------------------- agents -- */
+/* The agent pipeline walks every transaction several times over; running it once
+   per renderer meant paying for it twice on every month change and category edit.
+   `render()` clears the cache after `decorate()`, so the results can never outlive
+   the state they were computed from. */
+let agentResults: FinancialAgentResults | null = null;
+function invalidateAgentResults() { agentResults = null; }
+function currentAgentResults(): FinancialAgentResults {
+  agentResults ??= runFinancialAgents({
+    transactions: S.tx, overrides: S.overrides, rules: S.rules, categories: S.cats,
+  });
+  return agentResults;
+}
+
 /* ---------------------------------------------------------- categorise -- */
 const transactionCategorizer = new RuleBasedTransactionCategorizer();
 function autoCat(transaction: BankTransaction) {
@@ -935,6 +949,7 @@ function forecast(horizonDays) {
    ===================================================================== */
 function render() {
   decorate();
+  invalidateAgentResults();
   fillCatFilter();
   const months = monthsPresent();
   $('#savings-directory').hidden = !directoryOpen;
@@ -965,27 +980,31 @@ function render() {
 }
 
 function renderSpendingGuide() {
-  const results = runFinancialAgents({
-    transactions: S.tx, overrides: S.overrides, rules: S.rules, categories: S.cats,
-  });
-  const payday = results.payday;
+  const payday = currentAgentResults().payday;
   const amount = $('#spending-guide-amount');
   const summary = $('#spending-guide-summary');
-  const values = ['#spending-guide-weekly', '#spending-guide-daily', '#spending-guide-balance', '#spending-guide-committed'];
+  const asOfNote = $('#spending-guide-asof');
+  const values = ['#spending-guide-weekly', '#spending-guide-daily', '#spending-guide-balance',
+    '#spending-guide-committed', '#spending-guide-retained'];
 
   amount.classList.remove('negative');
   if (!payday) {
     amount.textContent = '—';
     summary.textContent = t('spendingGuideNoBalance');
+    asOfNote.textContent = '';
     values.forEach((selector) => { $(selector).textContent = '—'; });
     $('#spending-guide-date').textContent = '—';
     return;
   }
 
+  /* The balance is only as current as the newest report the household uploaded.
+     Saying so is the difference between guidance and a wrong number. */
+  asOfNote.textContent = t('spendingGuideAsOf', { date: DDMMYY.format(dOf(payday.asOf)) });
   amount.textContent = money(Math.max(0, payday.freeToSpend));
-  amount.classList.toggle('negative', payday.freeToSpend < 0);
   $('#spending-guide-balance').textContent = money(payday.balance);
   $('#spending-guide-committed').textContent = payday.nextIncomeDate ? `−${money(payday.committed)}` : '—';
+  // Context, not a deduction: how much a one-month cushion would be for this household.
+  $('#spending-guide-retained').textContent = payday.retained > 0 ? money(payday.retained) : '—';
   $('#spending-guide-date').textContent = payday.nextIncomeDate ? DDMMYY.format(dOf(payday.nextIncomeDate)) : t('notDetected');
 
   if (!payday.nextIncomeDate || payday.daysRemaining == null) {
@@ -995,14 +1014,19 @@ function renderSpendingGuide() {
     return;
   }
 
-  if (payday.freeToSpend < 0) {
-    summary.textContent = t('spendingGuideGap', { amount: money(Math.abs(payday.freeToSpend)), date: DDMMYY.format(dOf(payday.nextIncomeDate)) });
+  const nextIncomeLabel = DDMMYY.format(dOf(payday.nextIncomeDate));
+  if (payday.available < 0) {
+    amount.classList.add('negative');
+    summary.textContent = t('spendingGuideGap', { amount: money(Math.abs(payday.available)), date: nextIncomeLabel });
     $('#spending-guide-weekly').textContent = money(0);
     $('#spending-guide-daily').textContent = money(0);
     return;
   }
 
-  summary.textContent = t('spendingGuideUntil', { days: payday.daysRemaining, date: DDMMYY.format(dOf(payday.nextIncomeDate)) });
+  // Name the binding constraint, so the figure reads as reasoning rather than a verdict.
+  summary.textContent = t(payday.limitedBy === 'balance' ? 'spendingGuideUntilTight' : 'spendingGuideUntil', {
+    days: payday.daysRemaining, date: nextIncomeLabel,
+  });
   $('#spending-guide-weekly').textContent = money(Math.max(0, payday.weeklyAllowance || 0));
   $('#spending-guide-daily').textContent = money(Math.max(0, payday.dailyAllowance || 0));
 }
@@ -1010,9 +1034,7 @@ function renderSpendingGuide() {
 function renderAgents() {
   const grid = $('#agent-grid');
   grid.textContent = '';
-  const results: FinancialAgentResults = runFinancialAgents({
-    transactions: S.tx, overrides: S.overrides, rules: S.rules, categories: S.cats,
-  });
+  const results: FinancialAgentResults = currentAgentResults();
   const addCard = (id: string, titleKey: string, content: Array<HTMLElement | string>, tone = 'info') => {
     grid.append(el('article', { class: `agent-card agent-card--${tone}`, 'data-testid': `agent-${id}` }, [
       el('header', {}, [el('span', { class: 'agent-dot', 'aria-hidden': 'true' }), el('h3', { text: t(titleKey) })]),
@@ -1112,7 +1134,8 @@ function renderAgents() {
       : t('agentPaydayResult', {
         balance: money(payday.balance), committed: money(payday.committed), date: DDMMYY.format(dOf(payday.nextIncomeDate)), free: money(payday.freeToSpend),
       });
-  addCard('payday', 'agentPaydayTitle', [el('p', { text: paydayText })], payday && payday.freeToSpend < 0 ? 'critical' : 'info');
+  // freeToSpend is floored at zero, so a shortfall now shows up in `available`.
+  addCard('payday', 'agentPaydayTitle', [el('p', { text: paydayText })], payday && payday.available < 0 ? 'critical' : 'info');
 }
 
 function renderAttention() {
@@ -1654,13 +1677,15 @@ function renderTx() {
       toast(t('categoryUpdatedToast'));
     });
     const amt = money2S(transaction.in > 0 ? transaction.in : -transaction.out);
+    /* data-label carries the column heading into the stacked mobile layout, where
+       there is no header row to read the cell against. */
     body.append(el('tr', { 'data-testid': 'transaction-row' }, [
-      el('td', { class: 'n', text: DDMMYY.format(dOf(transaction.date)) }),
-      el('td', { class: 'desc', text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
-      el('td', { class: 'catcell' }, [el('span', { class: 'dot', style: `background:${catColor(S.cats, transaction.cat)}` }), sel]),
-      el('td', { class: 'n ' + (transaction.in > 0 ? 'pos' : 'neg'), text: amt }),
-      el('td', { class: 'n', text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
-      el('td', { class: 'n', style: 'color:var(--muted);font-size:12.5px', text: transaction.ref }),
+      el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(transaction.date)) }),
+      el('td', { class: 'desc', 'data-label': t('description'), text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
+      el('td', { class: 'catcell', 'data-label': t('category') }, [el('span', { class: 'dot', style: `background:${catColor(S.cats, transaction.cat)}` }), sel]),
+      el('td', { class: 'amountcell n ' + (transaction.in > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: amt, 'data-testid': 'transaction-amount' }),
+      el('td', { class: 'n', 'data-label': t('balance'), text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
+      el('td', { class: 'refcell n', 'data-label': t('reference'), text: transaction.ref }),
     ]));
   }
   if (list.length > 400) {
