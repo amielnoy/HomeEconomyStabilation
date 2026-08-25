@@ -459,18 +459,23 @@ body.drawer-open{ overflow:hidden; }
 /* Touch targets are a property of the input device, not the window width: a phone in
    landscape and a tablet report desktop-class widths but are still fingers on glass. */
 @media (pointer: coarse){
-  .btn,.mchip,.ds-button,.ds-field,
+  .btn,.btn.sm,.ds-button[data-size="sm"],.mchip,.ds-button,.ds-field,
   .filters input[type=search],.filters select,
   .rulerow input,.budrow input,.rulerow select,
   .settings-section > summary,
   .spending-guide-side summary,
-  .agent-opportunity summary{
+  .agent-opportunity summary,
+  .catsel,
+  input,select,textarea{
     min-height:48px;
   }
   .spending-guide-side summary,.agent-opportunity summary{
     display:flex; align-items:center;
   }
-  select{ min-height:48px; }
+  /* Anything under 16px makes iOS zoom the page on focus, in any orientation.
+     !important because the design-system field classes are more specific. */
+  input,select,textarea{ font-size:16px!important; }
+  select{ min-height:48px!important; }
   .x{ min-width:48px; min-height:48px; }
 }
 
@@ -499,6 +504,23 @@ body.drawer-open{ overflow:hidden; }
   #tx td.catcell .catsel{ flex:1 1 auto; min-width:0; }
   /* The row is no longer wider than its container, so the scroll hint is now noise. */
   #tx-scroll-hint{ display:none; }
+}
+
+@media (max-width:600px), (pointer: coarse) and (max-width:900px){
+  .actions{ width:100%; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 48px; gap:8px; }
+  .actions > .btn{ min-width:0; padding-inline:10px; font-size:13px; justify-content:center; }
+  .brand{ width:100%; }
+  .mobile-menu-toggle{ display:inline-grid!important; place-items:center; padding:0!important; font-size:22px!important; letter-spacing:2px; }
+  .secondary-actions{
+    display:none; position:absolute; inset-inline:0; inset-block-start:calc(100% - 1px);
+    grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:12px;
+    border:1px solid var(--line); border-radius:0 0 16px 16px;
+    background:var(--surface); box-shadow:var(--ds-shadow-2);
+  }
+  .secondary-actions.on{ display:grid; }
+  .secondary-actions > .btn,.secondary-actions > .locale-picker,.secondary-actions .ds-field{ width:100%; }
+  .secondary-actions > .btn{ justify-content:center; }
+  .secondary-actions > .locale-picker{ grid-column:1 / -1; }
 }
 
 @media (max-width:600px){
@@ -539,9 +561,7 @@ body.drawer-open{ overflow:hidden; }
   .rulerow input,.budrow input,.rulerow select{
     min-height:48px;
   }
-  input,select,textarea{ font-size:16px!important; }
-  select{ min-height:48px!important; height:48px; }
-  .x{ min-width:48px; min-height:48px; }
+  select{ height:48px; }
   .hero,.card{ padding-inline:16px; }
   .drawer{
     padding-block-start:calc(16px + env(safe-area-inset-top));
