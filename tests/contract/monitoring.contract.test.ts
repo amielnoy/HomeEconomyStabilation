@@ -51,9 +51,11 @@ describe('monitoring contract', () => {
 
     expect(prometheus).toContain('targets: ["api:3000"]');
     expect(prometheus).toContain('metrics_path: /metrics');
-    expect(server).toContain('_probe("application"');
-    expect(server).toContain('_probe("swagger"');
-    expect(server).toContain('_probe("scalar"');
+    expect(server).toContain('("application"');
+    expect(server).toContain('("swagger"');
+    expect(server).toContain('("scalar"');
+    // A scrape must not be usable as an outbound-request amplifier.
+    expect(server).toContain('PROBE_TTL_SECONDS');
     expect(server).toContain('endpoint="api"');
     expect(server).toContain('home_economy_endpoint_up');
     expect(server).toContain('home_economy_http_requests_total');
