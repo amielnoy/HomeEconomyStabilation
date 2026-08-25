@@ -31,12 +31,15 @@ test('loads the self-hosted Scalar explorer from the shared OpenAPI contract', a
   await expect(scalarDocsPage.swaggerLink).toHaveAttribute('href', '/api-docs.html');
   await expect(scalarDocsPage.healthOperation).toBeVisible();
   await expect(scalarDocsPage.testHealthRequestButton).toBeVisible();
+
+  // Tag sections mount as they are reached, so read to the end before asserting.
+  await scalarDocsPage.revealAllOperations();
+
   await expect(scalarDocsPage.loadOperation).toBeVisible();
   await expect(scalarDocsPage.saveOperation).toBeVisible();
   await expect(scalarDocsPage.deleteOperation).toBeVisible();
   await expect(scalarDocsPage.loadProfileOperation).toBeVisible();
   await expect(scalarDocsPage.saveProfileOperation).toBeVisible();
-  await scalarDocsPage.openConsentGroupButton.click();
   await expect(scalarDocsPage.loadConsentOperation).toBeVisible();
   await expect(scalarDocsPage.acceptConsentOperation).toBeVisible();
   await expect(scalarDocsPage.withdrawConsentOperation).toBeVisible();
