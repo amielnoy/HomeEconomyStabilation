@@ -280,6 +280,8 @@
   "categories": "Répartition des dépenses",
   "recurring": "Paiements récurrents détectés",
   "transactions": "Opérations",
+  "transactionTableScrollHint": "Balayez horizontalement pour voir toutes les colonnes.",
+  "transactionTableRegionLabel": "Tableau des opérations",
   "actions": "Points à vérifier",
   "agentsTitle": "Vos agents financiers",
   "agentsIntro": "Chaque agent vérifie un modèle différent localement. Aucun changement n'est effectué sans votre accord.",

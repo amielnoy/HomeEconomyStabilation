@@ -280,6 +280,8 @@
   "categories": "לאן הכסף הולך",
   "recurring": "חיובים חוזרים שזוהו",
   "transactions": "תנועות",
+  "transactionTableScrollHint": "החליקו לצדדים כדי לראות את כל העמודות.",
+  "transactionTableRegionLabel": "טבלת תנועות",
   "actions": "דברים שכדאי לבדוק",
   "agentsTitle": "הסוכנים שלך",
   "agentsIntro": "כל סוכן בודק דפוס אחר באופן מקומי. שינוי מתבצע רק לאחר אישור.",

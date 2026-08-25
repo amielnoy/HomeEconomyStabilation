@@ -2038,11 +2038,13 @@ async function readWorkbook(arrayBuffer, filename = '') {
                 return;
             consentRepository.accept(locale);
             renderCloudConsent();
+            document.querySelector('#cloud-consent-withdraw').focus();
             toast(t('cloudConsentSavedLocally'));
         });
         $('#cloud-consent-withdraw').addEventListener('click', () => {
             consentRepository.withdraw();
             renderCloudConsent();
+            document.querySelector('#cloud-consent-check').focus();
             toast(t('cloudConsentWithdrawn'));
         });
         $('#manual-form').addEventListener('submit', (e) => {

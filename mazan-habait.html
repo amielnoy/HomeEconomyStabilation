@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta data-testid="viewport-meta" name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title data-i18n="title">מאזן הבית</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700&family=Frank+Ruhl+Libre:wght@500;700&family=Noto+Sans+Ethiopic:wght@400;500;600;700&display=swap">
@@ -313,6 +314,7 @@ svg.chart{ display:block; width:100%; height:auto; overflow:visible; }
 
 /* ============================================================ table ====== */
 .tblwrap{ overflow-x:auto; margin-top:6px; }
+.table-scroll-hint{ display:none; margin:6px 0 0; color:var(--muted); font-size:12px; }
 table{ width:100%; border-collapse:collapse; font-size:14px; }
 th{
   text-align:start; font-size:11.5px; letter-spacing:.07em; color:var(--muted);
@@ -502,6 +504,7 @@ body.drawer-open{ overflow:hidden; }
     -webkit-overflow-scrolling:touch;
     overscroll-behavior-inline:contain;
   }
+  .table-scroll-hint{ display:block; }
 }
 </style>
 
@@ -838,7 +841,8 @@ body.drawer-open{ overflow:hidden; }
           <option value="all" data-i18n="allHistory">כל ההיסטוריה</option>
         </select>
       </div>
-      <div class="tblwrap"><table id="tx" data-testid="tx"><thead><tr>
+      <p class="table-scroll-hint" id="tx-scroll-hint" data-i18n="transactionTableScrollHint" data-testid="tx-scroll-hint">החליקו לצדדים כדי לראות את כל העמודות.</p>
+      <div class="tblwrap" role="region" aria-label="טבלת תנועות" data-i18n-aria-label="transactionTableRegionLabel" aria-describedby="tx-scroll-hint" tabindex="0" data-testid="tx-table-scroll"><table id="tx" data-testid="tx"><thead><tr>
         <th style="width:92px" data-i18n="date">תאריך</th><th data-i18n="description">תיאור פעולה</th><th style="width:150px" data-i18n="category">קטגוריה</th>
         <th style="width:96px" data-i18n="amount">סכום</th><th style="width:104px" data-i18n="balance">יתרה</th><th style="width:110px" data-i18n="reference">אסמכתא</th>
       </tr></thead><tbody id="tx-body" data-testid="tx-body"></tbody></table></div>

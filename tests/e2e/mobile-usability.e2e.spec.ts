@@ -50,6 +50,12 @@ test.describe('mobile browser usability', () => {
     await expect(homePage.dashboard.root).toBeVisible();
     expect(await homePage.hasHorizontalOverflow()).toBe(false);
     expect(await homePage.touchTargetsBelow(homePage.mobileDashboardControls)).toEqual([]);
+    const transactionTableRegion = homePage.page.getByTestId('tx-table-scroll');
+    await expect(transactionTableRegion).toBeVisible();
+    await expect(transactionTableRegion).toHaveAccessibleName('טבלת תנועות');
+    await expect(transactionTableRegion).toHaveAttribute('tabindex', '0');
+    await expect(transactionTableRegion).toHaveAccessibleDescription('החליקו לצדדים כדי לראות את כל העמודות.');
+    await expect(homePage.page.getByTestId('tx-scroll-hint')).toBeVisible();
     const [guide, amount, months] = await Promise.all([
       homePage.dashboard.spendingGuide.boundingBox(),
       homePage.dashboard.spendingGuideAmount.boundingBox(),

@@ -280,6 +280,8 @@
   "categories": "ገንዘቡ የት ይወጣል",
   "recurring": "የተገኙ ተደጋጋሚ ክፍያዎች",
   "transactions": "ግብይቶች",
+  "transactionTableScrollHint": "ሁሉንም ዓምዶች ለማየት በጎን ያንሸራትቱ።",
+  "transactionTableRegionLabel": "የግብይቶች ሰንጠረዥ",
   "actions": "ሊመረመሩ የሚገቡ ነገሮች",
   "agentsTitle": "የእርስዎ የገንዘብ ወኪሎች",
   "agentsIntro": "እያንዳንዱ ወኪል የተለየ ንድፍ በመሣሪያው ላይ ይመረምራል። ያለ እርስዎ ፈቃድ ምንም አይቀየርም።",
