@@ -234,7 +234,8 @@ button{ cursor:pointer; }
 .agent-body .btn{ justify-self:start; }
 .agent-savings-summary{ font-weight:700; color:var(--ink) !important; }
 .agent-opportunity{ display:grid; gap:5px; padding-top:8px; border-top:1px solid var(--line); }
-.agent-opportunity-estimate{ font-weight:700; color:var(--good) !important; }
+/* --good is a fill colour; --good-text is the pair that clears 4.5:1 as text. */
+.agent-opportunity-estimate{ font-weight:700; color:var(--good-text); }
 .agent-opportunity details{ color:var(--muted); font-size:12px; }
 .agent-opportunity summary{ cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
 @media (max-width:700px){ .agent-grid{ grid-template-columns:1fr; } }
@@ -315,6 +316,7 @@ svg.chart{ display:block; width:100%; height:auto; overflow:visible; }
 /* ============================================================ table ====== */
 .tblwrap{ overflow-x:auto; margin-top:6px; }
 .table-scroll-hint{ display:none; margin:6px 0 0; color:var(--muted); font-size:12px; }
+.refcell{ color:var(--muted); font-size:12.5px; }
 table{ width:100%; border-collapse:collapse; font-size:14px; }
 th{
   text-align:start; font-size:11.5px; letter-spacing:.07em; color:var(--muted);
@@ -443,6 +445,51 @@ body.drawer-open{ overflow:hidden; }
 
 @media (prefers-reduced-motion: reduce){
   *{ transition-duration:.01ms !important; animation-duration:.01ms !important; }
+}
+
+/* Touch targets are a property of the input device, not the window width: a phone in
+   landscape and a tablet report desktop-class widths but are still fingers on glass. */
+@media (pointer: coarse){
+  .btn,.mchip,.ds-button,.ds-field,
+  .filters input[type=search],.filters select,
+  .rulerow input,.budrow input,.rulerow select,
+  .settings-section > summary,
+  .spending-guide-side summary,
+  .agent-opportunity summary{
+    min-height:48px;
+  }
+  .spending-guide-side summary,.agent-opportunity summary{
+    display:flex; align-items:center;
+  }
+  select{ min-height:48px; }
+  .x{ min-width:48px; min-height:48px; }
+}
+
+/* The transactions table is six columns wide and a phone is not. Below 560px each row
+   becomes its own labelled block, so the amount and balance are read rather than
+   scrolled past — they were the two columns that fell off the edge. */
+@media (max-width:560px){
+  #tx thead{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  #tx, #tx tbody, #tx tr, #tx td{ display:block; width:auto; }
+  #tx tr{
+    border:1px solid var(--line); border-radius:12px;
+    padding:10px 12px; margin-bottom:10px; background:var(--surface);
+  }
+  #tx td{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    border:0; padding:5px 0; text-align:start; white-space:normal;
+  }
+  #tx td::before{
+    content:attr(data-label); color:var(--muted); font-size:12.5px;
+    font-weight:500; flex:0 0 auto;
+  }
+  #tx td:empty{ display:none; }
+  #tx td.desc{ font-weight:600; }
+  #tx td.amountcell{ font-size:17px; font-weight:700; }
+  #tx td.catcell{ flex-wrap:wrap; }
+  #tx td.catcell .catsel{ flex:1 1 auto; min-width:0; }
+  /* The row is no longer wider than its container, so the scroll hint is now noise. */
+  #tx-scroll-hint{ display:none; }
 }
 
 @media (max-width:600px){
@@ -814,7 +861,7 @@ body.drawer-open{ overflow:hidden; }
       </header>
       <p class="note" id="cat-note" data-testid="cat-note"></p>
       <div id="cat-list" data-testid="cat-list"></div>
-      <div id="cat-table" hidden class="tblwrap" data-testid="cat-table"></div>
+      <div id="cat-table" hidden class="tblwrap" role="region" aria-labelledby="cat-h" tabindex="0" data-testid="cat-table"></div>
       </section>
     </div>
 
@@ -822,7 +869,7 @@ body.drawer-open{ overflow:hidden; }
     <section class="card" aria-labelledby="rc-h" style="margin-top:16px">
       <header><h2 id="rc-h" data-i18n="recurring" data-testid="rc-h">חיובים חוזרים שזוהו</h2></header>
       <p class="note" id="rc-note" data-testid="rc-note"></p>
-      <div class="tblwrap" id="rc-list" data-testid="rc-list"></div>
+      <div class="tblwrap" id="rc-list" role="region" aria-labelledby="rc-h" tabindex="0" data-testid="rc-list"></div>
     </section>
 
     <!-- transactions ---------------------------------------------------- -->

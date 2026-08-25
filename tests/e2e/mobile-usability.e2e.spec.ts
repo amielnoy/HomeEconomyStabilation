@@ -54,8 +54,16 @@ test.describe('mobile browser usability', () => {
     await expect(transactionTableRegion).toBeVisible();
     await expect(transactionTableRegion).toHaveAccessibleName('טבלת תנועות');
     await expect(transactionTableRegion).toHaveAttribute('tabindex', '0');
-    await expect(transactionTableRegion).toHaveAccessibleDescription('החליקו לצדדים כדי לראות את כל העמודות.');
-    await expect(homePage.page.getByTestId('tx-scroll-hint')).toBeVisible();
+    /* The table used to be 558px inside a 346px scroller, which pushed the amount,
+       balance and reference columns off-screen — the amount rendered as "4.90" where
+       the value was "-54.90". The stacked layout must keep every amount fully inside
+       the viewport with no horizontal scrolling at all. */
+    expect(await homePage.dashboard.clippedTransactionAmounts()).toEqual([]);
+    const tableScroll = await transactionTableRegion.evaluate(
+      (node) => node.scrollWidth - node.clientWidth,
+    );
+    expect(tableScroll, 'the transactions table should not scroll sideways on a phone').toBeLessThanOrEqual(1);
+    await expect(homePage.page.getByTestId('tx-scroll-hint')).toBeHidden();
     const [guide, amount, months] = await Promise.all([
       homePage.dashboard.spendingGuide.boundingBox(),
       homePage.dashboard.spendingGuideAmount.boundingBox(),

@@ -17,7 +17,12 @@ export class DashboardComponent {
   readonly spendingGuideDetails = this.page.getByTestId('spending-guide-details');
   readonly spendingGuideBalance = this.page.getByTestId('spending-guide-balance');
   readonly spendingGuideCommitted = this.page.getByTestId('spending-guide-committed');
+  readonly spendingGuideRetained = this.page.getByTestId('spending-guide-retained');
+  readonly spendingGuideAsOf = this.page.getByTestId('spending-guide-asof');
   readonly spendingGuideDate = this.page.getByTestId('spending-guide-date');
+  readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
+  readonly recurringRows = this.page.getByTestId('recurring-row');
+  readonly transactionAmounts = this.page.getByTestId('transaction-amount');
   readonly recommendationButton = this.page.getByTestId('btn-recommendations');
   readonly recommendations = this.page.getByTestId('recommendations');
   readonly recommendationNote = this.page.getByTestId('rec-screen-note');
@@ -44,6 +49,26 @@ export class DashboardComponent {
   readonly dynamicRegions = this.dynamicRegionIds.map((testId) => this.page.getByTestId(testId));
 
   constructor(private readonly page: Page) {}
+
+  /** The safe-to-spend headline as a number, so tests can assert bounds rather than
+      pin an exact string that the model is entitled to refine. */
+  @step('Read the safe-to-spend headline as a number')
+  async readSpendingGuideAmount(): Promise<number> {
+    const text = (await this.spendingGuideAmount.innerText()).replace(/[^\d.-]/g, '');
+    return Number.parseFloat(text);
+  }
+
+  /** Transaction amounts that fall outside the viewport, with what the reader would
+      actually see — a clipped currency cell misreads as a smaller charge. */
+  @step('Find transaction amounts clipped by the viewport')
+  async clippedTransactionAmounts(): Promise<Array<{ text: string; left: number; right: number }>> {
+    return this.transactionAmounts.evaluateAll((cells) => cells.flatMap((cell) => {
+      const box = cell.getBoundingClientRect();
+      if (box.width === 0) return [];
+      if (box.left >= -0.5 && box.right <= window.innerWidth + 0.5) return [];
+      return [{ text: (cell.textContent || '').trim(), left: Math.round(box.left), right: Math.round(box.right) }];
+    }));
+  }
 
   @step('Load a complete financial-agent example')
   async loadAgentScenario(): Promise<void> {
