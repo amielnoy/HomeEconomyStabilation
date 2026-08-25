@@ -102,10 +102,10 @@ npm run test:docker:stop # כיבוי שרתי הבדיקות והדוח
 אפשר גם להריץ `npm run test:docker`.
 
 - `web` מגיש את היישום ואת Swagger UI באמצעות Nginx; `scalar` הוא שרת Nginx נפרד לתיעוד ולבדיקות API ידניות.
-- `api` מריץ FastAPI/Uvicorn ואת `/api/snapshots`; Nginx מעביר אליו את נתיבי `/api/`.
+- `api` מריץ FastAPI/Uvicorn ואת נתיבי `/api/snapshots`,‏ `/api/profile` ו־`/api/consents/cloud-sync`; Nginx מעביר אליו את נתיבי `/api/`.
 - `tests` מכיל Python,‏ Chromium ו־WebKit, מריץ build,‏ Vitest,‏ Pytest ו־Playwright במקביל, ומאחד את תוצאותיהם ב־Allure.
 - `allure` מגיש באמצעות Nginx את דוח ה־HTML שנוצר לאחר סיום הבדיקות.
-- `grafana` טוען דשבורד בריאות כללי ודשבורד `Home Economy Database` לזמינות, latency וקודי תוצאה של Supabase, ללא סיסמת DB וללא תוכן פיננסי.
+- `grafana` טוען דשבורד בריאות כללי ודשבורד `Home Economy Database` לזמינות, latency, שגיאות, פעילות profile/consent/snapshot וכתיבות שנחסמו ללא הסכמה, ללא סיסמת DB וללא תוכן פיננסי.
 
 בתחילת כל הרצה הסקריפט מנקה containers ישנים רק מה־Compose project המבודד `home-economy-tests`, בלי למחוק volumes, כדי שגם rerun אחרי interruption לא ייתקע בהתנגשות שמות.
 
@@ -139,7 +139,7 @@ Vitest בודק לוגיקת דפדפן וחוזים במהירות. Pytest בו
 
 ## פריסה אוטומטית ל־Vercel
 
-ה־workflow בקובץ `.github/workflows/ci.yml` מריץ build ואת כל הבדיקות בכל push ו־pull request. פריסת production מתבצעת רק לאחר הצלחה מלאה, ורק ב־push לענף `main` או בהפעלה ידנית באמצעות `workflow_dispatch`. ריצת schedule בודקת את המוצר אך אינה פורסת.
+ה־workflow בקובץ `.github/workflows/ci.yml` מריץ build ואת כל הבדיקות בכל push ו־pull request. כל פעולות GitHub הרשמיות בו משתמשות בגרסאות Node.js 24 (`checkout@v6`,‏ `setup-node@v6`,‏ `setup-python@v6`,‏ `upload-artifact@v6`) כדי להימנע מאזהרת ה־Node.js 20 שהוצא משימוש. פריסת production מתבצעת רק לאחר הצלחה מלאה, ורק ב־push לענף `main` או בהפעלה ידנית באמצעות `workflow_dispatch`. ריצת schedule בודקת את המוצר אך אינה פורסת.
 
 ה־workflow מוכן בקוד, אך הפעלתו בחשבון עדיין דורשת את ה־secrets והגנות הענף המפורטים ב־[TODO.md](TODO.md). עד להשלמתם אפשר לפרוס ידנית רק לאחר מעבר מלא של הבדיקות.
 
@@ -153,7 +153,7 @@ Vitest בודק לוגיקת דפדפן וחוזים במהירות. Pytest בו
 
 ## תשתית Supabase וסנכרון עתידי
 
-האפליקציה נשארת local-first. טעינת דוחות, ניתוח ושמירה מקומית אינם דורשים חשבון או Supabase. לפני התמדה נמחקים מספרי חשבון וכרטיס, CVV, אסמכתאות ושמות הקבצים; היסטוריית תנועות מצומצמת נשמרת בדפדפן כדי לאפשר תקציבים וסוכנים. התשתית החדשה מכינה סנכרון אופציונלי בלבד: המשתמש יצטרך להיכנס, לקרוא את הודעת הפרטיות ולאשר אותה במפורש לפני שתתאפשר העלאה. האישור המקומי הנוכחי מתעד בחירה בלבד ואינו שולח נתונים. הגבול המדויק והסתייגויות GDPR/HIPAA מתועדים ב־[PRIVACY.md](PRIVACY.md).
+האפליקציה נשארת local-first. טעינת דוחות, ניתוח ושמירה מקומית אינם דורשים חשבון או Supabase. לפני התמדה נמחקים מספרי חשבון וכרטיס, CVV, אסמכתאות ושמות הקבצים; היסטוריית תנועות מצומצמת נשמרת בדפדפן כדי לאפשר תקציבים וסוכנים. ה־API יכול לשמור ב־Supabase שפת פרופיל והסכמה גרסתית, וכתיבת snapshot נחסמת ללא הסכמה פעילה. הממשק עדיין אינו מתחבר או מעלה; הבחירה המקומית ממשיכה לאפשר שימוש ללא חשבון. הגבול המדויק והסתייגויות GDPR/HIPAA מתועדים ב־[PRIVACY.md](PRIVACY.md).
 
 להכנה בסביבת Supabase/Vercel:
 
@@ -163,13 +163,13 @@ Vitest בודק לוגיקת דפדפן וחוזים במהירות. Pytest בו
 4. משתמשים במפתח החדש מסוג `sb_publishable_...` בלבד. אין להגדיר `service_role` או secret key ביישום זה.
 5. לפני הפעלה למשתמשים אמיתיים משלימים את מסך ההתחברות, מדיניות הפרטיות, פרטי בעל השליטה במידע, דרך עיון/תיקון/מחיקה ובדיקת ייעוץ משפטי ואבטחת מידע.
 
-מודל הנתונים המינימלי כולל `user_profiles`,‏ `app_snapshots` ו־`consent_acceptances`. כל הטבלאות מפעילות RLS ומאפשרות למשתמש מאומת לגשת רק לשורה שלו. בצד Python המחלקות `UserProfileRepository`,‏ `SnapshotRepository` ו־`ConsentRepository` מנהלות את הקריאה והכתיבה דרך JWT המשתמש ו־publishable key בלבד. בדפדפן `SupabaseSnapshotRepository` מדברת רק עם `/api/snapshots` ו־`LocalConsentRepository` מנהלת הסכמה גרסתית.
+מודל הנתונים המינימלי כולל `user_profiles`,‏ `app_snapshots` ו־`consent_acceptances`. כל הטבלאות מפעילות RLS ומאפשרות למשתמש מאומת לגשת רק לשורה שלו. בצד Python המחלקות `UserProfileRepository`,‏ `SnapshotRepository` ו־`ConsentRepository` מנהלות את הקריאה והכתיבה דרך JWT המשתמש ו־publishable key בלבד. בדפדפן `SupabaseSnapshotRepository`,‏ `SupabaseProfileRepository` ו־`SupabaseConsentRepository` מדברות עם נתיבי API מאומתים; `LocalConsentRepository` נשארת ברירת המחדל עד חיבור Auth לממשק.
 
 פירוט מלא נמצא ב־[SUPABASE.md](SUPABASE.md).
 
 ### בדיקה ידנית דרך Swagger או Scalar
 
-לאחר `npm run build` מפעילים את סביבת Compose ופותחים את Swagger ב־`http://127.0.0.1:8765/api-docs.html` או את שרת Scalar ב־`http://127.0.0.1:8767/scalar-docs.html`. שני הממשקים מציגים ומריצים ידנית את `GET /api/health` ואת פעולות `GET`,‏ `PUT` ו־`DELETE` של `/api/snapshots`, ויש ביניהם קישור מעבר ישיר. ב־Scalar בוחרים פעולה ולוחצים **Test Request**. לבדיקת snapshot מוצלחת מזינים Bearer JWT אמיתי של משתמש Supabase במנגנון Authentication; אין להדביק secret או `service_role`. בהיעדר הגדרת Supabase אפשר לבדוק שכשל התשתית מוחזר סגור כ־`503 cloud_not_configured`.
+לאחר `npm run build` מפעילים את סביבת Compose ופותחים את Swagger ב־`http://127.0.0.1:8765/api-docs.html` או את שרת Scalar ב־`http://127.0.0.1:8767/scalar-docs.html`. שני הממשקים מציגים health ואת פעולות snapshot, profile ו־consent. ב־Scalar בוחרים פעולה ולוחצים **Test Request**. לבדיקת snapshot מוצלחת מזינים Bearer JWT אמיתי, שומרים קודם הסכמה דרך `PUT /api/consents/cloud-sync`, ואז כותבים snapshot; אין להדביק secret או `service_role`. בהיעדר הגדרת Supabase אפשר לבדוק שכשל התשתית מוחזר סגור כ־`503 cloud_not_configured`.
 
 החוזה היחיד נמצא ב־`openapi.json`. נכסי Swagger UI ו־Scalar בגרסאות מקובעות מועתקים מקומית בזמן build, ללא CDN, telemetry או גופנים חיצוניים. פרטי האימות אינם נשמרים לאחר טעינה מחדש.
 
@@ -191,6 +191,7 @@ src/bank-importer.ts     Strategy לייבוא דוחות בנק
 src/categorization.ts    מדיניות סיווג תנועות ובכורת שיוך ידני
 src/state-repository.ts  Codec קשיח ו־Repository ל־localStorage/גיבוי
 src/cloud-sync.ts       חוזה סנכרון ו־SupabaseSnapshotRepository
+src/cloud-metadata.ts   מאגרי Supabase לפרופיל ולהסכמה
 src/consent.ts          הסכמה גרסתית וביטולה
 src/{architecture,api-docs,scalar-docs}.ts התנהגות TypeScript למסמכי המערכת וה־API
 server/                 FastAPI, validation ומאגרי Supabase

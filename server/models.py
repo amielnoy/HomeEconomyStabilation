@@ -16,6 +16,14 @@ _FINANCIAL_IDENTIFIERS = (
     re.compile(r"\b(?:cvv|cvc|security\s*code)\s*[:#-]?\s*\d{3,4}\b", re.IGNORECASE),
     re.compile(r"\b(?:\d[ -]?){12,18}\d\b"),
     re.compile(r"\b\d{1,3}[- ]\d{1,4}[- ]\d{4,10}\b"),
+    # Mirrors redactFinancialIdentifiers in src/privacy.ts: a digit run introduced by
+    # an account, branch or card word is an identifier, not an amount. Python's \b is
+    # Unicode-aware, so it works beside Hebrew where the JS equivalent needs lookarounds.
+    re.compile(
+        r"\b(?:חשבון|חשבונות|בנק|סניף|כרטיס|account|acct|branch|card|מספר|no|nr)[\s:.#-]*"
+        r"\d[\d-]{3,12}\d\b(?![.,]\d)",
+        re.IGNORECASE,
+    ),
 )
 
 
@@ -91,6 +99,16 @@ class SnapshotInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     schemaVersion: Literal[2]
     payload: CloudStatePayload
+
+
+class ProfileInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    preferred_locale: Locale = Field(alias="preferredLocale")
+
+
+class CloudConsentInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    locale: Locale
 
 
 class UserProfile(BaseModel):

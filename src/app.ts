@@ -1,4 +1,5 @@
-import { creditCardImporter, type Workbook, type SpreadsheetCell } from './credit-card-importer.js';
+import { creditCardImporter } from './credit-card-importer.js';
+import { readWorkbook } from './spreadsheet-reader.js';
 import { createPrivacySafeSnapshot } from './privacy.js';
 import { createLocaleFormatters, formatMessage, getLocaleConfig, isSupportedLocale, resolveLocale, type Locale } from './localization.js';
 import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js';
@@ -12,578 +13,13 @@ import { RuleBasedTransactionCategorizer } from './categorization.js';
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
 interface DomElement extends HTMLElement { value: string; files: FileList | null; reset(): void; }
 interface ClaudeWindow extends Window { claude?: { use(name: string): Promise<DownloadApi> }; }
-interface Resources extends Record<string, string | boolean | Record<string, string>> { replace?: Record<string, string>; }
+type ResourceValue = string | boolean | Record<string, string>;
+interface Resources { [key: string]: ResourceValue | undefined; replace?: Record<string, string>; }
 let locale: Locale = resolveLocale(localStorage.getItem('mazan-habait/locale'));
 let resources: Resources = {};
 let directoryOpen = window.location.hash === '#savings-directory';
 const consentRepository = new LocalConsentRepository(localStorage);
 let drawerReturnFocus: HTMLElement | null = null;
-
-/* sheetread.ts — minimal, dependency-free reader for legacy .xls (BIFF8 inside a
-   CFB container), .xlsx (ZIP + SpreadsheetML) and .csv, returning
-   { sheets: [ { name, rows: [ [cell,…] ] } ] } where each cell is
-   { v: value, t: 's'|'n'|'d'|'b'|'e' }.  Runs unchanged in Node 18+ and in the
-   browser: the only platform APIs it touches are TextDecoder and
-   DecompressionStream. */
-
-const SE = (b: Uint8Array | ArrayBuffer): DataView => b instanceof ArrayBuffer
-  ? new DataView(b)
-  : new DataView(b.buffer, b.byteOffset, b.byteLength);
-
-/* ---------------------------------------------------------------- utilities */
-
-function utf16le(bytes, start, len) {
-  return new TextDecoder('utf-16le').decode(bytes.subarray(start, start + len * 2));
-}
-function latin1(bytes, start, len) {
-  let s = '';
-  for (let i = 0; i < len; i++) s += String.fromCharCode(bytes[start + i]);
-  return s;
-}
-
-/* Excel serial date -> Date (UTC-anchored, so the calendar day never drifts). */
-function serialToDate(serial, date1904) {
-  const epoch = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30);
-  let days = Math.floor(serial);
-  const frac = serial - days;
-  // The 1900 system pretends 1900 was a leap year; serials past 60 are shifted.
-  if (!date1904 && days > 60) days -= 0;
-  const ms = epoch + days * 86400000 + Math.round(frac * 86400000);
-  return new Date(ms);
-}
-
-const BUILTIN_DATE_FMT = new Set([
-  14, 15, 16, 17, 18, 19, 20, 21, 22,
-  27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
-  45, 46, 47,
-  50, 51, 52, 53, 54, 55, 56, 57, 58,
-  71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81,
-]);
-
-/* Does a number-format string describe a date/time? Strips quoted literals,
-   escapes, colour/condition brackets and the currency-locale bracket first, so
-   that e.g. [$₪-40D]#,##0.00 is not mistaken for a date because of the "D". */
-function fmtIsDate(fmt) {
-  if (!fmt) return false;
-  const stripped = fmt
-    .replace(/\\./g, '')
-    .replace(/"[^"]*"/g, '')
-    .replace(/\[[^\]]*\]/g, '');
-  return /[ymdhs]/i.test(stripped) && !/^[^ymdhs]*$/i.test(stripped);
-}
-
-/* --------------------------------------------------------------------- CFB */
-
-function readCFB(buf: ArrayBuffer): { entries: Array<{ name: string; type: number; start: number; size: number }>; readStream: (entry: { start: number; size: number }) => Uint8Array } {
-  const b = new Uint8Array(buf);
-  const dv = SE(b);
-  const sig = dv.getUint32(0, true) === 0xe011cfd0 && dv.getUint32(4, true) === 0xe11ab1a1;
-  if (!sig) throw new Error('not a compound file');
-
-  const sectorShift = dv.getUint16(30, true);
-  const sectorSize = 1 << sectorShift;
-  const miniSectorSize = 1 << dv.getUint16(32, true);
-  const numFAT = dv.getUint32(44, true);
-  const dirStart = dv.getUint32(48, true);
-  const miniCutoff = dv.getUint32(56, true);
-  const miniFATStart = dv.getUint32(60, true);
-  const numMiniFAT = dv.getUint32(64, true);
-  const difatStart = dv.getUint32(68, true);
-  const numDIFAT = dv.getUint32(72, true);
-
-  const sectorOffset = (s) => (s + 1) * sectorSize;
-
-  // Assemble the DIFAT: 109 entries live in the header, the rest in a chain.
-  const difat: number[] = [];
-  for (let i = 0; i < 109; i++) {
-    const v = dv.getUint32(76 + i * 4, true);
-    if (v === 0xffffffff) break;
-    difat.push(v);
-  }
-  let ds = difatStart;
-  for (let n = 0; n < numDIFAT && ds !== 0xffffffff && ds !== 0xfffffffe; n++) {
-    const off = sectorOffset(ds);
-    const perSector = sectorSize / 4 - 1;
-    for (let i = 0; i < perSector; i++) {
-      const v = dv.getUint32(off + i * 4, true);
-      if (v !== 0xffffffff) difat.push(v);
-    }
-    ds = dv.getUint32(off + perSector * 4, true);
-  }
-
-  // FAT
-  const fat: number[] = [];
-  for (const sec of difat.slice(0, Math.max(numFAT, difat.length))) {
-    const off = sectorOffset(sec);
-    if (off + sectorSize > b.length) break;
-    for (let i = 0; i < sectorSize / 4; i++) fat.push(dv.getUint32(off + i * 4, true));
-  }
-
-  const chain = (start, fatTable) => {
-    const out: number[] = [];
-    let s = start;
-    const seen = new Set();
-    while (s !== 0xfffffffe && s !== 0xffffffff && s !== 0xfffffffd && s !== undefined) {
-      if (seen.has(s)) break;
-      seen.add(s);
-      out.push(s);
-      s = fatTable[s];
-    }
-    return out;
-  };
-
-  const readChain = (start, size = null) => {
-    const secs = chain(start, fat);
-    const out = new Uint8Array(secs.length * sectorSize);
-    secs.forEach((s, i) => {
-      const off = sectorOffset(s);
-      out.set(b.subarray(off, Math.min(off + sectorSize, b.length)), i * sectorSize);
-    });
-    return size != null ? out.subarray(0, size) : out;
-  };
-
-  // Directory
-  const dirBytes = readChain(dirStart);
-  const entries: Array<{ name: string; type: number; start: number; size: number }> = [];
-  for (let off = 0; off + 128 <= dirBytes.length; off += 128) {
-    const nameLen = SE(dirBytes).getUint16(off + 64, true);
-    if (nameLen <= 0 || nameLen > 64) continue;
-    const name = utf16le(dirBytes, off, Math.max(0, nameLen / 2 - 1));
-    const type = dirBytes[off + 66];
-    const dvd = SE(dirBytes);
-    entries.push({
-      name,
-      type,
-      start: dvd.getUint32(off + 116, true),
-      size: dvd.getUint32(off + 120, true) + dvd.getUint32(off + 124, true) * 4294967296,
-    });
-  }
-
-  // Mini-FAT and mini-stream (small streams live inside the root entry's stream)
-  const root = entries.find((e) => e.type === 5);
-  let miniFAT: number[] = [];
-  if (numMiniFAT) {
-    const mb = readChain(miniFATStart);
-    const mdv = SE(mb);
-    for (let i = 0; i + 4 <= mb.length; i += 4) miniFAT.push(mdv.getUint32(i, true));
-  }
-  const miniStream = root && root.size ? readChain(root.start, root.size) : new Uint8Array(0);
-
-  const readStream = (entry: { start: number; size: number }) => {
-    if (entry.size < miniCutoff && root) {
-      const secs = chain(entry.start, miniFAT);
-      const out = new Uint8Array(secs.length * miniSectorSize);
-      secs.forEach((s, i) => {
-        const off = s * miniSectorSize;
-        out.set(miniStream.subarray(off, off + miniSectorSize), i * miniSectorSize);
-      });
-      return out.subarray(0, entry.size);
-    }
-    return readChain(entry.start, entry.size);
-  };
-
-  return { entries, readStream };
-}
-
-/* ------------------------------------------------------------------- BIFF8 */
-
-/* Read an XLUnicodeString whose length has already been read, honouring the
-   CONTINUE-record boundaries the caller supplies via `next`. */
-function biffString(rd, cch, flagsByte) {
-  let high = flagsByte & 0x01;
-  let out = '';
-  let left = cch;
-  while (left > 0) {
-    const avail = rd.remaining();
-    if (avail <= 0) {
-      if (!rd.nextBlock()) break;
-      high = rd.byte() & 0x01;
-      continue;
-    }
-    const take = high ? Math.min(left, Math.floor(avail / 2)) : Math.min(left, avail);
-    if (take <= 0) {
-      if (!rd.nextBlock()) break;
-      high = rd.byte() & 0x01;
-      continue;
-    }
-    out += high ? rd.utf16(take) : rd.latin1(take);
-    left -= take;
-  }
-  return out;
-}
-
-function rkToNumber(rk) {
-  const isInt = (rk & 0x02) !== 0;
-  const div100 = (rk & 0x01) !== 0;
-  let v;
-  if (isInt) {
-    v = rk >> 2;
-  } else {
-    const buf = new ArrayBuffer(8);
-    const d = new DataView(buf);
-    d.setUint32(0, 0, true);
-    d.setInt32(4, rk & 0xfffffffc, true);
-    v = d.getFloat64(0, true);
-  }
-  return div100 ? v / 100 : v;
-}
-
-function parseXLS(buf: ArrayBuffer): Workbook {
-  const { entries, readStream } = readCFB(buf);
-  const wbEntry = entries.find((e) => e.type === 2 && /^(Workbook|Book)$/i.test(e.name));
-  if (!wbEntry) throw new Error('no Workbook stream');
-  const s = readStream(wbEntry);
-  const dv = SE(s);
-
-  // Pass 1: walk every record, keeping the globals we need.
-  const records: Array<{ id: number; start: number; len: number; pos: number }> = [];
-  let p = 0;
-  while (p + 4 <= s.length) {
-    const id = dv.getUint16(p, true);
-    const len = dv.getUint16(p + 2, true);
-    if (p + 4 + len > s.length) break;
-    records.push({ id, start: p + 4, len, pos: p });
-    p += 4 + len;
-  }
-
-  const boundsheets: Array<{ pos: number; name: string; hidden: boolean }> = [];
-  const xfFmt: number[] = [];
-  const formats: Record<number, string> = {};
-  let date1904 = false;
-  let sst = [];
-
-  const readerOver = (idx) => {
-    // A cursor that transparently walks into CONTINUE records.
-    let i = idx;
-    let off = records[i].start;
-    let end = records[i].start + records[i].len;
-    return {
-      remaining: () => end - off,
-      byte() { return s[off++]; },
-      u16() { const v = dv.getUint16(off, true); off += 2; return v; },
-      i32() { const v = dv.getInt32(off, true); off += 4; return v; },
-      skip(n) { off += n; },
-      latin1(n) { const v = latin1(s, off, n); off += n; return v; },
-      utf16(n) { const v = utf16le(s, off, n); off += n * 2; return v; },
-      nextBlock() {
-        if (i + 1 < records.length && records[i + 1].id === 0x003c) {
-          i += 1;
-          off = records[i].start;
-          end = records[i].start + records[i].len;
-          return true;
-        }
-        return false;
-      },
-      atEnd() { return off >= end && !(records[i + 1] && records[i + 1].id === 0x003c); },
-    };
-  };
-
-  for (let i = 0; i < records.length; i++) {
-    const r = records[i];
-    const o = r.start;
-    if (r.id === 0x0085) {
-      // BOUNDSHEET
-      const pos = dv.getUint32(o, true);
-      const cch = s[o + 6];
-      const flags = s[o + 7];
-      const name = flags & 0x01 ? utf16le(s, o + 8, cch) : latin1(s, o + 8, cch);
-      boundsheets.push({ name, pos, hidden: (s[o + 4] & 0x03) !== 0 });
-    } else if (r.id === 0x0022) {
-      date1904 = dv.getUint16(o, true) === 1;
-    } else if (r.id === 0x00e0) {
-      xfFmt.push(dv.getUint16(o + 2, true));
-    } else if (r.id === 0x041e) {
-      const ifmt = dv.getUint16(o, true);
-      const cch = dv.getUint16(o + 2, true);
-      const flags = s[o + 4];
-      formats[ifmt] = flags & 0x01 ? utf16le(s, o + 5, cch) : latin1(s, o + 5, cch);
-    } else if (r.id === 0x00fc) {
-      // SST
-      const rd = readerOver(i);
-      rd.skip(4);
-      const unique = rd.i32();
-      for (let n = 0; n < unique; n++) {
-        if (rd.remaining() < 3 && !rd.nextBlock()) break;
-        const cch = rd.u16();
-        const flags = rd.byte();
-        let cRun = 0;
-        let cbExt = 0;
-        if (flags & 0x08) cRun = rd.u16();
-        if (flags & 0x04) cbExt = rd.i32();
-        sst.push(biffString(rd, cch, flags));
-        let toSkip = cRun * 4 + cbExt;
-        while (toSkip > 0) {
-          const avail = rd.remaining();
-          if (avail <= 0) { if (!rd.nextBlock()) break; continue; }
-          const take = Math.min(avail, toSkip);
-          rd.skip(take);
-          toSkip -= take;
-        }
-      }
-    }
-  }
-
-  const isDateXF = (ixfe) => {
-    const ifmt = xfFmt[ixfe];
-    if (ifmt == null) return false;
-    if (formats[ifmt] != null) return fmtIsDate(formats[ifmt]);
-    return BUILTIN_DATE_FMT.has(ifmt);
-  };
-
-  // Pass 2: per-sheet cell records, delimited by each BOUNDSHEET's stream offset.
-  const recAt = new Map(records.map((r) => [r.pos, r]));
-  const sheets: Array<{ name: string; rows: Array<Array<SpreadsheetCell | null>> }> = [];
-  for (let si = 0; si < boundsheets.length; si++) {
-    const bs = boundsheets[si];
-    const startIdx = records.findIndex((r) => r.pos === bs.pos);
-    if (startIdx < 0) continue;
-    const rows: Array<Array<SpreadsheetCell | null>> = [];
-    const put = (row, col, cell) => {
-      if (!rows[row]) rows[row] = [];
-      rows[row][col] = cell;
-    };
-    for (let i = startIdx + 1; i < records.length; i++) {
-      const r = records[i];
-      if (r.id === 0x000a) break; // EOF of this substream
-      const o = r.start;
-      if (r.id === 0x00fd) {
-        // LABELSST
-        const row = dv.getUint16(o, true), col = dv.getUint16(o + 2, true);
-        put(row, col, { t: 's', v: sst[dv.getUint32(o + 6, true)] ?? '' });
-      } else if (r.id === 0x0204) {
-        // LABEL
-        const row = dv.getUint16(o, true), col = dv.getUint16(o + 2, true);
-        const cch = dv.getUint16(o + 6, true);
-        const flags = s[o + 8];
-        put(row, col, { t: 's', v: flags & 0x01 ? utf16le(s, o + 9, cch) : latin1(s, o + 9, cch) });
-      } else if (r.id === 0x0203) {
-        // NUMBER
-        const row = dv.getUint16(o, true), col = dv.getUint16(o + 2, true);
-        const ixfe = dv.getUint16(o + 4, true);
-        const v = dv.getFloat64(o + 6, true);
-        put(row, col, isDateXF(ixfe) ? { t: 'd', v: serialToDate(v, date1904) } : { t: 'n', v });
-      } else if (r.id === 0x027e) {
-        // RK
-        const row = dv.getUint16(o, true), col = dv.getUint16(o + 2, true);
-        const ixfe = dv.getUint16(o + 4, true);
-        const v = rkToNumber(dv.getInt32(o + 6, true));
-        put(row, col, isDateXF(ixfe) ? { t: 'd', v: serialToDate(v, date1904) } : { t: 'n', v });
-      } else if (r.id === 0x00bd) {
-        // MULRK
-        const row = dv.getUint16(o, true);
-        const colFirst = dv.getUint16(o + 2, true);
-        const n = (r.len - 6) / 6;
-        for (let k = 0; k < n; k++) {
-          const ixfe = dv.getUint16(o + 4 + k * 6, true);
-          const v = rkToNumber(dv.getInt32(o + 6 + k * 6, true));
-          put(row, colFirst + k, isDateXF(ixfe) ? { t: 'd', v: serialToDate(v, date1904) } : { t: 'n', v });
-        }
-      } else if (r.id === 0x0006) {
-        // FORMULA — cached result only
-        const row = dv.getUint16(o, true), col = dv.getUint16(o + 2, true);
-        const ixfe = dv.getUint16(o + 4, true);
-        if (dv.getUint16(o + 12, true) === 0xffff) {
-          const kind = s[o + 6];
-          if (kind === 0) {
-            // string result arrives in the following STRING record
-            const nxt = records[i + 1];
-            let str = '';
-            if (nxt && nxt.id === 0x0207) {
-              const cch = dv.getUint16(nxt.start, true);
-              const flags = s[nxt.start + 2];
-              str = flags & 0x01 ? utf16le(s, nxt.start + 3, cch) : latin1(s, nxt.start + 3, cch);
-            }
-            put(row, col, { t: 's', v: str });
-          } else if (kind === 1) {
-            put(row, col, { t: 'b', v: s[o + 8] !== 0 });
-          } else if (kind === 2) {
-            put(row, col, { t: 'e', v: s[o + 8] });
-          }
-        } else {
-          const v = dv.getFloat64(o + 6, true);
-          put(row, col, isDateXF(ixfe) ? { t: 'd', v: serialToDate(v, date1904) } : { t: 'n', v });
-        }
-      }
-    }
-    sheets.push({ name: bs.name, rows });
-  }
-  return { sheets };
-}
-
-/* -------------------------------------------------------------------- XLSX */
-
-async function inflateRaw(bytes) {
-  const ds = new DecompressionStream('deflate-raw');
-  const stream = new Blob([bytes]).stream().pipeThrough(ds);
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-async function unzip(buf) {
-  const b = new Uint8Array(buf);
-  const dv = SE(b);
-  // locate End Of Central Directory
-  let eocd = -1;
-  for (let i = b.length - 22; i >= Math.max(0, b.length - 66000); i--) {
-    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
-  }
-  if (eocd < 0) throw new Error('not a zip');
-  const count = dv.getUint16(eocd + 10, true);
-  let off = dv.getUint32(eocd + 16, true);
-  const files: Record<string, { method: number; bytes: Uint8Array }> = {};
-  for (let n = 0; n < count; n++) {
-    if (dv.getUint32(off, true) !== 0x02014b50) break;
-    const method = dv.getUint16(off + 10, true);
-    const csize = dv.getUint32(off + 20, true);
-    const nameLen = dv.getUint16(off + 28, true);
-    const extraLen = dv.getUint16(off + 30, true);
-    const cmtLen = dv.getUint16(off + 32, true);
-    const lho = dv.getUint32(off + 42, true);
-    const name = new TextDecoder().decode(b.subarray(off + 46, off + 46 + nameLen));
-    const lNameLen = dv.getUint16(lho + 26, true);
-    const lExtraLen = dv.getUint16(lho + 28, true);
-    const dataStart = lho + 30 + lNameLen + lExtraLen;
-    files[name] = { method, bytes: b.subarray(dataStart, dataStart + csize) };
-    off += 46 + nameLen + extraLen + cmtLen;
-  }
-  const out: Record<string, Uint8Array> = {};
-  for (const [name, f] of Object.entries(files)) {
-    out[name] = f.method === 0 ? f.bytes : await inflateRaw(f.bytes);
-  }
-  return out;
-}
-
-const XMLDEC = new TextDecoder();
-function xmlDoc(bytes) {
-  return new DOMParser().parseFromString(XMLDEC.decode(bytes), 'application/xml');
-}
-function colFromRef(ref) {
-  let n = 0;
-  for (let i = 0; i < ref.length; i++) {
-    const c = ref.charCodeAt(i);
-    if (c < 65 || c > 90) break;
-    n = n * 26 + (c - 64);
-  }
-  return n - 1;
-}
-
-async function parseXLSX(buf: ArrayBuffer): Promise<Workbook> {
-  const zip = await unzip(buf);
-  const get = (p) => zip[p] || zip[p.replace(/^xl\//, '')];
-
-  // shared strings
-  let shared = [];
-  if (get('xl/sharedStrings.xml')) {
-    const doc = xmlDoc(get('xl/sharedStrings.xml'));
-    shared = [...doc.getElementsByTagName('si')].map((si) =>
-      [...si.getElementsByTagName('t')].map((t) => t.textContent).join(''));
-  }
-
-  // styles → which cellXfs indices are dates
-  const dateXf = [];
-  let date1904 = false;
-  if (get('xl/styles.xml')) {
-    const doc = xmlDoc(get('xl/styles.xml'));
-    const custom = {};
-    for (const nf of doc.getElementsByTagName('numFmt')) {
-      custom[+nf.getAttribute('numFmtId')] = nf.getAttribute('formatCode') || '';
-    }
-    const cellXfs = doc.getElementsByTagName('cellXfs')[0];
-    if (cellXfs) {
-      for (const xf of cellXfs.getElementsByTagName('xf')) {
-        const id = +(xf.getAttribute('numFmtId') || 0);
-        dateXf.push(custom[id] != null ? fmtIsDate(custom[id]) : BUILTIN_DATE_FMT.has(id));
-      }
-    }
-  }
-  if (get('xl/workbook.xml')) {
-    const doc = xmlDoc(get('xl/workbook.xml'));
-    const pr = doc.getElementsByTagName('workbookPr')[0];
-    if (pr && (pr.getAttribute('date1904') === '1' || pr.getAttribute('date1904') === 'true')) date1904 = true;
-  }
-
-  // sheet order & names
-  const wb = xmlDoc(get('xl/workbook.xml'));
-  const rels = xmlDoc(get('xl/_rels/workbook.xml.rels'));
-  const relMap = {};
-  for (const r of rels.getElementsByTagName('Relationship')) {
-    relMap[r.getAttribute('Id')] = r.getAttribute('Target').replace(/^\/?xl\//, '').replace(/^\//, '');
-  }
-  const sheets: Array<{ name: string; rows: Array<Array<SpreadsheetCell | null>> }> = [];
-  for (const sh of wb.getElementsByTagName('sheet')) {
-    const rid = sh.getAttribute('r:id') || sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
-    const target = relMap[rid];
-    const bytes = get('xl/' + target);
-    const rows: Array<Array<SpreadsheetCell | null>> = [];
-    if (bytes) {
-      const doc = xmlDoc(bytes);
-      for (const row of doc.getElementsByTagName('row')) {
-        const ri = +row.getAttribute('r') - 1;
-        for (const c of row.getElementsByTagName('c')) {
-          const ci = colFromRef(c.getAttribute('r') || '');
-          const t = c.getAttribute('t');
-          const sIdx = +(c.getAttribute('s') || 0);
-          const isEl = c.getElementsByTagName('is')[0];
-          const vEl = c.getElementsByTagName('v')[0];
-          let cell = null;
-          if (t === 'inlineStr' && isEl) {
-            cell = { t: 's', v: [...isEl.getElementsByTagName('t')].map((x) => x.textContent).join('') };
-          } else if (!vEl) {
-            cell = null;
-          } else if (t === 's') {
-            cell = { t: 's', v: shared[+vEl.textContent] ?? '' };
-          } else if (t === 'str') {
-            cell = { t: 's', v: vEl.textContent };
-          } else if (t === 'b') {
-            cell = { t: 'b', v: vEl.textContent === '1' };
-          } else if (t === 'e') {
-            cell = { t: 'e', v: vEl.textContent };
-          } else {
-            const num = parseFloat(vEl.textContent);
-            cell = dateXf[sIdx] ? { t: 'd', v: serialToDate(num, date1904) } : { t: 'n', v: num };
-          }
-          if (cell) {
-            if (!rows[ri]) rows[ri] = [];
-            rows[ri][ci] = cell;
-          }
-        }
-      }
-    }
-    sheets.push({ name: sh.getAttribute('name'), rows });
-  }
-  return { sheets };
-}
-
-/* --------------------------------------------------------------------- CSV */
-
-function parseCSV(text: string, name = 'CSV'): Workbook {
-  const rows: Array<Array<SpreadsheetCell | null>> = [];
-  let row = [], field = '', quoted = false;
-  const pushField = () => { row.push(field === '' ? null : { t: 's', v: field }); field = ''; };
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (quoted) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false;
-      } else field += ch;
-    } else if (ch === '"') quoted = true;
-    else if (ch === ',' || ch === '\t' || ch === ';') pushField();
-    else if (ch === '\n') { pushField(); rows.push(row); row = []; }
-    else if (ch !== '\r') field += ch;
-  }
-  if (field !== '' || row.length) { pushField(); rows.push(row); }
-  return { sheets: [{ name, rows }] };
-}
-
-/* ------------------------------------------------------------------ facade */
-
-async function readWorkbook(arrayBuffer: ArrayBuffer, filename = ''): Promise<Workbook> {
-  const b = new Uint8Array(arrayBuffer);
-  if (b[0] === 0xd0 && b[1] === 0xcf) return parseXLS(arrayBuffer);
-  if (b[0] === 0x50 && b[1] === 0x4b) return parseXLSX(arrayBuffer);
-  const text = new TextDecoder('utf-8').decode(b);
-  if (/^\s*</.test(text) && /<table/i.test(text)) throw new Error('HTML_TABLE');
-  return parseCSV(text, filename || 'CSV');
-}
 
 /* =====================================================================
    מאזן הבית — app logic
@@ -605,6 +41,22 @@ const el = (tag: string, attrs: Record<string, unknown> = {}, kids: Node | strin
   }
   if (kids) for (const k of (Array.isArray(kids) ? kids : [kids])) if (k != null) n.append(k);
   return n;
+};
+/* An SVG with one aria-label tells a screen-reader user that a chart exists and
+   nothing about what it shows. Each chart therefore publishes the same figures as a
+   table, in the document rather than hidden from sighted readers. */
+const renderDataTable = (
+  host: DomElement,
+  headers: readonly string[],
+  rows: ReadonlyArray<readonly string[]>,
+) => {
+  host.textContent = '';
+  if (!rows.length) return;
+  const table = el('table');
+  table.append(el('thead', {}, el('tr', {}, headers.map((label) => el('th', { text: label, scope: 'col' })))));
+  table.append(el('tbody', {}, rows.map((row) => el('tr', {}, row.map((value, column) =>
+    el(column === 0 ? 'th' : 'td', { text: value, ...(column === 0 ? { scope: 'row' } : { class: 'n' }) }))))));
+  host.append(table);
 };
 const renderTooltip = (tip: DomElement, heading: string, rows: Array<[string, string]>) => {
   tip.textContent = '';
@@ -629,22 +81,22 @@ let DDMM = new Intl.DateTimeFormat('he-IL', { day: '2-digit', month: '2-digit' }
 let DDMMYY = new Intl.DateTimeFormat('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
 let MONTH_LONG = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'numeric' });
 let MONTH_SHORT = new Intl.DateTimeFormat('he-IL', { month: 'short' });
-const money = (v) => ILS0.format(Math.round(v || 0));
-const money2 = (v) => ILS2.format(v || 0);
-const moneyS = (v) => ILS0S.format(Math.round(v || 0));
-const money2S = (v) => ILS2S.format(v || 0);
+const money = (v: number) => ILS0.format(Math.round(v || 0));
+const money2 = (v: number) => ILS2.format(v || 0);
+const moneyS = (v: number) => ILS0S.format(Math.round(v || 0));
+const money2S = (v: number) => ILS2S.format(v || 0);
 
 const DAY = 86400000;
-const iso = (d) => d.toISOString().slice(0, 10);
-const dOf = (isoStr) => new Date(isoStr + 'T00:00:00Z');
-const monthKey = (isoStr) => isoStr.slice(0, 7);
-const monthLabel = (mk) => MONTH_LONG.format(new Date(mk + '-01T00:00:00Z'));
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const median = (arr) => {
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+const dOf = (isoStr: string) => new Date(isoStr + 'T00:00:00Z');
+const monthKey = (isoStr: string) => isoStr.slice(0, 7);
+const monthLabel = (mk: string | null) => mk ? MONTH_LONG.format(new Date(mk + '-01T00:00:00Z')) : '';
+const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const median = (arr: number[]): number => {
   if (!arr.length) return 0;
   const a = [...arr].sort((x, y) => x - y);
   const m = a.length >> 1;
-  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  return a.length % 2 ? a[m]! : (a[m - 1]! + a[m]!) / 2;
 };
 
 const t = (key: string, params: Record<string, string | number> = {}): string => {
@@ -673,7 +125,9 @@ function applyLocale() {
   const localeSelect = document.querySelector<HTMLSelectElement>('#locale-select')!;
   localeSelect.value = locale;
   localeSelect.setAttribute('aria-label', t('languageLabel'));
-  document.querySelector<HTMLButtonElement>('#btn-recommendations')!.disabled = false;
+  // Deliberately always enabled: with no data the button is a guided path to the
+  // upload rather than a dead end, and a disabled control explains nothing. The
+  // markup no longer ships `disabled`, so this no longer has to undo it.
   const formatters = createLocaleFormatters(locale);
   ILS0 = formatters.money0;
   ILS2 = formatters.money2;
@@ -690,7 +144,7 @@ function applyLocale() {
 /* Slot order is fixed and never cycled: the first eight categories carry the
    validated categorical hues, anything past them takes the neutral. */
 const SLOT = ['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--s5)','var(--s6)','var(--s7)','var(--s8)'];
-const catColor = (cats, id) => {
+const catColor = (cats: readonly Category[], id: string | undefined) => {
   if (id === 'income') return 'var(--good)';
   const i = cats.filter((c) => c.id !== 'income').findIndex((c) => c.id === id);
   return i >= 0 && i < 8 ? SLOT[i] : 'var(--s0)';
@@ -730,7 +184,7 @@ const DEFAULT_RULES = [
   ['משכורת', 'income'], ['שכר', 'income'], ['ביטוח לאומי', 'income'], ['קצבה', 'income'],
   ['משיכה לחשבון הבנק', 'savings'], ['העברה לחשבון', 'savings'], ['העברה בנקאית', 'savings'],
   ['מזונות', 'home'],
-].map(([match, cat], i): Rule => ({ id: 'r' + i, match, cat }));
+].map(([match, cat], i): Rule => ({ id: 'r' + i, match: match!, cat: cat! }));
 
 /* --------------------------------------------------------------- state -- */
 const KEY = 'mazan-habait/v1';
@@ -761,8 +215,8 @@ function save() {
 }
 
 /* --------------------------------------------------------------- toast -- */
-let toastT;
-function toast(msg) {
+let toastT: ReturnType<typeof setTimeout> | undefined;
+function toast(msg: string) {
   const t = $('#toast');
   t.textContent = msg;
   t.classList.add('on');
@@ -770,32 +224,64 @@ function toast(msg) {
   toastT = setTimeout(() => t.classList.remove('on'), 3400);
 }
 
+/* ------------------------------------------------------------- agents -- */
+/* The agent pipeline walks every transaction several times over; running it once
+   per renderer meant paying for it twice on every month change and category edit.
+   `render()` clears the cache after `decorate()`, so the results can never outlive
+   the state they were computed from. */
+let agentResults: FinancialAgentResults | null = null;
+function invalidateAgentResults() { agentResults = null; }
+function currentAgentResults(): FinancialAgentResults {
+  agentResults ??= runFinancialAgents({
+    transactions: S.tx, overrides: S.overrides, rules: S.rules, categories: S.cats,
+  });
+  return agentResults;
+}
+
 /* ---------------------------------------------------------- categorise -- */
 const transactionCategorizer = new RuleBasedTransactionCategorizer();
 function autoCat(transaction: BankTransaction) {
   return transactionCategorizer.categorize(transaction, S.overrides, S.rules);
 }
-const catById = (id) => {
+/** A category with no ceiling set reads as zero rather than undefined. */
+const budgetOf = (id: string) => S.budgets[id] ?? 0;
+const catById = (id: string | undefined) => {
   const category = S.cats.find((c) => c.id === id) || { id, name: id, kind: 'expense' };
   return { ...category, name: String(resources[`cat.${id}`] ?? category.name) };
 };
 
 /* Amount, signed: outflow negative. Neutral categories are movements, not
    spending, so they are excluded from the income/expense totals. */
-function signed(t) { return t.in - t.out; }
+function signed(t: BankTransaction) { return t.in - t.out; }
 
 /* --------------------------------------------------------- aggregation -- */
+/* A card settlement on the bank statement and the card statement's own line items
+   are the same money described twice. Once card detail has been imported, the
+   aggregate charge is what it actually is — a transfer between the household's own
+   accounts — so the spending is counted once, where it is itemised. Without card
+   detail the aggregate is the only record there is, and stays an expense. */
 function decorate() {
   S.tx.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  for (const t of S.tx) { t.cat = autoCat(t); t.kind = catById(t.cat).kind; }
+  const cardDates = S.tx.filter((t) => t.source === 'card').map((t) => dOf(t.date).getTime());
+  // A card period is settled by the bank in arrears, so the window runs past the
+  // newest card line rather than stopping level with it.
+  const settledFrom = cardDates.length ? Math.min(...cardDates) : Infinity;
+  const settledUntil = cardDates.length ? Math.max(...cardDates) + 45 * DAY : -Infinity;
+  for (const t of S.tx) {
+    t.cat = autoCat(t);
+    t.kind = catById(t.cat).kind;
+    if (t.source === 'card' || t.cat !== 'credit' || t.out <= 0) continue;
+    const at = dOf(t.date).getTime();
+    if (at >= settledFrom && at <= settledUntil) t.kind = 'neutral';
+  }
 }
 function monthsPresent() {
   const set = new Set(S.tx.map((t) => monthKey(t.date)));
   return [...set].sort().reverse();
 }
-function txOfMonth(mk) { return S.tx.filter((t) => monthKey(t.date) === mk); }
+function txOfMonth(mk: string | null) { return S.tx.filter((t) => monthKey(t.date) === mk); }
 
-function totals(list) {
+function totals(list: readonly BankTransaction[]) {
   let inn = 0, out = 0, moved = 0;
   for (const t of list) {
     if (t.kind === 'neutral') { moved += Math.abs(signed(t)); continue; }
@@ -803,7 +289,7 @@ function totals(list) {
   }
   return { in: inn, out, net: inn - out, moved };
 }
-function byCategory(list) {
+function byCategory(list: readonly BankTransaction[]) {
   const m = new Map();
   for (const t of list) {
     if (t.kind === 'income' || t.kind === 'neutral') continue;
@@ -826,16 +312,17 @@ function balanceSeries() {
   if (!known.length) return [];
   const out = [];
   for (const t of known) out.push({ date: t.date, bal: t.bal });
-  // one point per day: keep the last (lowest-in-list = earliest) per date
+  /* One point per day. S.tx is newest-first, so the first entry seen for a date is
+     the day's final transaction — which is the balance that day closed on. */
   const byDate = new Map();
   for (const p of out) if (!byDate.has(p.date)) byDate.set(p.date, p.bal);
   const dates = [...byDate.keys()].sort();
   if (!dates.length) return [];
   const series = [];
-  let cur = byDate.get(dates[0]);
-  for (let d = dOf(dates[0]).getTime(); d <= dOf(dates[dates.length - 1]).getTime(); d += DAY) {
+  let cur = byDate.get(dates[0]!)!;
+  for (let d = dOf(dates[0]!).getTime(); d <= dOf(dates[dates.length - 1]!).getTime(); d += DAY) {
     const k = iso(new Date(d));
-    if (byDate.has(k)) cur = byDate.get(k);
+    if (byDate.has(k)) cur = byDate.get(k)!;
     series.push({ t: d, bal: cur });
   }
   return series;
@@ -844,7 +331,7 @@ function balanceSeries() {
 /* ---------------------------------------------------------- recurring --- */
 /* A charge is recurring when the same normalised payee shows up in at least
    two distinct months with a comparable amount. */
-function normPayee(desc) {
+function normPayee(desc: string) {
   return desc
     .replace(/\d{3,}/g, '')
     .replace(/[^֐-׿a-zA-Z ]/g, ' ')
@@ -855,13 +342,14 @@ function normPayee(desc) {
 function recurring() {
   const groups = new Map();
   for (const t of S.tx) {
-    const k = (t.in > 0 ? 'in:' : 'out:') + normPayee(t.desc);
-    if (!k.slice(4)) continue;
+    const payee = normPayee(t.desc);
+    if (!payee) continue;
+    const k = (t.in > 0 ? 'in:' : 'out:') + payee;
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k).push(t);
   }
   const out = [];
-  for (const [k, list] of groups) {
+  for (const [k, list] of groups as Map<string, BankTransaction[]>) {
     const months = new Set(list.map((t) => monthKey(t.date)));
     if (months.size < 2) continue;
     const amounts = list.map((t) => Math.abs(signed(t)));
@@ -872,21 +360,21 @@ function recurring() {
     out.push({
       key: k,
       dir: k.startsWith('in:') ? 'in' : 'out',
-      label: list[0].desc,
-      cat: list[0].cat,
+      label: list[0]!.desc,
+      cat: list[0]!.cat,
       amount: med,
       day: Math.round(median(days)),
       count: list.length,
       months: months.size,
       steady: spread < 0.15,
-      last: list[0].date,
+      last: list[0]!.date,
     });
   }
   return out.sort((a, b) => b.amount * b.months - a.amount * a.months);
 }
 
 /* ----------------------------------------------------------- forecast --- */
-function forecast(horizonDays) {
+function forecast(horizonDays: number) {
   const cb = currentBalance();
   if (!cb) return null;
   const rec = recurring();
@@ -935,6 +423,7 @@ function forecast(horizonDays) {
    ===================================================================== */
 function render() {
   decorate();
+  invalidateAgentResults();
   fillCatFilter();
   const months = monthsPresent();
   $('#savings-directory').hidden = !directoryOpen;
@@ -945,7 +434,9 @@ function render() {
   }
   $('#empty').hidden = true;
   $('#main').hidden = directoryOpen;
-  if (!S.month || !months.includes(S.month)) S.month = months[0];
+  if (!S.month || !months.includes(S.month)) S.month = months[0] ?? null;
+  const month = S.month;
+  if (!month) return;
 
   renderMonths(months);
   renderSpendingGuide();
@@ -965,27 +456,31 @@ function render() {
 }
 
 function renderSpendingGuide() {
-  const results = runFinancialAgents({
-    transactions: S.tx, overrides: S.overrides, rules: S.rules, categories: S.cats,
-  });
-  const payday = results.payday;
+  const payday = currentAgentResults().payday;
   const amount = $('#spending-guide-amount');
   const summary = $('#spending-guide-summary');
-  const values = ['#spending-guide-weekly', '#spending-guide-daily', '#spending-guide-balance', '#spending-guide-committed'];
+  const asOfNote = $('#spending-guide-asof');
+  const values = ['#spending-guide-weekly', '#spending-guide-daily', '#spending-guide-balance',
+    '#spending-guide-committed', '#spending-guide-retained'];
 
   amount.classList.remove('negative');
   if (!payday) {
     amount.textContent = '—';
     summary.textContent = t('spendingGuideNoBalance');
+    asOfNote.textContent = '';
     values.forEach((selector) => { $(selector).textContent = '—'; });
     $('#spending-guide-date').textContent = '—';
     return;
   }
 
+  /* The balance is only as current as the newest report the household uploaded.
+     Saying so is the difference between guidance and a wrong number. */
+  asOfNote.textContent = t('spendingGuideAsOf', { date: DDMMYY.format(dOf(payday.asOf)) });
   amount.textContent = money(Math.max(0, payday.freeToSpend));
-  amount.classList.toggle('negative', payday.freeToSpend < 0);
   $('#spending-guide-balance').textContent = money(payday.balance);
   $('#spending-guide-committed').textContent = payday.nextIncomeDate ? `−${money(payday.committed)}` : '—';
+  // Context, not a deduction: how much a one-month cushion would be for this household.
+  $('#spending-guide-retained').textContent = payday.retained > 0 ? money(payday.retained) : '—';
   $('#spending-guide-date').textContent = payday.nextIncomeDate ? DDMMYY.format(dOf(payday.nextIncomeDate)) : t('notDetected');
 
   if (!payday.nextIncomeDate || payday.daysRemaining == null) {
@@ -995,14 +490,19 @@ function renderSpendingGuide() {
     return;
   }
 
-  if (payday.freeToSpend < 0) {
-    summary.textContent = t('spendingGuideGap', { amount: money(Math.abs(payday.freeToSpend)), date: DDMMYY.format(dOf(payday.nextIncomeDate)) });
+  const nextIncomeLabel = DDMMYY.format(dOf(payday.nextIncomeDate));
+  if (payday.available < 0) {
+    amount.classList.add('negative');
+    summary.textContent = t('spendingGuideGap', { amount: money(Math.abs(payday.available)), date: nextIncomeLabel });
     $('#spending-guide-weekly').textContent = money(0);
     $('#spending-guide-daily').textContent = money(0);
     return;
   }
 
-  summary.textContent = t('spendingGuideUntil', { days: payday.daysRemaining, date: DDMMYY.format(dOf(payday.nextIncomeDate)) });
+  // Name the binding constraint, so the figure reads as reasoning rather than a verdict.
+  summary.textContent = t(payday.limitedBy === 'balance' ? 'spendingGuideUntilTight' : 'spendingGuideUntil', {
+    days: payday.daysRemaining, date: nextIncomeLabel,
+  });
   $('#spending-guide-weekly').textContent = money(Math.max(0, payday.weeklyAllowance || 0));
   $('#spending-guide-daily').textContent = money(Math.max(0, payday.dailyAllowance || 0));
 }
@@ -1010,13 +510,35 @@ function renderSpendingGuide() {
 function renderAgents() {
   const grid = $('#agent-grid');
   grid.textContent = '';
-  const results: FinancialAgentResults = runFinancialAgents({
-    transactions: S.tx, overrides: S.overrides, rules: S.rules, categories: S.cats,
-  });
+  const results: FinancialAgentResults = currentAgentResults();
+  /* An agent with nothing to report still deserves to be accounted for, but not a
+     full card: four consecutive "nothing found" panels used to take the most
+     valuable space on the dashboard and crowd out the agents that did find
+     something. Quiet agents collapse into one shared card, each keeping its own
+     row and test id. */
+  const quiet: Array<{ id: string; titleKey: string; content: Array<HTMLElement | string> }> = [];
   const addCard = (id: string, titleKey: string, content: Array<HTMLElement | string>, tone = 'info') => {
+    if (tone === 'quiet') { quiet.push({ id, titleKey, content }); return; }
     grid.append(el('article', { class: `agent-card agent-card--${tone}`, 'data-testid': `agent-${id}` }, [
       el('header', {}, [el('span', { class: 'agent-dot', 'aria-hidden': 'true' }), el('h3', { text: t(titleKey) })]),
       el('div', { class: 'agent-body' }, content),
+    ]));
+  };
+  const flushQuietAgents = () => {
+    if (!quiet.length) return;
+    grid.append(el('article', { class: 'agent-card agent-card--quiet agent-card--roundup', 'data-testid': 'agent-all-clear' }, [
+      el('header', {}, [
+        el('span', { class: 'agent-dot', 'aria-hidden': 'true' }),
+        el('h3', { text: t('agentsAllClearTitle', { count: quiet.length }) }),
+      ]),
+      el('div', { class: 'agent-body agent-roundup' }, quiet.map((agent) => el('div', {
+        class: 'agent-roundup-row', 'data-testid': `agent-${agent.id}`,
+      }, [
+        el('span', { class: 'agent-roundup-name', text: t(agent.titleKey) }),
+        el('span', { class: 'agent-roundup-note', text: agent.content
+          .map((node) => typeof node === 'string' ? node : node.textContent || '')
+          .join(' ').trim() }),
+      ]))),
     ]));
   };
   const messages = (items: string[], emptyKey: string) => items.length
@@ -1112,7 +634,9 @@ function renderAgents() {
       : t('agentPaydayResult', {
         balance: money(payday.balance), committed: money(payday.committed), date: DDMMYY.format(dOf(payday.nextIncomeDate)), free: money(payday.freeToSpend),
       });
-  addCard('payday', 'agentPaydayTitle', [el('p', { text: paydayText })], payday && payday.freeToSpend < 0 ? 'critical' : 'info');
+  // freeToSpend is floored at zero, so a shortfall now shows up in `available`.
+  addCard('payday', 'agentPaydayTitle', [el('p', { text: paydayText })], payday && payday.available < 0 ? 'critical' : 'info');
+  flushQuietAgents();
 }
 
 function renderAttention() {
@@ -1123,9 +647,9 @@ function renderAttention() {
   if (cb && cb.bal < 0) items.push({ kind: 'crit', title: t('negativeBalance'), text: t('amountAsOfDate', { amount: money(cb.bal), date: DDMMYY.format(dOf(cb.date)) }) });
 
   const spend = new Map(byCategory(txOfMonth(S.month)));
-  for (const c of S.cats.filter((x) => x.kind === 'expense' && S.budgets[x.id] > 0)) {
-    const pct = (spend.get(c.id) || 0) / S.budgets[c.id];
-    if (pct > 1) items.push({ kind: 'crit', title: t('budgetExceeded'), text: t('categoryAmount', { category: catById(c.id).name, amount: money((spend.get(c.id) || 0) - S.budgets[c.id]) }) });
+  for (const c of S.cats.filter((x) => x.kind === 'expense' && budgetOf(x.id) > 0)) {
+    const pct = (spend.get(c.id) || 0) / budgetOf(c.id);
+    if (pct > 1) items.push({ kind: 'crit', title: t('budgetExceeded'), text: t('categoryAmount', { category: catById(c.id).name, amount: money((spend.get(c.id) || 0) - budgetOf(c.id)) }) });
     else if (pct > .8) items.push({ kind: 'warn', title: t('budgetNearLimit'), text: t('categoryPercentUsed', { category: catById(c.id).name, percent: Math.round(pct * 100) }) });
   }
 
@@ -1159,19 +683,19 @@ function renderRecommendations() {
   const recommendations: Recommendation[] = [];
   const monthTransactions = txOfMonth(S.month);
   const spend = new Map(byCategory(monthTransactions));
-  const accountLabel = S.accounts.length ? t('accountLabel', { accounts: S.accounts[0] }) : t('customer');
+  const accountLabel = S.accounts[0] ? t('accountLabel', { accounts: S.accounts[0] }) : t('customer');
 
   const balance = currentBalance();
   if (balance?.bal != null && balance.bal < 0) {
     recommendations.push({ level: 'critical', title: t('recNegativeTitle'), detail: t('recNegativeDetail', { account: accountLabel, amount: money(balance.bal) }), impact: t('recNegativeImpact'), action: t('reviewCashFlow'), target: '#fc-h' });
   }
 
-  for (const category of S.cats.filter((item) => item.kind === 'expense' && S.budgets[item.id] > 0)) {
+  for (const category of S.cats.filter((item) => item.kind === 'expense' && budgetOf(item.id) > 0)) {
     const used = spend.get(category.id) || 0;
-    const ratio = used / S.budgets[category.id];
+    const ratio = used / budgetOf(category.id);
     const categoryName = catById(category.id).name;
-    if (ratio > 1) recommendations.push({ level: 'critical', title: t('recReduceCategoryTitle', { category: categoryName }), detail: t('recBudgetExceededDetail', { amount: money(used - S.budgets[category.id]) }), impact: t('recBudgetExceededImpact', { amount: money(used - S.budgets[category.id]) }), action: t('openBudget'), target: '#bd-h' });
-    else if (ratio > .8) recommendations.push({ level: 'warning', title: t('recWatchCategoryTitle', { category: categoryName }), detail: t('recBudgetUsedDetail', { percent: Math.round(ratio * 100) }), impact: t('recBudgetRemainingImpact', { amount: money(S.budgets[category.id] - used) }), action: t('openBudget'), target: '#bd-h' });
+    if (ratio > 1) recommendations.push({ level: 'critical', title: t('recReduceCategoryTitle', { category: categoryName }), detail: t('recBudgetExceededDetail', { amount: money(used - budgetOf(category.id)) }), impact: t('recBudgetExceededImpact', { amount: money(used - budgetOf(category.id)) }), action: t('openBudget'), target: '#bd-h' });
+    else if (ratio > .8) recommendations.push({ level: 'warning', title: t('recWatchCategoryTitle', { category: categoryName }), detail: t('recBudgetUsedDetail', { percent: Math.round(ratio * 100) }), impact: t('recBudgetRemainingImpact', { amount: money(budgetOf(category.id) - used) }), action: t('openBudget'), target: '#bd-h' });
   }
 
   const uncategorised = monthTransactions.filter((transaction) => transaction.cat === 'other').length;
@@ -1179,7 +703,7 @@ function renderRecommendations() {
 
   const recurringCharges = recurring().filter((item) => item.dir === 'out');
   if (recurringCharges.length) {
-    const largest = recurringCharges[0];
+    const largest = recurringCharges[0]!;
     recommendations.push({ level: 'info', title: t('recReviewRecurringTitle'), detail: t('recReviewRecurringDetail', { merchant: largest.label, amount: money(largest.amount) }), impact: t('recReviewRecurringImpact'), action: t('reviewCharges'), target: '#rc-h' });
   }
 
@@ -1250,7 +774,7 @@ function showSavingsDirectory() {
   $('#savings-directory').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function renderMonths(months) {
+function renderMonths(months: readonly string[]) {
   const nav = $('#months');
   nav.textContent = '';
   for (const mk of months) {
@@ -1264,7 +788,7 @@ function renderMonths(months) {
 }
 
 /* ------------------------------------------------------------- hero ----- */
-function renderHero(months) {
+function renderHero(months: readonly string[]) {
   const list = txOfMonth(S.month);
   const tot = totals(list);
   const cb = currentBalance();
@@ -1278,9 +802,10 @@ function renderHero(months) {
   $('#t-net').textContent = moneyS(tot.net);
   $('#t-net').className = 'val sm num ' + (tot.net >= 0 ? 'pos' : 'neg');
 
-  const idx = months.indexOf(S.month);
-  const prev = idx >= 0 && idx + 1 < months.length ? totals(txOfMonth(months[idx + 1])) : null;
-  const delta = (cur, was) => {
+  const idx = S.month ? months.indexOf(S.month) : -1;
+  const previousMonth = idx >= 0 ? months[idx + 1] : undefined;
+  const prev = previousMonth ? totals(txOfMonth(previousMonth)) : null;
+  const delta = (cur: number, was: number | null | undefined) => {
     if (!prev || !was) return '';
     const pct = Math.round(((cur - was) / was) * 100);
     if (!isFinite(pct) || pct === 0) return t('sameAsPreviousMonth');
@@ -1297,11 +822,11 @@ function renderHero(months) {
 
 /* Income above the line, spending below it — one shared ₪ scale, so the
    month whose bar hangs lower than it rises is the month that ate savings. */
-function drawWaterline(months) {
+function drawWaterline(months: readonly string[]) {
   const svg = $('#wl');
   const tip = $('#wl-tip');
   svg.textContent = '';
-  const narrow = (svg.parentElement.clientWidth || 900) < 560;
+  const narrow = (svg.parentElement?.clientWidth || 900) < 560;
   const show = months.slice(0, narrow ? 6 : 12).reverse();   // oldest → newest
   const data = show.map((mk) => ({ mk, ...totals(txOfMonth(mk)) }));
   const max = Math.max(1, ...data.map((d) => Math.max(d.in, d.out)));
@@ -1314,7 +839,7 @@ function drawWaterline(months) {
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('height', String(H));
 
-  const y = (v) => zero - (v / max) * (plotH / 2 - 6);
+  const y = (v: number) => zero - (v / max) * (plotH / 2 - 6);
 
   // gridlines + right-hand value axis
   for (const frac of [-1, -0.5, 0, 0.5, 1]) {
@@ -1360,9 +885,13 @@ function drawWaterline(months) {
 
     svg.append(Object.assign(s('text', {
       x: cx, y: H - 8, class: 'tick', 'text-anchor': 'middle',
-      style: isSel ? 'fill:var(--ink);font-weight:700' : null,
+      ...(isSel ? { style: 'fill:var(--ink);font-weight:700' } : {}),
     }), { textContent: MONTH_SHORT.format(new Date(d.mk + '-01T00:00:00Z')) }));
   });
+
+  renderDataTable($('#wl-table'),
+    [t('month'), t('incomeShort'), t('expensesShort'), t('netShort')],
+    data.map((d) => [monthLabel(d.mk), money(d.in), money(d.out), moneyS(d.net)]));
 
   $('#wl-note').textContent = show.length > 1
     ? t('monthsInHistory', { count: show.length })
@@ -1383,15 +912,15 @@ function renderForecast() {
   const all = [...histShown.map((p) => ({ t: p.t, v: p.bal })), ...f.points.map((p) => ({ t: p.t, v: p.bal }))];
   const lo = Math.min(0, ...all.map((p) => p.v), ...f.points.map((p) => p.lo));
   const hi = Math.max(...all.map((p) => p.v), ...f.points.map((p) => p.hi));
-  const t0 = all[0].t, t1 = all[all.length - 1].t;
+  const t0 = all[0]!.t, t1 = all[all.length - 1]!.t;
 
-  const narrow = (svg.parentElement.clientWidth || 900) < 560;
+  const narrow = (svg.parentElement?.clientWidth || 900) < 560;
   const W = narrow ? 420 : 900, H = narrow ? 280 : 250;
   const padT = 14, padB = 26, padR = narrow ? 52 : 64, padL = 8;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('height', String(H));
-  const X = (t) => padL + ((t - t0) / Math.max(1, t1 - t0)) * (W - padL - padR);
-  const Y = (v) => padT + (1 - (v - lo) / Math.max(1, hi - lo)) * (H - padT - padB);
+  const X = (t: number) => padL + ((t - t0) / Math.max(1, t1 - t0)) * (W - padL - padR);
+  const Y = (v: number) => padT + (1 - (v - lo) / Math.max(1, hi - lo)) * (H - padT - padB);
 
   for (let i = 0; i <= 4; i++) {
     const v = lo + ((hi - lo) * i) / 4;
@@ -1440,7 +969,7 @@ function renderForecast() {
   svg.append(s('circle', { cx: X(f.start), cy: Y(f.startBal), r: 4.5, fill: 'var(--accent)', stroke: 'var(--surface)', 'stroke-width': 2 }));
 
   // end label, direct
-  const last = f.points[f.points.length - 1];
+  const last = f.points[f.points.length - 1]!;
   const endTxt = s('text', { x: X(last.t) - 6, y: Y(last.bal) - 10, class: 'tick', 'text-anchor': 'end', style: 'fill:var(--ink);font-weight:700;font-size:12px' });
   endTxt.textContent = money(last.bal);
   svg.append(endTxt);
@@ -1464,14 +993,14 @@ function renderForecast() {
     const r = svg.getBoundingClientRect();
     const vx = ((ev.clientX - r.left) / r.width) * W;             // client px -> viewBox x
     const tt = t0 + ((vx - padL) / (W - padL - padR)) * (t1 - t0);
-    let best = hitAll[0], bd = Infinity;
+    let best = hitAll[0]!, bd = Infinity;
     for (const p of hitAll) { const d = Math.abs(p.t - tt); if (d < bd) { bd = d; best = p; } }
     cross.setAttribute('x1', String(X(best.t))); cross.setAttribute('x2', String(X(best.t))); cross.setAttribute('opacity', String(.8));
     const ev2 = f.events.filter((e) => e.t === best.t);
     const rows: Array<[string, string]> = [
       [best.kind === 'fc' ? t('expectedBalance') : t('balance'), money(best.v)],
     ];
-    if (best.kind === 'fc' && best.hi - best.lo > 1) rows.push([t('range'), `${money(best.lo)}–${money(best.hi)}`]);
+    if (best.kind === 'fc' && best.hi != null && best.lo != null && best.hi - best.lo > 1) rows.push([t('range'), `${money(best.lo)}–${money(best.hi)}`]);
     for (const event of ev2) rows.push([event.label.slice(0, 22), moneyS(event.amount)]);
     renderTooltip(tip, DDMMYY.format(new Date(best.t)), rows);
     tip.classList.add('on');
@@ -1481,6 +1010,13 @@ function renderForecast() {
   });
   hit.addEventListener('pointerleave', () => { tip.classList.remove('on'); cross.setAttribute('opacity', String(0)); });
   svg.append(hit);
+
+  /* Weekly rather than daily: a 90-day projection is 90 rows, which is a worse
+     experience than the chart it stands in for. */
+  renderDataTable($('#fc-table'),
+    [t('date'), t('expectedBalance'), t('range')],
+    f.points.filter((_, index) => index % 7 === 0 || index === f.points.length - 1)
+      .map((p) => [DDMMYY.format(new Date(p.t)), money(p.bal), `${money(p.lo)}–${money(p.hi)}`]));
 
   const nRec = f.rec.length;
   const thin = f.historyDays < 45;
@@ -1501,19 +1037,19 @@ function renderBudgets() {
   box.textContent = '';
   const list = txOfMonth(S.month);
   const spend = new Map(byCategory(list));
-  const tracked = S.cats.filter((c) => c.kind === 'expense' && S.budgets[c.id] > 0);
+  const tracked = S.cats.filter((c) => c.kind === 'expense' && budgetOf(c.id) > 0);
 
   if (!tracked.length) {
     $('#bd-note').textContent = t('budgetsNotConfiguredNote');
     box.append(el('div', { class: 'empty-row', text: t('noBudgetLimits') }));
     return;
   }
-  const totalCap = tracked.reduce((a, c) => a + S.budgets[c.id], 0);
+  const totalCap = tracked.reduce((a, c) => a + budgetOf(c.id), 0);
   const totalSpent = tracked.reduce((a, c) => a + (spend.get(c.id) || 0), 0);
   $('#bd-note').textContent = t('budgetTrackingSummary', { spent: money(totalSpent), cap: money(totalCap), month: monthLabel(S.month) });
 
   for (const c of tracked) {
-    const cap = S.budgets[c.id];
+    const cap = budgetOf(c.id);
     const used = spend.get(c.id) || 0;
     const pct = used / cap;
     const state = pct > 1 ? 'over' : pct > 0.8 ? 'warn' : 'ok';
@@ -1550,13 +1086,13 @@ function renderCategories() {
     box.append(el('div', { class: 'empty-row', text: t('noData') }));
     return;
   }
-  const top = rows[0];
+  const top = rows[0]!;
   $('#cat-note').textContent = t('categorySpendingSummary', {
     total: money(total), month: monthLabel(S.month), category: catById(top[0]).name,
     percent: Math.round((top[1] / total) * 100),
   });
 
-  const max = rows[0][1];
+  const max = rows[0]![1];
   for (const [cid, v] of rows) {
     box.append(el('div', { class: 'catrow', 'data-testid': 'category-row' }, [
       el('div', { class: 'top' }, [
@@ -1649,18 +1185,20 @@ function renderTx() {
     const sel = el('select', { class: 'catsel', 'aria-label': t('categoryForTransaction', { description: transaction.desc }), 'data-testid': 'transaction-category-select' });
     for (const c of S.cats) sel.append(el('option', { value: c.id, text: catById(c.id).name, selected: c.id === transaction.cat }));
     sel.addEventListener('change', () => {
-      S.overrides[transaction.id] = sel.value;
+      if (transaction.id) S.overrides[transaction.id] = sel.value;
       save(); render();
       toast(t('categoryUpdatedToast'));
     });
     const amt = money2S(transaction.in > 0 ? transaction.in : -transaction.out);
+    /* data-label carries the column heading into the stacked mobile layout, where
+       there is no header row to read the cell against. */
     body.append(el('tr', { 'data-testid': 'transaction-row' }, [
-      el('td', { class: 'n', text: DDMMYY.format(dOf(transaction.date)) }),
-      el('td', { class: 'desc', text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
-      el('td', { class: 'catcell' }, [el('span', { class: 'dot', style: `background:${catColor(S.cats, transaction.cat)}` }), sel]),
-      el('td', { class: 'n ' + (transaction.in > 0 ? 'pos' : 'neg'), text: amt }),
-      el('td', { class: 'n', text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
-      el('td', { class: 'n', style: 'color:var(--muted);font-size:12.5px', text: transaction.ref }),
+      el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(transaction.date)) }),
+      el('td', { class: 'desc', 'data-label': t('description'), text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
+      el('td', { class: 'catcell', 'data-label': t('category') }, [el('span', { class: 'dot', style: `background:${catColor(S.cats, transaction.cat)}` }), sel]),
+      el('td', { class: 'amountcell n ' + (transaction.in > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: amt, 'data-testid': 'transaction-amount' }),
+      el('td', { class: 'n', 'data-label': t('balance'), text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
+      el('td', { class: 'refcell n', 'data-label': t('reference'), text: transaction.ref }),
     ]));
   }
   if (list.length > 400) {
@@ -1673,7 +1211,7 @@ function renderFoot() {
   const srcs = new Set(S.tx.map((t) => t.src));
   $('#foot-note').textContent = t('historySummary', {
     transactions: S.tx.length, reports: srcs.size,
-    from: DDMMYY.format(dOf(dates[0])), to: DDMMYY.format(dOf(dates[dates.length - 1])),
+    from: DDMMYY.format(dOf(dates[0]!)), to: DDMMYY.format(dOf(dates[dates.length - 1]!)),
   });
 }
 
@@ -1686,7 +1224,7 @@ function renderDrawer() {
   for (const c of S.cats.filter((c) => c.kind === 'expense')) {
     const inp = el('input', {
       type: 'number', min: '0', step: '50', inputmode: 'numeric',
-      value: S.budgets[c.id] || '', placeholder: t('none'),
+      value: budgetOf(c.id) || '', placeholder: t('none'),
       'aria-label': t('monthlyLimitForCategory', { category: catById(c.id).name }), 'data-testid': 'budget-limit-input',
     });
     inp.addEventListener('change', () => {
@@ -1704,10 +1242,10 @@ function renderDrawer() {
   r.textContent = '';
   S.rules.forEach((rule, i) => {
     const m = el('input', { type: 'text', value: rule.match, 'aria-label': t('matchingText'), 'data-testid': 'rule-match-input' });
-    m.addEventListener('change', () => { S.rules[i].match = clean(m.value); save(); render(); });
+    m.addEventListener('change', () => { S.rules[i]!.match = clean(m.value); save(); render(); });
     const sel = el('select', { 'aria-label': t('category'), 'data-testid': 'rule-category-select' });
     for (const c of S.cats) sel.append(el('option', { value: c.id, text: catById(c.id).name, selected: c.id === rule.cat }));
-    sel.addEventListener('change', () => { S.rules[i].cat = sel.value; save(); render(); });
+    sel.addEventListener('change', () => { S.rules[i]!.cat = sel.value; save(); render(); });
     r.append(el('div', { class: 'rulerow', 'data-testid': 'settings-rule-row' }, [
       m, el('span', { style: 'color:var(--muted)', text: '←' }), sel,
       el('button', {
@@ -1721,11 +1259,11 @@ function renderDrawer() {
   cbox.textContent = '';
   S.cats.forEach((c, i) => {
     const nm = el('input', { type: 'text', value: catById(c.id).name, 'aria-label': t('categoryName'), 'data-testid': 'category-name-input' });
-    nm.addEventListener('change', () => { S.cats[i].name = clean(nm.value) || c.id; save(); renderDrawer(); render(); });
+    nm.addEventListener('change', () => { S.cats[i]!.name = clean(nm.value) || c.id; save(); renderDrawer(); render(); });
     const kind = el('select', { 'aria-label': t('type'), 'data-testid': 'category-type-select' });
     for (const [v, labelKey] of [['expense', 'expenseSingular'], ['income', 'incomeSingular'], ['neutral', 'transfer']] as const)
       kind.append(el('option', { value: v, text: t(labelKey), selected: c.kind === v }));
-    kind.addEventListener('change', () => { S.cats[i].kind = kind.value as Category['kind']; save(); renderDrawer(); render(); });
+    kind.addEventListener('change', () => { S.cats[i]!.kind = kind.value as Category['kind']; save(); renderDrawer(); render(); });
     cbox.append(el('div', { class: 'rulerow', 'data-testid': 'settings-category-row' }, [
       el('span', { class: 'dot', style: `background:${catColor(S.cats, c.id)};margin-inline-end:2px` }),
       nm, kind,
@@ -1746,7 +1284,7 @@ function renderDrawer() {
     ? t('storedDataSummary', {
       transactions: S.tx.length, months: new Set(S.tx.map((transaction) => monthKey(transaction.date))).size,
       overrides: Object.keys(S.overrides).length,
-      range: dates.length ? DDMMYY.format(dOf(dates[0])) + ' – ' + DDMMYY.format(dOf(dates[dates.length - 1])) : '',
+      range: dates.length ? DDMMYY.format(dOf(dates[0]!)) + ' – ' + DDMMYY.format(dOf(dates[dates.length - 1]!)) : '',
     })
     : t('noStoredData');
   renderCloudConsent();
@@ -1820,8 +1358,8 @@ function keepFocusInDrawer(event: KeyboardEvent) {
   const focusable = $$('#drawer button:not([disabled]), #drawer input:not([disabled]), #drawer select:not([disabled]), #drawer summary, #drawer label[tabindex]')
     .filter((node) => node.getClientRects().length > 0);
   if (!focusable.length) return;
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
+  const first = focusable[0]!;
+  const last = focusable[focusable.length - 1]!;
   if (event.shiftKey && document.activeElement === first) {
     event.preventDefault();
     last.focus();
@@ -1845,7 +1383,7 @@ async function exportBackup() {
   if (dl) {
     try { await dl.save({ filename: name, data }); toast(t('backupSaved')); return; }
     catch (err) {
-      if (err && err.code === 'declined') { toast(t('backupCancelled')); return; }
+      if (err && (err as { code?: string }).code === 'declined') { toast(t('backupCancelled')); return; }
     }
   }
   try { await navigator.clipboard.writeText(data); toast(t('backupCopied')); }
@@ -1872,6 +1410,7 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank')
   const files = [...fileList];
   if (!files.length) return;
   let added = 0, dup = 0, bad = 0;
+  const have = new Set(S.tx.map((t) => t.id));
   for (const file of files) {
     try {
       const buf = await file.arrayBuffer();
@@ -1883,7 +1422,6 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank')
       const { rows, account } = imported;
       if (!rows.length) { bad++; continue; }
       if (account && !S.accounts.includes(account)) S.accounts.push(account);
-      const have = new Set(S.tx.map((t) => t.id));
       for (const t of rows) {
         if (have.has(t.id)) { dup++; continue; }
         have.add(t.id); S.tx.push(t); added++;
@@ -1908,7 +1446,7 @@ function wire() {
   $('#file').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files) handleFiles(input.files); input.value = ''; });
   $('#card-file').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files) handleFiles(input.files, 'card'); input.value = ''; });
   const drop = $('#drop');
-  const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
+  const stop = (e: Event) => { e.preventDefault(); e.stopPropagation(); };
   ['dragenter', 'dragover'].forEach((n) => document.addEventListener(n, (e) => {
     stop(e); if (drop) drop.classList.add('over');
   }));
@@ -1973,11 +1511,13 @@ function wire() {
     if (!checkbox.checked) return;
     consentRepository.accept(locale);
     renderCloudConsent();
+    document.querySelector<HTMLButtonElement>('#cloud-consent-withdraw')!.focus();
     toast(t('cloudConsentSavedLocally'));
   });
   $('#cloud-consent-withdraw').addEventListener('click', () => {
     consentRepository.withdraw();
     renderCloudConsent();
+    document.querySelector<HTMLInputElement>('#cloud-consent-check')!.focus();
     toast(t('cloudConsentWithdrawn'));
   });
   $('#manual-form').addEventListener('submit', (e) => {
@@ -2009,7 +1549,7 @@ function wire() {
   });
 
   $('#dr-addrule').addEventListener('click', () => {
-    S.rules.unshift({ id: 'r' + Date.now(), match: '', cat: S.cats[0].id });
+    S.rules.unshift({ id: 'r' + Date.now(), match: '', cat: S.cats[0]?.id ?? 'other' });
     save(); renderDrawer();
     const first = $('#dr-rules input'); if (first) first.focus();
   });

@@ -12,6 +12,11 @@ test('loads the self-hosted Swagger explorer with every API operation', async ({
   await expect(apiDocsPage.loadOperation).toBeVisible();
   await expect(apiDocsPage.saveOperation).toBeVisible();
   await expect(apiDocsPage.deleteOperation).toBeVisible();
+  await expect(apiDocsPage.loadProfileOperation).toBeVisible();
+  await expect(apiDocsPage.saveProfileOperation).toBeVisible();
+  await expect(apiDocsPage.loadConsentOperation).toBeVisible();
+  await expect(apiDocsPage.acceptConsentOperation).toBeVisible();
+  await expect(apiDocsPage.withdrawConsentOperation).toBeVisible();
 });
 
 test('loads the self-hosted Scalar explorer from the shared OpenAPI contract', async ({ scalarDocsPage }) => {
@@ -26,9 +31,18 @@ test('loads the self-hosted Scalar explorer from the shared OpenAPI contract', a
   await expect(scalarDocsPage.swaggerLink).toHaveAttribute('href', '/api-docs.html');
   await expect(scalarDocsPage.healthOperation).toBeVisible();
   await expect(scalarDocsPage.testHealthRequestButton).toBeVisible();
+
+  // Tag sections mount as they are reached, so read to the end before asserting.
+  await scalarDocsPage.revealAllOperations();
+
   await expect(scalarDocsPage.loadOperation).toBeVisible();
   await expect(scalarDocsPage.saveOperation).toBeVisible();
   await expect(scalarDocsPage.deleteOperation).toBeVisible();
+  await expect(scalarDocsPage.loadProfileOperation).toBeVisible();
+  await expect(scalarDocsPage.saveProfileOperation).toBeVisible();
+  await expect(scalarDocsPage.loadConsentOperation).toBeVisible();
+  await expect(scalarDocsPage.acceptConsentOperation).toBeVisible();
+  await expect(scalarDocsPage.withdrawConsentOperation).toBeVisible();
 
   const pageOrigin = new URL(scalarDocsPage.page.url()).origin;
   expect(requestedUrls.filter((url) => url.startsWith('http') && new URL(url).origin !== pageOrigin)).toEqual([]);

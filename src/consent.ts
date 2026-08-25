@@ -1,3 +1,6 @@
+/* Local-first is the product's promise, so the browser store is authoritative:
+   a cloud store, once wired, mirrors it rather than replacing it. Withdrawal has to
+   work with no network, which only the local side can guarantee. */
 export const CLOUD_CONSENT_KEY = 'mazan-habait/cloud-consent';
 export const CLOUD_CONSENT_VERSION = 'cloud-sync-v2-privacy-minimised-2026-08-24';
 
@@ -14,7 +17,22 @@ interface StoragePort {
   removeItem(key: string): void;
 }
 
-export class LocalConsentRepository {
+/**
+ * The one shape a consent store has to satisfy, whichever side of the network it
+ * lives on. Two implementations already exist — this browser one and the Supabase
+ * repository in cloud-metadata.ts — and naming the port now settles which is
+ * authoritative before the choice becomes a migration.
+ *
+ * `current()` is deliberately allowed to be async so a remote store fits without
+ * the callers changing shape.
+ */
+export interface ConsentPort {
+  current(): ConsentAcceptance | null | Promise<ConsentAcceptance | null>;
+  accept(locale: string): ConsentAcceptance | Promise<ConsentAcceptance>;
+  withdraw(): void | Promise<void>;
+}
+
+export class LocalConsentRepository implements ConsentPort {
   constructor(private readonly storage: StoragePort) {}
 
   current(): ConsentAcceptance | null {

@@ -31,18 +31,23 @@ def payload() -> CloudStatePayload:
 
 def test_snapshot_repository_reads_writes_and_deletes_only_the_owner_row() -> None:
     row = {"payload": payload().persistence_dict(), "schema_version": 2, "updated_at": "2026-08-24T20:00:00Z"}
-    client = FakeRestClient([[row], [row], [row], []])
+    client = FakeRestClient([[row], [row], []])
     repository = SnapshotRepository(client, "user-1")  # type: ignore[arg-type]
 
     assert repository.read().schemaVersion == 2  # type: ignore[union-attr]
     assert repository.save(payload()).schemaVersion == 2
     repository.delete()
 
+    # The write is a single upsert, so it carries the owner in the body rather than
+    # in a filter; reads and deletes still scope by user_id.
     assert all(
         call.get("params", {}).get("user_id") == "eq.user-1"
-        for call in client.calls if call["table"] == "app_snapshots"
+        for call in client.calls if call["method"] in {"GET", "DELETE"}
     )
-    assert [call["method"] for call in client.calls] == ["GET", "GET", "PATCH", "DELETE"]
+    assert [call["method"] for call in client.calls] == ["GET", "POST", "DELETE"]
+    write = client.calls[1]
+    assert write["json"]["user_id"] == "user-1"
+    assert "resolution=merge-duplicates" in write["prefer"]
 
 
 def test_profile_repository_creates_a_minimal_profile() -> None:
@@ -50,10 +55,12 @@ def test_profile_repository_creates_a_minimal_profile() -> None:
         "user_id": "user-1", "preferred_locale": "fr",
         "created_at": "2026-08-24T20:00:00Z", "updated_at": "2026-08-24T20:00:00Z",
     }
-    client = FakeRestClient([[], [row]])
+    client = FakeRestClient([[row]])
     profile = UserProfileRepository(client, "user-1").save("fr")  # type: ignore[arg-type]
     assert profile.preferred_locale == "fr"
+    assert len(client.calls) == 1, "saving a profile should take one round trip, not two"
     assert client.calls[-1]["json"] == {"user_id": "user-1", "preferred_locale": "fr"}
+    assert "resolution=merge-duplicates" in client.calls[-1]["prefer"]
 
 
 def test_consent_repository_accepts_reads_and_withdraws_a_version() -> None:
@@ -62,11 +69,13 @@ def test_consent_repository_accepts_reads_and_withdraws_a_version() -> None:
         "accepted_at": "2026-08-24T20:00:00Z", "withdrawn_at": None,
     }
     withdrawn = {**consent, "withdrawn_at": "2026-08-24T21:00:00Z"}
-    client = FakeRestClient([[], [consent], [consent], [withdrawn]])
+    client = FakeRestClient([[consent], [consent], [withdrawn]])
     repository = ConsentRepository(client, "user-1")  # type: ignore[arg-type]
     assert repository.accept("v2", "he").withdrawn_at is None
     assert repository.read("v2") is not None
     assert repository.withdraw("v2").withdrawn_at is not None
+    assert [call["method"] for call in client.calls] == ["POST", "GET", "PATCH"]
+    assert "resolution=merge-duplicates" in client.calls[0]["prefer"]
 
 
 def test_repository_error_does_not_include_provider_details() -> None:

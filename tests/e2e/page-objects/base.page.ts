@@ -45,6 +45,44 @@ export abstract class BasePage {
     );
   }
 
+  /**
+   * Every visible interactive element on the page, measured against the touch
+   * minimum — as opposed to a hand-curated list, which is only ever as complete as
+   * the last person to remember to extend it. The 19px "how did we calculate this"
+   * disclosures were missed for exactly that reason.
+   *
+   * `exceptions` takes selectors that are deliberately below the minimum, so an
+   * intentional exemption has to be written down rather than silently omitted.
+   */
+  @step('Check every visible interactive element against the touch minimum')
+  async undersizedTouchTargets(
+    { minimumSize = 44, exceptions = [] }: { minimumSize?: number; exceptions?: readonly string[] } = {},
+  ): Promise<Array<{ selector: string; label: string; width: number; height: number }>> {
+    return this.page.evaluate(({ minimum, skip }) => {
+      const interactive = 'a[href], button, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"]), input:not([type="hidden"])';
+      const describe = (node: Element): string => {
+        const path = [];
+        for (const part of [node.id && `#${node.id}`, node.getAttribute('data-testid') && `[data-testid="${node.getAttribute('data-testid')}"]`]) {
+          if (part) path.push(part);
+        }
+        return path.join('') || node.tagName.toLowerCase();
+      };
+      return [...document.querySelectorAll(interactive)].flatMap((node) => {
+        if (skip.some((selector) => node.matches(selector))) return [];
+        const box = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        if (box.width === 0 || box.height === 0 || style.visibility === 'hidden') return [];
+        if (box.width >= minimum && box.height >= minimum) return [];
+        return [{
+          selector: describe(node),
+          label: (node.getAttribute('aria-label') || node.textContent || '').trim().slice(0, 60) || '<unlabelled>',
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+        }];
+      });
+    }, { minimum: minimumSize, skip: [...exceptions] });
+  }
+
   @step('Check that visible touch targets are large enough')
   async touchTargetsBelow(locator: Locator | readonly Locator[], minimumSize = 44): Promise<Array<{
     label: string;

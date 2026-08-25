@@ -9,23 +9,68 @@ import httpx
 
 from .config import read_supabase_config
 
-_REQUEST_COUNTS: Counter[tuple[str, int]] = Counter()
+_REQUEST_COUNTS: Counter[tuple[str, str, int]] = Counter()
 _SUPABASE_COUNTS: Counter[tuple[str, int]] = Counter()
 _SUPABASE_DURATIONS: dict[str, float] = {}
 _LOCK = Lock()
 _STARTED_AT = monotonic()
+_METHODS = {"GET", "HEAD", "PUT", "DELETE", "POST", "PATCH", "OPTIONS"}
+_SUPABASE_OPERATIONS = {
+    "auth_verify", "profile_read", "profile_write", "snapshot_read", "snapshot_write", "snapshot_delete",
+    "consent_read", "consent_write", "consent_withdraw",
+}
 
 
-def record_response(method: str, status: int) -> None:
+def _route_name(path: str) -> str:
+    return {
+        "/api/health": "health",
+        "/api/snapshots": "snapshots",
+        "/api/profile": "profile",
+        "/api/consents/cloud-sync": "cloud_consent",
+        "/health": "container_health",
+        "/metrics": "metrics",
+    }.get(path, "other")
+
+
+def record_response(method: str, path: str, status: int) -> None:
+    """Record only bounded route names; raw paths and user identifiers are discarded."""
     with _LOCK:
-        _REQUEST_COUNTS[(method, status)] += 1
+        _REQUEST_COUNTS[(_route_name(path), method if method in _METHODS else "OTHER", status)] += 1
 
 
 def record_supabase_response(operation: str, status: int, duration: float) -> None:
     """Record bounded metadata only; operation names never contain user data."""
+    bounded_operation = operation if operation in _SUPABASE_OPERATIONS else "other"
     with _LOCK:
-        _SUPABASE_COUNTS[(operation, status)] += 1
-        _SUPABASE_DURATIONS[operation] = duration
+        _SUPABASE_COUNTS[(bounded_operation, status)] += 1
+        _SUPABASE_DURATIONS[bounded_operation] = duration
+
+
+PROBE_TTL_SECONDS = 30.0
+_PROBE_CACHE: dict[str, tuple[float, object]] = {}
+
+
+def _cached(key: str, produce, now: float | None = None):
+    """Serve a probe result for PROBE_TTL_SECONDS.
+
+    Every scrape used to fire four live outbound requests at a 2s timeout each, so an
+    unauthenticated caller could hold the endpoint open for eight seconds and hammer
+    the probed services at whatever rate they liked.
+    """
+    current = monotonic() if now is None else now
+    with _LOCK:
+        cached = _PROBE_CACHE.get(key)
+        if cached and current - cached[0] < PROBE_TTL_SECONDS:
+            return cached[1]
+    value = produce()
+    with _LOCK:
+        _PROBE_CACHE[key] = (current, value)
+    return value
+
+
+def reset_probe_cache() -> None:
+    with _LOCK:
+        _PROBE_CACHE.clear()
 
 
 def _probe_supabase() -> tuple[int, float]:
@@ -56,12 +101,16 @@ def _probe(name: str, url: str) -> tuple[str, int, float]:
 def render_metrics() -> str:
     web_origin = environ.get("MONITOR_WEB_ORIGIN", "http://web")
     scalar_origin = environ.get("MONITOR_SCALAR_ORIGIN", web_origin)
-    probes = [
-        _probe("application", f"{web_origin}/mazan-habait.html"),
-        _probe("swagger", f"{web_origin}/api-docs.html"),
-        _probe("scalar", f"{scalar_origin}/scalar-docs.html"),
+    targets = [
+        ("application", f"{web_origin}/mazan-habait.html"),
+        ("swagger", f"{web_origin}/api-docs.html"),
+        ("scalar", f"{scalar_origin}/scalar-docs.html"),
     ]
-    database_up, database_duration = _probe_supabase()
+    probes = [
+        _cached(f"endpoint:{name}:{url}", lambda name=name, url=url: _probe(name, url))
+        for name, url in targets
+    ]
+    database_up, database_duration = _cached("supabase", _probe_supabase)
     lines = [
         "# HELP home_economy_process_uptime_seconds API process uptime.",
         "# TYPE home_economy_process_uptime_seconds gauge",
@@ -78,15 +127,17 @@ def render_metrics() -> str:
         lines.append(f'home_economy_endpoint_up{{endpoint="{name}"}} {up}')
         lines.append(f'home_economy_endpoint_duration_seconds{{endpoint="{name}"}} {duration}')
     lines.extend([
-        "# HELP home_economy_http_requests_total HTTP responses served by method and status.",
+        "# HELP home_economy_http_requests_total HTTP responses served by bounded route, method and status.",
         "# TYPE home_economy_http_requests_total counter",
     ])
     with _LOCK:
         counts = list(_REQUEST_COUNTS.items())
         supabase_counts = list(_SUPABASE_COUNTS.items())
         supabase_durations = list(_SUPABASE_DURATIONS.items())
-    for (method, status), count in counts:
-        lines.append(f'home_economy_http_requests_total{{method="{method}",status="{status}"}} {count}')
+    for (route, method, status), count in counts:
+        lines.append(
+            f'home_economy_http_requests_total{{route="{route}",method="{method}",status="{status}"}} {count}'
+        )
     lines.extend([
         "# HELP home_economy_supabase_requests_total Supabase responses by bounded operation and status.",
         "# TYPE home_economy_supabase_requests_total counter",

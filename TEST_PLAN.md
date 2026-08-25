@@ -25,7 +25,7 @@ Playwright device profiles are repeatable emulations, not a substitute for final
 
 | Command | Expected result |
 |---|---|
-| `npm run build` | Application/API compile, strict boundary typecheck passes, and local Swagger/Scalar assets are copied |
+| `npm run build` | TypeScript application/scripts compile, Python API validation and strict boundary typecheck pass, and local Swagger/Scalar assets are copied; project-owned JavaScript exists only as generated output |
 | `npm run typecheck:strict` | New domain, import, persistence and API boundaries pass strict/null/index type checks |
 | `npm test` | All Vitest unit, API, contract and component suites pass |
 | `npm run test:server` | All Pytest server suites pass |
@@ -52,6 +52,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 
 | File | Coverage |
 |---|---|
+| `tests/unit/spreadsheet-reader.unit.test.ts` | Legacy .xls, .xlsx and CSV reading: delimiters, quoting, CRLF, magic-byte dispatch and the HTML-table refusal |
 | `tests/unit/financial-agents.unit.test.ts` | Eight agents, saving estimates, Strategy injection, safe-to-spend edges and date clamping |
 | `tests/unit/localization.unit.test.ts` | Supported locale validation, RTL/LTR, UTC formatting and named parameters |
 | `tests/unit/credit-card-importer.unit.test.ts` | Charges, refunds and invalid workbook rows |
@@ -61,6 +62,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/unit/privacy.unit.test.ts` | Identifier redaction, allowlisted snapshots and removal/rejection of unknown sensitive properties |
 | `tests/unit/state-repository.unit.test.ts` | Runtime state validation, safe migration, default-rule merge, prototype-key refusal and persistence round-trip |
 | `tests/unit/cloud-sync.unit.test.ts` | Privacy-safe schema-v2 validation, signed-out behavior, auth headers, failures, timeout and DELETE |
+| `tests/unit/cloud-metadata.unit.test.ts` | Authenticated Supabase profile/consent reads and writes, response validation, safe auth headers and withdrawal |
 | `tests/unit/consent.unit.test.ts` | Versioned consent, malformed records and withdrawal |
 
 ## Python server suites
@@ -69,9 +71,10 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 |---|---|
 | `tests/server/test_config.py` | Environment validation and strict bearer-token parsing |
 | `tests/server/test_models.py` | Pydantic allowlists, size bounds and financial-identifier rejection |
+| `tests/server/test_metrics.py` | Bounded route/method/operation labels and rejection of raw path or identity data in Prometheus output |
 | `tests/server/test_request_guard.py` | Media type, body size and bounded rate limiting |
 | `tests/server/test_repositories.py` | Profile, snapshot and consent CRUD with owner filters and stable failures |
-| `tests/server/test_app.py` | FastAPI health, methods, authentication boundary and snapshot responses |
+| `tests/server/test_app.py` | FastAPI health, methods, profile/consent persistence, authentication boundary and consent-gated snapshot writes |
 
 ## API suites
 
@@ -90,8 +93,8 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/contract/documentation-contract.test.ts` | README, architecture, design system, privacy, Supabase, TODO, monitoring and this test plan stay synchronized |
 | `tests/contract/importer-contract.test.ts` | Dashboard transaction shape |
 | `tests/contract/localization-contract.test.ts` | Key parity, named-parameter parity and complete HTML/runtime translation coverage |
-| `tests/contract/monitoring.contract.test.ts` | Prometheus, application/database Grafana dashboards, privacy-safe Supabase metrics and combined Allure publication |
-| `tests/contract/openapi.contract.test.ts` | Snapshot operations, privacy-minimised schema v2, bearer security, responses and self-hosted Swagger/Scalar |
+| `tests/contract/monitoring.contract.test.ts` | Prometheus, bounded route labels, application/database Grafana dashboards, profile/consent/snapshot panels, privacy-safe Supabase metrics and combined Allure publication |
+| `tests/contract/openapi.contract.test.ts` | Snapshot, profile and consent operations, privacy-minimised schema v2, bearer security, responses and self-hosted Swagger/Scalar |
 | `tests/contract/security-sanity.contract.test.ts` | Dangerous sinks, HTTPS opener isolation, file types and remote scripts |
 | `tests/contract/supabase-schema.contract.test.ts` | Tables, grants, RLS ownership, publishable-key boundary and migration/runtime schema-version parity |
 | `tests/contract/test-id-contract.test.ts` | Stable test IDs for static/dynamic controls and Page Object selector discipline |
@@ -114,10 +117,13 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | File | Coverage |
 |---|---|
 | `tests/e2e/accessibility.e2e.spec.ts` | axe WCAG A/AA checks for empty, populated, settings, agents and directory states |
-| `tests/e2e/api-docs.e2e.spec.ts` | Self-hosted Swagger and Scalar loading the same specification and all snapshot operations |
+| `tests/e2e/chart-accessibility.e2e.spec.ts` | Both charts publish their figures as data tables, with row headers and the projection range |
+| `tests/e2e/api-docs.e2e.spec.ts` | Self-hosted Swagger and Scalar loading the same specification and every health, snapshot, profile and consent operation |
 | `tests/e2e/architecture.e2e.spec.ts` | Architecture content, responsive layout and accessibility |
 | `tests/e2e/cloud-consent.e2e.spec.ts` | Consent acceptance and withdrawal without upload |
+| `tests/e2e/cloud-metadata.sanity.api.e2e.spec.ts` | Anonymous profile/consent refusal, malformed metadata rejection, no-store responses and stable method contracts |
 | `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import, evidence-based transfer/alimony categorization, honest unknown fallback, upload availability and recommendations |
+| `tests/e2e/card-reconciliation.e2e.spec.ts` | A card settlement and its itemised card lines are counted once, not twice |
 | `tests/e2e/financial-agents.e2e.spec.ts` | Eight agents, saving evidence, safe-to-spend, explicit approvals and translation |
 | `tests/e2e/i18n-dynamic.e2e.spec.ts` | Generated English, French and Amharic copy without Hebrew leakage |
 | `tests/e2e/localization.e2e.spec.ts` | Persistence, RTL/LTR, ILS formatting and mobile overflow in every locale |
@@ -137,10 +143,10 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 3. Switch Hebrew → Amharic → French → English and verify direction, wrapping and understandable copy.
 4. Navigate using keyboard only, then check VoiceOver and TalkBack announcements.
 5. Open Paamonim, Mekimi and the Paamonim WhatsApp channel; verify the destinations are still official HTTPS pages and that the channel has not become a private-advice promise.
-6. Review Swagger and Scalar, including the link between them, without entering a production token.
+6. Review Swagger and Scalar, including profile and consent operations and the snapshot consent prerequisite, without entering a production token.
 7. Review Grafana and confirm no JWT, transaction, email or snapshot content appears in metrics.
 8. Open the Allure report and investigate failures, retries, unexpected skips and missing attachments.
-9. In a disposable Supabase project, apply every migration, insert/update a schema-v2 snapshot, verify owner isolation, and exercise a legacy-v1 row before validating the v2 constraint.
+9. In a disposable Supabase project, apply every migration; with two synthetic users verify profile and consent isolation, refusal before consent, schema-v2 snapshot write/read/delete after consent, withdrawal, and controlled handling of a legacy-v1 row.
 
 ## Failure handling
 

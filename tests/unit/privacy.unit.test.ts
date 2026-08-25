@@ -48,3 +48,22 @@ describe('privacy-safe persistence', () => {
     expect(isPrivacySafeTransaction({ ref: '', src: 'bank-report', desc: 'card 4111111111111111' })).toBe(false);
   });
 });
+
+describe('account identifiers the privacy notice promises not to keep', () => {
+  it('redacts a digit run introduced by an account, branch or card word', () => {
+    expect(redactFinancialIdentifiers('חשבון 123456789 העברה')).toBe('חשבון [redacted] העברה');
+    expect(redactFinancialIdentifiers('account 12345678 transfer')).toBe('account [redacted] transfer');
+    expect(redactFinancialIdentifiers('כרטיס 4580-1234')).toBe('כרטיס [redacted]');
+  });
+
+  it('leaves amounts and counts alone, which share the same shape', () => {
+    for (const description of ['שופרסל דיל 1,234.56', 'משיכה מבנקט 250.00', 'תשלום 3 מתוך 12']) {
+      expect(redactFinancialIdentifiers(description)).toBe(description);
+    }
+  });
+
+  it('is idempotent, so a redacted description survives a second save unchanged', () => {
+    const once = redactFinancialIdentifiers('חשבון 123456789');
+    expect(redactFinancialIdentifiers(once)).toBe(once);
+  });
+});

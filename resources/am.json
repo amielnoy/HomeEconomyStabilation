@@ -88,7 +88,7 @@
   "filterByCategory": "በምድብ ያጣሩ",
   "filterByDirection": "በአቅጣጫ ያጣሩ",
   "range": "የጊዜ ክልል",
-  "privacyFooter": "የተቀነሱ የግብይት መረጃዎች በዚህ አሳሽ ውስጥ ብቻ ይቀመጣሉ እና ወደ ሰርቨር አይላኩም። የባንክ ሂሳብና የካርድ ቁጥሮች፣ CVV፣ ማጣቀሻዎችና የፋይል ስሞች አይቀመጡም። የወደፊት የደመና ማመሳሰል ግልጽ ፈቃድ ይፈልጋል።",
+  "privacyFooter": "የተቀነሱ ግብይቶች፣ ምድቦች፣ ደንቦችና በጀቶች በዚህ አሳሽ ውስጥ ብቻ ይቀመጣሉ፤ ወደ አገልጋይ አይላኩም። የሂሳብና የካርድ ቁጥሮች፣ CVV፣ ማጣቀሻዎችና የፋይል ስሞች አይቀመጡም። አሳሹ ወደ ጣቢያው እንዴት እንደደረሱ (utm እና gclid) እና የመጨረሻዎቹን 50 የአጠቃቀም ክስተቶች ያስቀምጣል፤ እነሱም አይላኩም። ቅርጸ-ቁምፊዎች ከዚህ ጣቢያ ይቀርባሉ፤ የሶስተኛ ወገን ጥሪ የለም። ወደፊት የደመና ማመሳሰል አማራጭ ሆኖ፣ ከመግባትና ግልጽ ፈቃድ በኋላ ብቻ ይሆናል።",
   "close": "ዝጋ",
   "monthlyBudgetLimits": "ወርሃዊ የበጀት ገደቦች",
   "monthlyBudgetLimitsNote": "ክትትል ላልፈለጉበት ምድብ ገደቡን ባዶ ይተዉ። ገደቡ ከተመረጠው ወር ወጪ ጋር ይነጻጸራል።",
@@ -262,6 +262,10 @@
   "spendingGuideKicker": "አሁን ማወቅ የሚገባው ቁጥር",
   "spendingGuideTitle": "እስከሚቀጥለው ገቢ ድረስ በደህና ማውጣት የሚቻለው",
   "spendingGuideUntil": "በ{date} እስከሚጠበቀው ገቢ ድረስ ለ{days} ቀናት",
+  "spendingGuideAsOf": "በቅርብ ጊዜ ሪፖርትዎ ላይ ባለው ቀሪ ሂሳብ መሠረት፣ በ{date} ዕለት።",
+  "spendingGuideUntilTight": "በ{date} እስከሚጠበቀው ገቢ ድረስ ላሉት {days} ቀናት። እዚህ ላይ ገደቡ ቀሪ ሂሳቡ ነው፣ የወጪ ፍጥነትዎ አይደለም።",
+  "balanceOnReport": "በቅርብ ሪፖርት ላይ ያለ ቀሪ ሂሳብ",
+  "retainedCushion": "የሚመከር ክምችት (የአንድ ወር ወጪ)",
   "spendingGuideNoBalance": "ይህን መጠን ለማስላት ወቅታዊ ቀሪ ሂሳብ ያስፈልጋል።",
   "spendingGuideNoIncome": "መደበኛ ገቢ ገና አልተገኘም፤ መጠኑ ያለጊዜ ክፍፍል ቀርቧል።",
   "spendingGuideGap": "እስከ {date} የሚጠበቁ ክፍያዎች ከቀሪ ሂሳቡ በ{amount} ይበልጣሉ። የገንዘብ ፍሰቱን ይመልከቱ።",
@@ -280,9 +284,12 @@
   "categories": "ገንዘቡ የት ይወጣል",
   "recurring": "የተገኙ ተደጋጋሚ ክፍያዎች",
   "transactions": "ግብይቶች",
+  "transactionTableScrollHint": "ሁሉንም ዓምዶች ለማየት በጎን ያንሸራትቱ።",
+  "transactionTableRegionLabel": "የግብይቶች ሰንጠረዥ",
   "actions": "ሊመረመሩ የሚገቡ ነገሮች",
   "agentsTitle": "የእርስዎ የገንዘብ ወኪሎች",
   "agentsIntro": "እያንዳንዱ ወኪል የተለየ ንድፍ በመሣሪያው ላይ ይመረምራል። ያለ እርስዎ ፈቃድ ምንም አይቀየርም።",
+  "agentsAllClearTitle": "ሁሉም ጸጥ ብሏል ({count} ወኪሎች)",
   "agentLearningTitle": "የሚማር የምደባ ወኪል",
   "agentAnomalyTitle": "ያልተለመደ ክፍያ ወኪል",
   "agentMissingTitle": "የጎደለ ክፍያ ወኪል",
@@ -438,5 +445,9 @@
     "עריכה": "አርትዕ",
     "טבלה": "ሰንጠረዥ",
     "גרף": "ግራፍ"
-  }
+  },
+  "chartAsTable": "መረጃውን እንደ ሰንጠረዥ አሳይ",
+  "waterlineTableSummary": "ገቢና ወጪ በወር፣ እንደ ሰንጠረዥ",
+  "forecastTableSummary": "የተገመተ ቀሪ ሂሳብ በሳምንት፣ እንደ ሰንጠረዥ",
+  "month": "ወር"
 }

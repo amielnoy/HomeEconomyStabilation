@@ -28,10 +28,18 @@ describe('monitoring contract', () => {
     expect(dashboard.uid).toBe('home-economy-database');
     expect(dashboard.panels.map((panel: { title: string }) => panel.title)).toEqual([
       'Supabase availability', 'Supabase health latency',
-      'Database operations by status', 'Latest database operation latency',
+      'Supabase error rate', 'Snapshot writes blocked by consent · 1h',
+      'Cloud API responses by route and status', 'Supabase operations by status',
+      'Supabase activity by data domain', 'Latest Supabase operation latency',
     ]);
+    const dashboardJson = JSON.stringify(dashboard);
+    for (const value of ['profile_.*', 'consent_.*', 'snapshot_.*', 'auth_verify', 'route']) {
+      expect(dashboardJson).toContain(value);
+    }
     expect(metrics).toContain('home_economy_supabase_up');
     expect(metrics).toContain('home_economy_supabase_requests_total');
+    expect(metrics).toContain('route="{route}"');
+    expect(metrics).toContain('"cloud_consent"');
     expect(metrics).not.toContain('user_id');
     expect(compose).not.toContain('SUPABASE_DB_PASSWORD');
     expect(compose).not.toContain('DATABASE_URL');
@@ -43,9 +51,11 @@ describe('monitoring contract', () => {
 
     expect(prometheus).toContain('targets: ["api:3000"]');
     expect(prometheus).toContain('metrics_path: /metrics');
-    expect(server).toContain('_probe("application"');
-    expect(server).toContain('_probe("swagger"');
-    expect(server).toContain('_probe("scalar"');
+    expect(server).toContain('("application"');
+    expect(server).toContain('("swagger"');
+    expect(server).toContain('("scalar"');
+    // A scrape must not be usable as an outbound-request amplifier.
+    expect(server).toContain('PROBE_TTL_SECONDS');
     expect(server).toContain('endpoint="api"');
     expect(server).toContain('home_economy_endpoint_up');
     expect(server).toContain('home_economy_http_requests_total');
@@ -100,6 +110,8 @@ describe('monitoring contract', () => {
     expect(containerRunner).toContain('SERVER_TEST_SCRIPT=test:server:allure');
     expect(workflow).toContain('Run Vitest, Pytest and Playwright in parallel');
     expect(workflow).toContain('run: npm run test:all');
+    expect(workflow).toContain('actions/upload-artifact@v6');
+    expect(workflow).not.toContain('actions/upload-artifact@v5');
     expect(playwrightConfig).toContain('workers: process.env.CI ? 2 : undefined');
   });
 });

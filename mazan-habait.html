@@ -4,9 +4,8 @@
 <meta charset="utf-8">
 <meta data-testid="viewport-meta" name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title data-i18n="title">מאזן הבית</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700&family=Frank+Ruhl+Libre:wght@500;700&family=Noto+Sans+Ethiopic:wght@400;500;600;700&display=swap">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="design-system.css">
 <style>
 /* ============================================================ tokens ===== */
@@ -233,9 +232,19 @@ button{ cursor:pointer; }
 .agent-body .btn{ justify-self:start; }
 .agent-savings-summary{ font-weight:700; color:var(--ink) !important; }
 .agent-opportunity{ display:grid; gap:5px; padding-top:8px; border-top:1px solid var(--line); }
-.agent-opportunity-estimate{ font-weight:700; color:var(--good) !important; }
+/* --good is a fill colour; --good-text is the pair that clears 4.5:1 as text. */
+.agent-opportunity-estimate{ font-weight:700; color:var(--good-text); }
 .agent-opportunity details{ color:var(--muted); font-size:12px; }
 .agent-opportunity summary{ cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+.agent-card--roundup{ grid-column:1 / -1; }
+.agent-roundup{ display:grid; gap:2px; }
+.agent-roundup-row{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px;
+  padding:5px 0; border-top:1px solid var(--line);
+}
+.agent-roundup-row:first-child{ border-top:0; }
+.agent-roundup-name{ font-weight:600; font-size:13.5px; }
+.agent-roundup-note{ color:var(--muted); font-size:12.5px; }
 @media (max-width:700px){ .agent-grid{ grid-template-columns:1fr; } }
 .recommendations{ margin-top:16px; }
 .recommendations-head{ display:flex; align-items:flex-start; gap:14px; padding:20px 0 12px; border-bottom:1px solid var(--line); }
@@ -274,6 +283,9 @@ button{ cursor:pointer; }
 .swatch{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-inline-end:6px; vertical-align:-1px; }
 
 /* ============================================================ charts ===== */
+.chart-data{ margin-top:8px; }
+.chart-data > summary{ font-size:12.5px; color:var(--muted); cursor:pointer; }
+.chart-data table{ margin-top:6px; }
 .chartwrap{ position:relative; overflow-x:auto; }
 svg.chart{ display:block; width:100%; height:auto; overflow:visible; }
 .tick{ font-size:11px; fill:var(--muted); font-variant-numeric:tabular-nums; }
@@ -313,6 +325,8 @@ svg.chart{ display:block; width:100%; height:auto; overflow:visible; }
 
 /* ============================================================ table ====== */
 .tblwrap{ overflow-x:auto; margin-top:6px; }
+.table-scroll-hint{ display:none; margin:6px 0 0; color:var(--muted); font-size:12px; }
+.refcell{ color:var(--muted); font-size:12.5px; }
 table{ width:100%; border-collapse:collapse; font-size:14px; }
 th{
   text-align:start; font-size:11.5px; letter-spacing:.07em; color:var(--muted);
@@ -382,8 +396,11 @@ body.drawer-open{ overflow:hidden; }
 .consent-actions{ display:flex; gap:8px; flex-wrap:wrap; }
 .consent-actions .btn:disabled{ cursor:not-allowed; opacity:.55; }
 .rulerow, .budrow{
-  display:flex; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line);
+  display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line);
 }
+/* Three controls in one row leaves the last of them a 40px sliver on a phone.
+   Let them wrap and claim a tappable width instead. */
+.rulerow select{ flex:1 1 44px; }
 .rulerow input, .budrow input, .rulerow select{
   border:1px solid var(--line-2); background:var(--surface); border-radius:8px;
   padding:6px 9px; font-size:13.5px; min-width:0;
@@ -443,6 +460,69 @@ body.drawer-open{ overflow:hidden; }
   *{ transition-duration:.01ms !important; animation-duration:.01ms !important; }
 }
 
+/* Touch targets are a property of the input device, not the window width: a phone in
+   landscape and a tablet report desktop-class widths but are still fingers on glass. */
+@media (pointer: coarse){
+  .btn,.btn.sm,.ds-button[data-size="sm"],.mchip,.ds-button,.ds-field,
+  .filters input[type=search],.filters select,
+  .rulerow input,.budrow input,.rulerow select,
+  summary,
+  .catsel,
+  input,select,textarea{
+    min-height:48px;
+  }
+  summary{ display:flex; align-items:center; }
+  /* Anything under 16px makes iOS zoom the page on focus, in any orientation.
+     !important because the design-system field classes are more specific. */
+  input,select,textarea{ font-size:16px!important; }
+  select{ min-height:48px!important; }
+  .x{ min-width:48px; min-height:48px; }
+}
+
+/* The transactions table is six columns wide and a phone is not. Below 560px each row
+   becomes its own labelled block, so the amount and balance are read rather than
+   scrolled past — they were the two columns that fell off the edge. */
+@media (max-width:560px){
+  #tx thead{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  #tx, #tx tbody, #tx tr, #tx td{ display:block; width:auto; }
+  #tx tr{
+    border:1px solid var(--line); border-radius:12px;
+    padding:10px 12px; margin-bottom:10px; background:var(--surface);
+  }
+  #tx td{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    border:0; padding:5px 0; text-align:start; white-space:normal;
+  }
+  #tx td::before{
+    content:attr(data-label); color:var(--muted); font-size:12.5px;
+    font-weight:500; flex:0 0 auto;
+  }
+  #tx td:empty{ display:none; }
+  #tx td.desc{ font-weight:600; }
+  #tx td.amountcell{ font-size:17px; font-weight:700; }
+  #tx td.catcell{ flex-wrap:wrap; }
+  #tx td.catcell .catsel{ flex:1 1 auto; min-width:0; }
+  /* The row is no longer wider than its container, so the scroll hint is now noise. */
+  #tx-scroll-hint{ display:none; }
+}
+
+@media (max-width:600px), (pointer: coarse) and (max-width:900px){
+  .actions{ width:100%; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 48px; gap:8px; }
+  .actions > .btn{ min-width:0; padding-inline:10px; font-size:13px; justify-content:center; }
+  .brand{ width:100%; }
+  .mobile-menu-toggle{ display:inline-grid!important; place-items:center; padding:0!important; font-size:22px!important; letter-spacing:2px; }
+  .secondary-actions{
+    display:none; position:absolute; inset-inline:0; inset-block-start:calc(100% - 1px);
+    grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:12px;
+    border:1px solid var(--line); border-radius:0 0 16px 16px;
+    background:var(--surface); box-shadow:var(--ds-shadow-2);
+  }
+  .secondary-actions.on{ display:grid; }
+  .secondary-actions > .btn,.secondary-actions > .locale-picker,.secondary-actions .ds-field{ width:100%; }
+  .secondary-actions > .btn{ justify-content:center; }
+  .secondary-actions > .locale-picker{ grid-column:1 / -1; }
+}
+
 @media (max-width:600px){
   body{ -webkit-text-size-adjust:100%; }
   .app{
@@ -481,9 +561,7 @@ body.drawer-open{ overflow:hidden; }
   .rulerow input,.budrow input,.rulerow select{
     min-height:48px;
   }
-  input,select,textarea{ font-size:16px!important; }
-  select{ min-height:48px!important; height:48px; }
-  .x{ min-width:48px; min-height:48px; }
+  select{ height:48px; }
   .hero,.card{ padding-inline:16px; }
   .drawer{
     padding-block-start:calc(16px + env(safe-area-inset-top));
@@ -502,6 +580,7 @@ body.drawer-open{ overflow:hidden; }
     -webkit-overflow-scrolling:touch;
     overscroll-behavior-inline:contain;
   }
+  .table-scroll-hint{ display:block; }
 }
 </style>
 
@@ -536,7 +615,7 @@ body.drawer-open{ overflow:hidden; }
       </label>
       <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
       <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
-        <button class="btn" id="btn-recommendations" disabled data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
+        <button class="btn" id="btn-recommendations" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
         <button class="btn" id="btn-savings" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
         <label class="locale-picker" data-testid="language-picker">
           <span class="vh" data-i18n="languageLabel">שפת ממשק</span>
@@ -706,6 +785,7 @@ body.drawer-open{ overflow:hidden; }
         <p class="spending-guide-kicker" data-i18n="spendingGuideKicker">המספר שכדאי לדעת עכשיו</p>
         <h2 id="spending-guide-h" data-i18n="spendingGuideTitle" data-testid="spending-guide-h">כמה בטוח להוציא עד ההכנסה הבאה</h2>
         <div class="spending-guide-amount num" id="spending-guide-amount" aria-live="polite" data-testid="spending-guide-amount">—</div>
+        <p class="spending-guide-asof" id="spending-guide-asof" data-testid="spending-guide-asof"></p>
         <p class="spending-guide-summary" id="spending-guide-summary" data-testid="spending-guide-summary"></p>
       </div>
       <div class="spending-guide-side" id="spending-guide-content" data-testid="spending-guide-content">
@@ -716,8 +796,9 @@ body.drawer-open{ overflow:hidden; }
         <details data-testid="spending-guide-details">
           <summary data-i18n="howCalculated">איך חישבנו?</summary>
           <div class="spending-guide-breakdown">
-            <div><span data-i18n="currentBalance">יתרה נוכחית</span><strong class="num" id="spending-guide-balance" data-testid="spending-guide-balance">—</strong></div>
+            <div><span data-i18n="balanceOnReport">יתרה בדוח האחרון</span><strong class="num" id="spending-guide-balance" data-testid="spending-guide-balance">—</strong></div>
             <div><span data-i18n="expectedCommitments">חיובים קבועים צפויים</span><strong class="num" id="spending-guide-committed" data-testid="spending-guide-committed">—</strong></div>
+            <div><span data-i18n="retainedCushion">כרית ביטחון מומלצת (חודש הוצאות)</span><strong class="num" id="spending-guide-retained" data-testid="spending-guide-retained">—</strong></div>
             <div><span data-i18n="nextExpectedIncome">הכנסה הבאה צפויה</span><strong id="spending-guide-date" data-testid="spending-guide-date">—</strong></div>
           </div>
         </details>
@@ -773,6 +854,10 @@ body.drawer-open{ overflow:hidden; }
           <span id="wl-note" style="margin-inline-start:auto;color:var(--muted)" data-testid="wl-note"></span>
         </div>
         <div class="chartwrap" tabindex="0"><svg class="chart" id="wl" role="img" aria-label="נכנס מול יצא, חודש מול חודש" data-i18n-aria-label="incomeVsExpensesChart" data-testid="wl"></svg><div class="tip" id="wl-tip" data-testid="wl-tip"></div></div>
+        <details class="chart-data" data-testid="wl-data">
+          <summary data-i18n="chartAsTable">הצגת הנתונים כטבלה</summary>
+          <div class="tblwrap" id="wl-table" role="region" data-i18n-aria-label="waterlineTableSummary" data-testid="wl-table" tabindex="0"></div>
+        </details>
       </div>
     </section>
 
@@ -790,6 +875,10 @@ body.drawer-open{ overflow:hidden; }
         </header>
         <p class="note" id="fc-note" data-testid="fc-note"></p>
         <div class="chartwrap" tabindex="0"><svg class="chart" id="fc" role="img" aria-label="יתרה בפועל והמשך צפוי" data-i18n-aria-label="forecastChart" data-testid="fc"></svg><div class="tip" id="fc-tip" data-testid="fc-tip"></div></div>
+        <details class="chart-data" data-testid="fc-data">
+          <summary data-i18n="chartAsTable">הצגת הנתונים כטבלה</summary>
+          <div class="tblwrap" id="fc-table" role="region" data-i18n-aria-label="forecastTableSummary" data-testid="fc-table" tabindex="0"></div>
+        </details>
       </section>
     </div>
 
@@ -809,7 +898,7 @@ body.drawer-open{ overflow:hidden; }
       </header>
       <p class="note" id="cat-note" data-testid="cat-note"></p>
       <div id="cat-list" data-testid="cat-list"></div>
-      <div id="cat-table" hidden class="tblwrap" data-testid="cat-table"></div>
+      <div id="cat-table" hidden class="tblwrap" role="region" aria-labelledby="cat-h" tabindex="0" data-testid="cat-table"></div>
       </section>
     </div>
 
@@ -817,7 +906,7 @@ body.drawer-open{ overflow:hidden; }
     <section class="card" aria-labelledby="rc-h" style="margin-top:16px">
       <header><h2 id="rc-h" data-i18n="recurring" data-testid="rc-h">חיובים חוזרים שזוהו</h2></header>
       <p class="note" id="rc-note" data-testid="rc-note"></p>
-      <div class="tblwrap" id="rc-list" data-testid="rc-list"></div>
+      <div class="tblwrap" id="rc-list" role="region" aria-labelledby="rc-h" tabindex="0" data-testid="rc-list"></div>
     </section>
 
     <!-- transactions ---------------------------------------------------- -->
@@ -838,7 +927,8 @@ body.drawer-open{ overflow:hidden; }
           <option value="all" data-i18n="allHistory">כל ההיסטוריה</option>
         </select>
       </div>
-      <div class="tblwrap"><table id="tx" data-testid="tx"><thead><tr>
+      <p class="table-scroll-hint" id="tx-scroll-hint" data-i18n="transactionTableScrollHint" data-testid="tx-scroll-hint">החליקו לצדדים כדי לראות את כל העמודות.</p>
+      <div class="tblwrap" role="region" aria-label="טבלת תנועות" data-i18n-aria-label="transactionTableRegionLabel" aria-describedby="tx-scroll-hint" tabindex="0" data-testid="tx-table-scroll"><table id="tx" data-testid="tx"><thead><tr>
         <th style="width:92px" data-i18n="date">תאריך</th><th data-i18n="description">תיאור פעולה</th><th style="width:150px" data-i18n="category">קטגוריה</th>
         <th style="width:96px" data-i18n="amount">סכום</th><th style="width:104px" data-i18n="balance">יתרה</th><th style="width:110px" data-i18n="reference">אסמכתא</th>
       </tr></thead><tbody id="tx-body" data-testid="tx-body"></tbody></table></div>
@@ -846,7 +936,7 @@ body.drawer-open{ overflow:hidden; }
 
     <footer class="foot">
       <p id="foot-note" data-testid="foot-note"></p>
-      <p data-i18n="privacyFooter">תנועות מצומצמות נשמרות רק בדפדפן ואינן נשלחות לשרת. מספרי חשבון וכרטיס, CVV, אסמכתאות ושמות קבצים אינם נשמרים. סנכרון ענן עתידי יהיה אופציונלי ורק לאחר כניסה והסכמה מפורשת.</p>
+      <p data-i18n="privacyFooter">תנועות מצומצמות, קטגוריות, כללים ותקציבים נשמרים רק בדפדפן ואינם נשלחים לשרת. מספרי חשבון וכרטיס, CVV, אסמכתאות ושמות קבצים אינם נשמרים. נשמרים בדפדפן גם מקור ההגעה לאתר (פרמטרי utm ו־gclid) ועד 50 אירועי שימוש אחרונים; גם הם אינם נשלחים לשרת. הגופנים מאוחסנים באתר עצמו ואין פנייה לשירות חיצוני. סנכרון ענן עתידי יהיה אופציונלי ורק לאחר כניסה והסכמה מפורשת.</p>
     </footer>
   </main>
 </div>

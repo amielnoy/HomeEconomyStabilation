@@ -49,6 +49,14 @@ export default defineConfig({
     { name: 'desktop-chromium', testIgnore: '**/*.api.e2e.spec.ts', use: { ...devices['Desktop Chrome'] } },
     { name: 'android-chrome', testIgnore: '**/*.api.e2e.spec.ts', use: { ...devices['Pixel 7'] } },
     { name: 'ios-webkit', testIgnore: '**/*.api.e2e.spec.ts', use: { ...devices['iPhone 13'] } },
+    /* Both phone projects are portrait, which leaves the 601-820px band unexercised —
+       a phone turned sideways and a tablet held upright report desktop-class widths
+       while still being fingers on glass. */
+    {
+      name: 'android-landscape',
+      testMatch: '**/mobile-usability.e2e.spec.ts',
+      use: { ...devices['Pixel 7 landscape'] },
+    },
     { name: 'api', testMatch: '**/*.api.e2e.spec.ts', use: { baseURL: apiBaseURL } },
   ],
 });

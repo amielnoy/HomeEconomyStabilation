@@ -1,16 +1,18 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Home Economy Cloud Snapshot API",
-    "version": "1.0.0",
-    "description": "Authenticated, optional cloud backup boundary. Local use does not call this API. Configure Supabase and authorize with a real user JWT before testing successful operations."
+    "title": "Home Economy Cloud Data API",
+    "version": "1.1.0",
+    "description": "Authenticated optional persistence for a minimal profile, versioned cloud consent and a privacy-minimised snapshot. Local use does not call this API. Accept the current consent statement before testing snapshot writes."
   },
   "servers": [
     { "url": "/", "description": "Current origin" }
   ],
   "tags": [
     { "name": "Health", "description": "Public deployment readiness" },
-    { "name": "Snapshots", "description": "One versioned application snapshot per authenticated user" }
+    { "name": "Snapshots", "description": "One versioned application snapshot per authenticated user" },
+    { "name": "Profile", "description": "Minimal authenticated user preferences" },
+    { "name": "Consent", "description": "Versioned cloud-sync consent records" }
   ],
   "paths": {
     "/api/health": {
@@ -49,7 +51,9 @@
             "description": "Snapshot found, or null when none is stored",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SnapshotResponse" } } }
           },
+          "429": { "$ref": "#/components/responses/RateLimited" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/CloudFailure" },
           "503": { "$ref": "#/components/responses/NotConfigured" }
         }
       },
@@ -79,7 +83,9 @@
           "413": { "$ref": "#/components/responses/TooLarge" },
           "415": { "$ref": "#/components/responses/JsonRequired" },
           "429": { "$ref": "#/components/responses/RateLimited" },
+          "403": { "$ref": "#/components/responses/ConsentRequired" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/CloudFailure" },
           "503": { "$ref": "#/components/responses/NotConfigured" }
         }
       },
@@ -90,7 +96,86 @@
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "204": { "description": "Snapshot deleted" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/CloudFailure" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Load the current user's preferred locale",
+        "operationId": "loadProfile",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Profile found, or null", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProfileResponse" } } } },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/CloudFailure" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      },
+      "put": {
+        "tags": ["Profile"],
+        "summary": "Create or update the current user's preferred locale",
+        "operationId": "saveProfile",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProfileInput" } } } },
+        "responses": {
+          "200": { "description": "Stored profile", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProfileResponse" } } } },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "413": { "$ref": "#/components/responses/RequestTooLarge" },
+          "415": { "$ref": "#/components/responses/JsonRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/CloudFailure" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      }
+    },
+    "/api/consents/cloud-sync": {
+      "get": {
+        "tags": ["Consent"],
+        "summary": "Load the current cloud-sync consent statement",
+        "operationId": "loadCloudConsent",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Current statement record, or null", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConsentResponse" } } } },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/CloudFailure" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      },
+      "put": {
+        "tags": ["Consent"],
+        "summary": "Accept the current cloud-sync consent statement",
+        "operationId": "acceptCloudConsent",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConsentInput" } } } },
+        "responses": {
+          "200": { "description": "Stored consent", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConsentResponse" } } } },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "413": { "$ref": "#/components/responses/RequestTooLarge" },
+          "415": { "$ref": "#/components/responses/JsonRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/CloudFailure" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      },
+      "delete": {
+        "tags": ["Consent"],
+        "summary": "Withdraw the current cloud-sync consent statement",
+        "operationId": "withdrawCloudConsent",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "204": { "description": "Consent withdrawn, or no current record existed" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/CloudFailure" },
           "503": { "$ref": "#/components/responses/NotConfigured" }
         }
       }
@@ -177,6 +262,49 @@
         "required": ["snapshot"],
         "properties": { "snapshot": { "oneOf": [{ "$ref": "#/components/schemas/Snapshot" }, { "type": "null" }] } }
       },
+      "ProfileInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["preferredLocale"],
+        "properties": { "preferredLocale": { "type": "string", "enum": ["he", "en", "am", "fr"] } }
+      },
+      "Profile": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ProfileInput" },
+          { "type": "object", "required": ["createdAt", "updatedAt"], "properties": {
+            "createdAt": { "type": "string", "format": "date-time" },
+            "updatedAt": { "type": "string", "format": "date-time" }
+          } }
+        ]
+      },
+      "ProfileResponse": {
+        "type": "object",
+        "required": ["profile"],
+        "properties": { "profile": { "oneOf": [{ "$ref": "#/components/schemas/Profile" }, { "type": "null" }] } }
+      },
+      "ConsentInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["locale"],
+        "properties": { "locale": { "type": "string", "enum": ["he", "en", "am", "fr"] } }
+      },
+      "Consent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["purpose", "statementVersion", "locale", "acceptedAt", "withdrawnAt"],
+        "properties": {
+          "purpose": { "type": "string", "const": "cloud_sync" },
+          "statementVersion": { "type": "string", "const": "cloud-sync-v2-privacy-minimised-2026-08-24" },
+          "locale": { "type": "string", "enum": ["he", "en", "am", "fr"] },
+          "acceptedAt": { "type": "string", "format": "date-time" },
+          "withdrawnAt": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] }
+        }
+      },
+      "ConsentResponse": {
+        "type": "object",
+        "required": ["consent"],
+        "properties": { "consent": { "oneOf": [{ "$ref": "#/components/schemas/Consent" }, { "type": "null" }] } }
+      },
       "Error": {
         "type": "object",
         "required": ["code"],
@@ -188,12 +316,24 @@
         "description": "Missing or invalid user JWT",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
       },
+      "ConsentRequired": {
+        "description": "The current cloud-sync statement must be actively accepted before a snapshot write",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "InvalidRequest": {
+        "description": "The request body is invalid or unsupported",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
       "InvalidSnapshot": {
         "description": "Invalid, unsupported or oversized snapshot",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
       },
       "TooLarge": {
         "description": "The snapshot exceeds the request or payload limit",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "RequestTooLarge": {
+        "description": "The metadata request exceeds the 1 KiB limit",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
       },
       "JsonRequired": {
@@ -203,6 +343,10 @@
       "RateLimited": {
         "description": "Too many requests from the same client window",
         "headers": { "Retry-After": { "schema": { "type": "integer" } } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "CloudFailure": {
+        "description": "Supabase authentication or persistence failed without exposing provider details",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
       },
       "NotConfigured": {

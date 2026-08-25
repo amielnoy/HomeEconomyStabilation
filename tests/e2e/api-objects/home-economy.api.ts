@@ -36,6 +36,33 @@ export class HomeEconomyApi {
     });
   }
 
+  @step('Try to read cloud profile metadata without signing in')
+  async getProfileWithoutAuthentication(): Promise<APIResponse> {
+    return this.request.get('/api/profile');
+  }
+
+  @step('Try to read cloud consent metadata without signing in')
+  async getCloudConsentWithoutAuthentication(): Promise<APIResponse> {
+    return this.request.get('/api/consents/cloud-sync');
+  }
+
+  @step('Check that profile writes reject an unsupported locale')
+  async putInvalidProfile(): Promise<APIResponse> {
+    return this.request.put('/api/profile', { data: { preferredLocale: 'xx' } });
+  }
+
+  @step('Check that consent writes require JSON')
+  async putConsentAsText(): Promise<APIResponse> {
+    return this.request.put('/api/consents/cloud-sync', {
+      data: 'not-json', headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+
+  @step('Check that consent rejects unsupported methods')
+  async postCloudConsent(): Promise<APIResponse> {
+    return this.request.post('/api/consents/cloud-sync', { data: {} });
+  }
+
   @step('Request an API route that does not exist')
   async getMissingRoute(): Promise<APIResponse> {
     return this.request.get('/api/not-a-real-route');

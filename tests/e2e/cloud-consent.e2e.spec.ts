@@ -18,8 +18,10 @@ test('records and withdraws explicit cloud consent without uploading financial d
   await homePage.settings.acceptCloudConsent();
   await expect(homePage.settings.cloudConsentStatus).toContainText('תועדה במכשיר');
   await expect(homePage.settings.cloudConsentWithdraw).toBeVisible();
+  await expect(homePage.settings.cloudConsentWithdraw).toBeFocused();
   expect(writes).toEqual([]);
 
   await homePage.settings.withdrawCloudConsent();
   await expect(homePage.settings.cloudConsentStatus).toContainText('לא ניתנה הסכמה');
+  await expect(homePage.settings.cloudConsentCheck).toBeFocused();
 });
