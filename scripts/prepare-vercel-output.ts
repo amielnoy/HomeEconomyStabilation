@@ -10,6 +10,7 @@ const files = [
   'api-docs.html',
   'scalar-docs.html',
   'openapi.json',
+  'favicon.svg',
   'design-system.css',
   'resources',
   'dist',

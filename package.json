@@ -18,10 +18,10 @@
     "test:all": "sh scripts/run-tests-in-parallel.sh",
     "verify": "npm run build && npm run test:all",
     "test:docker": "sh scripts/run-all-tests.sh",
-    "test:docker:stop": "sh scripts/stop-test-stack.sh",
+    "test:docker:stop": "sh scripts/stop-stack.sh home-economy-tests",
     "build:api": "python3 -m compileall -q api server",
     "stack:start": "sh scripts/run-local-stack.sh",
-    "stack:stop": "sh scripts/stop-local-stack.sh"
+    "stack:stop": "sh scripts/stop-stack.sh home-economy-local"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
