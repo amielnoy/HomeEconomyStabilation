@@ -289,6 +289,7 @@
   "actions": "דברים שכדאי לבדוק",
   "agentsTitle": "הסוכנים שלך",
   "agentsIntro": "כל סוכן בודק דפוס אחר באופן מקומי. שינוי מתבצע רק לאחר אישור.",
+  "agentsAllClearTitle": "הכל שקט ({count} סוכנים)",
   "agentLearningTitle": "סוכן שיוך לומד",
   "agentAnomalyTitle": "סוכן חריגות",
   "agentMissingTitle": "סוכן חיובים חסרים",

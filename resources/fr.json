@@ -289,6 +289,7 @@
   "actions": "Points à vérifier",
   "agentsTitle": "Vos agents financiers",
   "agentsIntro": "Chaque agent vérifie un modèle différent localement. Aucun changement n'est effectué sans votre accord.",
+  "agentsAllClearTitle": "Rien à signaler ({count} agents)",
   "agentLearningTitle": "Agent de classement apprenant",
   "agentAnomalyTitle": "Agent d'anomalies",
   "agentMissingTitle": "Agent de paiements manquants",

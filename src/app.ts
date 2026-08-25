@@ -108,7 +108,9 @@ function applyLocale() {
   const localeSelect = document.querySelector<HTMLSelectElement>('#locale-select')!;
   localeSelect.value = locale;
   localeSelect.setAttribute('aria-label', t('languageLabel'));
-  document.querySelector<HTMLButtonElement>('#btn-recommendations')!.disabled = false;
+  // Enabled only once there is something to recommend on; otherwise the control
+  // looks live and answers a click with "no data yet".
+  document.querySelector<HTMLButtonElement>('#btn-recommendations')!.disabled = !S.tx.length;
   const formatters = createLocaleFormatters(locale);
   ILS0 = formatters.money0;
   ILS2 = formatters.money2;
@@ -275,7 +277,8 @@ function balanceSeries() {
   if (!known.length) return [];
   const out = [];
   for (const t of known) out.push({ date: t.date, bal: t.bal });
-  // one point per day: keep the last (lowest-in-list = earliest) per date
+  /* One point per day. S.tx is newest-first, so the first entry seen for a date is
+     the day's final transaction — which is the balance that day closed on. */
   const byDate = new Map();
   for (const p of out) if (!byDate.has(p.date)) byDate.set(p.date, p.bal);
   const dates = [...byDate.keys()].sort();
@@ -304,8 +307,9 @@ function normPayee(desc) {
 function recurring() {
   const groups = new Map();
   for (const t of S.tx) {
-    const k = (t.in > 0 ? 'in:' : 'out:') + normPayee(t.desc);
-    if (!k.slice(4)) continue;
+    const payee = normPayee(t.desc);
+    if (!payee) continue;
+    const k = (t.in > 0 ? 'in:' : 'out:') + payee;
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k).push(t);
   }
@@ -386,6 +390,7 @@ function render() {
   decorate();
   invalidateAgentResults();
   fillCatFilter();
+  document.querySelector<HTMLButtonElement>('#btn-recommendations')!.disabled = !S.tx.length;
   const months = monthsPresent();
   $('#savings-directory').hidden = !directoryOpen;
   if (!S.tx.length) {
@@ -470,10 +475,34 @@ function renderAgents() {
   const grid = $('#agent-grid');
   grid.textContent = '';
   const results: FinancialAgentResults = currentAgentResults();
+  /* An agent with nothing to report still deserves to be accounted for, but not a
+     full card: four consecutive "nothing found" panels used to take the most
+     valuable space on the dashboard and crowd out the agents that did find
+     something. Quiet agents collapse into one shared card, each keeping its own
+     row and test id. */
+  const quiet: Array<{ id: string; titleKey: string; content: Array<HTMLElement | string> }> = [];
   const addCard = (id: string, titleKey: string, content: Array<HTMLElement | string>, tone = 'info') => {
+    if (tone === 'quiet') { quiet.push({ id, titleKey, content }); return; }
     grid.append(el('article', { class: `agent-card agent-card--${tone}`, 'data-testid': `agent-${id}` }, [
       el('header', {}, [el('span', { class: 'agent-dot', 'aria-hidden': 'true' }), el('h3', { text: t(titleKey) })]),
       el('div', { class: 'agent-body' }, content),
+    ]));
+  };
+  const flushQuietAgents = () => {
+    if (!quiet.length) return;
+    grid.append(el('article', { class: 'agent-card agent-card--quiet agent-card--roundup', 'data-testid': 'agent-all-clear' }, [
+      el('header', {}, [
+        el('span', { class: 'agent-dot', 'aria-hidden': 'true' }),
+        el('h3', { text: t('agentsAllClearTitle', { count: quiet.length }) }),
+      ]),
+      el('div', { class: 'agent-body agent-roundup' }, quiet.map((agent) => el('div', {
+        class: 'agent-roundup-row', 'data-testid': `agent-${agent.id}`,
+      }, [
+        el('span', { class: 'agent-roundup-name', text: t(agent.titleKey) }),
+        el('span', { class: 'agent-roundup-note', text: agent.content
+          .map((node) => typeof node === 'string' ? node : node.textContent || '')
+          .join(' ').trim() }),
+      ]))),
     ]));
   };
   const messages = (items: string[], emptyKey: string) => items.length
@@ -571,6 +600,7 @@ function renderAgents() {
       });
   // freeToSpend is floored at zero, so a shortfall now shows up in `available`.
   addCard('payday', 'agentPaydayTitle', [el('p', { text: paydayText })], payday && payday.available < 0 ? 'critical' : 'info');
+  flushQuietAgents();
 }
 
 function renderAttention() {
@@ -1332,6 +1362,7 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank')
   const files = [...fileList];
   if (!files.length) return;
   let added = 0, dup = 0, bad = 0;
+  const have = new Set(S.tx.map((t) => t.id));
   for (const file of files) {
     try {
       const buf = await file.arrayBuffer();
@@ -1343,7 +1374,6 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank')
       const { rows, account } = imported;
       if (!rows.length) { bad++; continue; }
       if (account && !S.accounts.includes(account)) S.accounts.push(account);
-      const have = new Set(S.tx.map((t) => t.id));
       for (const t of rows) {
         if (have.has(t.id)) { dup++; continue; }
         have.add(t.id); S.tx.push(t); added++;

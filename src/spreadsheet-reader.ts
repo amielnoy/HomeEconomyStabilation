@@ -30,10 +30,11 @@ function latin1(bytes: Uint8Array, start: number, len: number): string {
 /* Excel serial date -> Date (UTC-anchored, so the calendar day never drifts). */
 function serialToDate(serial: number, date1904: boolean): Date {
   const epoch = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30);
-  let days = Math.floor(serial);
+  const days = Math.floor(serial);
   const frac = serial - days;
-  // The 1900 system pretends 1900 was a leap year; serials past 60 are shifted.
-  if (!date1904 && days > 60) days -= 0;
+  /* The 1900 system pretends 1900 was a leap year, which shifts every serial past
+     60 by a day. Anchoring the epoch at 1899-12-30 rather than 1900-01-01 absorbs
+     that shift, so no further correction belongs here. */
   const ms = epoch + days * 86400000 + Math.round(frac * 86400000);
   return new Date(ms);
 }

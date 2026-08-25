@@ -289,6 +289,7 @@
   "actions": "Things to review",
   "agentsTitle": "Your financial agents",
   "agentsIntro": "Each agent checks a different pattern locally. Nothing is changed without your approval.",
+  "agentsAllClearTitle": "All clear ({count} agents)",
   "agentLearningTitle": "Learning categorization agent",
   "agentAnomalyTitle": "Charge anomaly agent",
   "agentMissingTitle": "Missing charge agent",

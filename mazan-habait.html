@@ -238,6 +238,15 @@ button{ cursor:pointer; }
 .agent-opportunity-estimate{ font-weight:700; color:var(--good-text); }
 .agent-opportunity details{ color:var(--muted); font-size:12px; }
 .agent-opportunity summary{ cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+.agent-card--roundup{ grid-column:1 / -1; }
+.agent-roundup{ display:grid; gap:2px; }
+.agent-roundup-row{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px;
+  padding:5px 0; border-top:1px solid var(--line);
+}
+.agent-roundup-row:first-child{ border-top:0; }
+.agent-roundup-name{ font-weight:600; font-size:13.5px; }
+.agent-roundup-note{ color:var(--muted); font-size:12.5px; }
 @media (max-width:700px){ .agent-grid{ grid-template-columns:1fr; } }
 .recommendations{ margin-top:16px; }
 .recommendations-head{ display:flex; align-items:flex-start; gap:14px; padding:20px 0 12px; border-bottom:1px solid var(--line); }

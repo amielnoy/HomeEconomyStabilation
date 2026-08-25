@@ -19,8 +19,7 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 .venv/
-dist/swagger-ui/
-dist/scalar/
+dist/
 .env
 .env.*
 !.env.example
