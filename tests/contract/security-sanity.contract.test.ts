@@ -27,8 +27,11 @@ describe('security sanity contract', () => {
   });
 
   it('limits file pickers to the documented financial and backup formats', () => {
-    expect(html).toMatch(/id="file"[^>]*accept="\.xls,\.xlsx,\.csv"/);
-    expect(html).toMatch(/id="card-file"[^>]*accept="\.xls,\.xlsx,\.csv"/);
+    /* .html/.htm is here because several Israeli banks export a statement as an
+       HTML document under an .xls name. The picker still names an explicit set:
+       it is an allowlist, and widening it is a decision, not an accident. */
+    expect(html).toMatch(/id="file"[^>]*accept="\.xls,\.xlsx,\.csv,\.html,\.htm"/);
+    expect(html).toMatch(/id="card-file"[^>]*accept="\.xls,\.xlsx,\.csv,\.html,\.htm"/);
     expect(html).toMatch(/id="dr-import"[^>]*accept="\.json,application\/json"/);
   });
 

@@ -3,6 +3,7 @@ set -u
 
 VITEST_SCRIPT=${VITEST_SCRIPT:-test}
 SERVER_TEST_SCRIPT=${SERVER_TEST_SCRIPT:-test:server}
+E2E_SCRIPT=${E2E_SCRIPT:-test:e2e}
 vitest_status=0
 playwright_status=0
 server_status=0
@@ -29,7 +30,7 @@ npm run "$VITEST_SCRIPT" &
 vitest_pid=$!
 npm run "$SERVER_TEST_SCRIPT" &
 server_pid=$!
-npm run test:e2e &
+npm run "$E2E_SCRIPT" &
 playwright_pid=$!
 
 wait "$vitest_pid" || vitest_status=$?

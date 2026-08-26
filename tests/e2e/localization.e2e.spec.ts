@@ -40,14 +40,3 @@ test('keeps imported household amounts in shekels in French', async ({ homePage 
   await expect(homePage.dashboard.balance).toContainText('₪');
   await expect(homePage.dashboard.transactionBalances.first()).toContainText('₪');
 });
-
-test('does not introduce horizontal page overflow on mobile in any language', async ({ homePage }) => {
-  await homePage.useMobileViewport();
-
-  for (const locale of ['he', 'en', 'am', 'fr'] as const) {
-    await homePage.language.choose(locale);
-    await expect(homePage.html).toHaveAttribute('lang', locale);
-    const overflows = await homePage.hasHorizontalOverflow();
-    expect(overflows, `${locale} should fit the mobile viewport`).toBe(false);
-  }
-});

@@ -83,3 +83,35 @@ export function richBankReport(): FilePayload {
     buffer: Buffer.from(lines.join('\n'), 'utf-8'),
   };
 }
+
+/* Several Israeli banks export a file named .xls that is really an HTML document.
+   The statement sits inside a layout table, the numbers carry a currency sign and
+   thousands separators, and the body is windows-1255 rather than UTF-8 — the three
+   things that separate a real bank export from a tidy fixture. */
+export function htmlBankReport(): FilePayload {
+  const rows = [
+    ['01/08/2026', 'שופרסל דיל', '431.00', '', '8,769.00'],
+    ['04/08/2026', 'חשמל - חברת החשמל', '486.00', '', '8,283.00'],
+    ['10/08/2026', 'משכורת חודשית', '', '17,400.00', '25,683.00'],
+    ['14/08/2026', 'משיכה מבנקט', '400.00', '', '25,283.00'],
+  ];
+  const body = [
+    '<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1255"></head><body>',
+    '<table><tr><td>',
+    '<table>',
+    '<tr><td>חשבון</td><td>04-279-661711</td></tr>',
+    '<tr><th>תאריך</th><th>תיאור פעולה</th><th>חובה</th><th>זכות</th><th>יתרה</th></tr>',
+    ...rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`),
+    '</table>',
+    '</td></tr></table>',
+    '</body></html>',
+  ].join('');
+
+  // windows-1255 maps Hebrew U+05D0..U+05EA onto 0xE0..0xFA.
+  const bytes = Uint8Array.from([...body].map((character) => {
+    const code = character.codePointAt(0)!;
+    return code >= 0x05d0 && code <= 0x05ea ? code - 0x05d0 + 0xe0 : code;
+  }));
+
+  return { name: 'leumi-statement.xls', mimeType: 'application/vnd.ms-excel', buffer: Buffer.from(bytes) };
+}

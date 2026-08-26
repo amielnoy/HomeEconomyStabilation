@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { htmlBankReport } from './reports';
 
 test.beforeEach(async ({ homePage }) => {
   await homePage.openFresh();
@@ -11,6 +12,20 @@ test('uploads and processes the supplied bank workbook', async ({ homePage }) =>
   await expect(homePage.dashboard.monthChips).toContainText('אוגוסט 2026');
   await expect(homePage.dashboard.transactionRows).toHaveCount(5);
   await expect(homePage.dashboard.accountSummary).toContainText('04-279-661711');
+});
+
+/* Several Israeli banks name an HTML document .xls. Excel opens it, so the bank
+   calls it a spreadsheet; before this it failed the import with nothing said about
+   why, and the customer had no way to tell a bad file from an unsupported one. */
+test('imports a statement that is really an HTML table named .xls', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport(htmlBankReport());
+
+  await expect(homePage.dashboard.root).toBeVisible();
+  await expect(homePage.dashboard.transactionRows).toHaveCount(4);
+  await expect(homePage.dashboard.accountSummary).toContainText('04-279-661711');
+  // Hebrew survives the windows-1255 body, so the rules can still categorise it.
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'שופרסל דיל' })).toHaveCount(1);
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'משיכה מבנקט' })).toHaveCount(1);
 });
 
 test('exposes the credit-card upload control in the live UI', async ({ homePage }) => {
@@ -34,6 +49,38 @@ test('classifies evidenced transfers and alimony while leaving unexplained debit
   await expect(homePage.dashboard.transactionCategories.nth(0)).toHaveValue('other');
   await expect(homePage.dashboard.transactionCategories.nth(1)).toHaveValue('home');
   await expect(homePage.dashboard.transactionCategories.nth(2)).toHaveValue('savings');
+});
+
+/* A loan repayment is usually worded as a transfer or a standing order, so before
+   the loans rules "העברה" claimed it for savings and it read as money the household
+   still had. A mortgage stays in housing: it is where someone lives before it is a
+   loan, and moving it would empty the housing figure people budget against. */
+test('separates loan repayments from housing and from transfers', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'loans.csv', mimeType: 'text/csv', buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,יתרה',
+      '05/08/2026,החזר הלוואה בנקאית,1200,5000',
+      '06/08/2026,הוראת קבע הלואה 12345,800,4200',
+      '07/08/2026,תשלום משכנתא,4000,200',
+    ].join('\n')),
+  });
+
+  await expect(homePage.dashboard.transactionCategories).toHaveCount(3);
+  await expect(homePage.dashboard.transactionCategories.nth(0)).toHaveValue('home');
+  // Both spellings a statement might carry.
+  await expect(homePage.dashboard.transactionCategories.nth(1)).toHaveValue('loans');
+  await expect(homePage.dashboard.transactionCategories.nth(2)).toHaveValue('loans');
+});
+
+test('offers loans as a category in every language', async ({ homePage }) => {
+  await homePage.upload.uploadSampleBankReport();
+  const picker = homePage.dashboard.transactionCategories.first();
+
+  for (const [locale, name] of [['he', 'הלוואות'], ['en', 'Loans'], ['fr', 'Prêts']] as const) {
+    await homePage.language.choose(locale);
+    await expect(homePage.html).toHaveAttribute('lang', locale);
+    await expect(picker.locator('option[value="loans"]')).toHaveText(name);
+  }
 });
 
 test('shows prioritized customer recommendations', async ({ homePage }) => {

@@ -9,7 +9,7 @@ No test may use real banking credentials, production JWTs or personally identify
 ## Environments and browser matrix
 
 | Layer | Runtime | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | Unit, API, contract | Vitest on Node | Fast logic, schema, security and public-boundary validation |
 | Python server | Pytest on Python 3.12 | FastAPI routes, validation, guards and Supabase repositories |
 | Component | Vitest with JSDOM | Rendered controls, translations, disclosures and link behavior |
@@ -24,7 +24,7 @@ Playwright device profiles are repeatable emulations, not a substitute for final
 ## Commands and expected artifacts
 
 | Command | Expected result |
-|---|---|
+| --- | --- |
 | `npm run build` | TypeScript application/scripts compile, Python API validation and strict boundary typecheck pass, and local Swagger/Scalar assets are copied; project-owned JavaScript exists only as generated output |
 | `npm run typecheck:strict` | New domain, import, persistence and API boundaries pass strict/null/index type checks |
 | `npm test` | All Vitest unit, API, contract and component suites pass |
@@ -51,8 +51,8 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 ## Unit suites
 
 | File | Coverage |
-|---|---|
-| `tests/unit/spreadsheet-reader.unit.test.ts` | Legacy .xls, .xlsx and CSV reading: delimiters, quoting, CRLF, magic-byte dispatch and the HTML-table refusal |
+| --- | --- |
+| `tests/unit/spreadsheet-reader.unit.test.ts` | Legacy .xls, .xlsx, CSV and HTML-table reading: delimiters, quoting, CRLF, magic-byte dispatch, colspan/rowspan alignment and windows-1255 decoding |
 | `tests/unit/financial-agents.unit.test.ts` | Eight agents, saving estimates, Strategy injection, safe-to-spend edges and date clamping |
 | `tests/unit/localization.unit.test.ts` | Supported locale validation, RTL/LTR, UTC formatting and named parameters |
 | `tests/unit/credit-card-importer.unit.test.ts` | Charges, refunds and invalid workbook rows |
@@ -68,7 +68,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 ## Python server suites
 
 | File | Coverage |
-|---|---|
+| --- | --- |
 | `tests/server/test_config.py` | Environment validation and strict bearer-token parsing |
 | `tests/server/test_models.py` | Pydantic allowlists, size bounds and financial-identifier rejection |
 | `tests/server/test_metrics.py` | Bounded route/method/operation labels and rejection of raw path or identity data in Prometheus output |
@@ -79,7 +79,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 ## API suites
 
 | File | Coverage |
-|---|---|
+| --- | --- |
 | `tests/api/credit-card-importer.api.test.ts` | Stable importer output and unsupported workbook rejection |
 | `tests/api/financial-agents.api.test.ts` | Stable result slot for every agent |
 | `tests/api/localization.api.test.ts` | Public locale configuration and formatter factory |
@@ -88,7 +88,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 ## Contract and security suites
 
 | File | Coverage |
-|---|---|
+| --- | --- |
 | `tests/contract/design-system-contract.test.ts` | Semantic tokens, recipe ownership, variants, disabled/focus states, contrast preferences, touch targets, typography and directional drawers |
 | `tests/contract/documentation-contract.test.ts` | README, architecture, design system, privacy, Supabase, TODO, monitoring and this test plan stay synchronized |
 | `tests/contract/importer-contract.test.ts` | Dashboard transaction shape |
@@ -103,7 +103,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 ## Component suites
 
 | File | Coverage |
-|---|---|
+| --- | --- |
 | `tests/component/cloud-consent.component.test.ts` | Unselected explicit consent, voluntariness, limits and rights |
 | `tests/component/credit-card-upload.component.test.ts` | Multi-file spreadsheet upload contract |
 | `tests/component/financial-agents.component.test.ts` | Accessible eight-agent host and prominent safe-to-spend result |
@@ -115,7 +115,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 ## End-to-end and sanity suites
 
 | File | Coverage |
-|---|---|
+| --- | --- |
 | `tests/e2e/accessibility.e2e.spec.ts` | axe WCAG A/AA checks for empty, populated, settings, agents and directory states |
 | `tests/e2e/chart-accessibility.e2e.spec.ts` | Both charts publish their figures as data tables, with row headers and the projection range |
 | `tests/e2e/api-docs.e2e.spec.ts` | Self-hosted Swagger and Scalar loading the same specification and every health, snapshot, profile and consent operation |

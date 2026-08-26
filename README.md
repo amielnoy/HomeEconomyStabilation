@@ -139,7 +139,7 @@ Vitest בודק לוגיקת דפדפן וחוזים במהירות. Pytest בו
 
 ## פריסה אוטומטית ל־Vercel
 
-ה־workflow בקובץ `.github/workflows/ci.yml` מריץ build ואת כל הבדיקות בכל push ו־pull request. כל פעולות GitHub הרשמיות בו משתמשות בגרסאות Node.js 24 (`checkout@v6`,‏ `setup-node@v6`,‏ `setup-python@v6`,‏ `upload-artifact@v6`) כדי להימנע מאזהרת ה־Node.js 20 שהוצא משימוש. פריסת production מתבצעת רק לאחר הצלחה מלאה, ורק ב־push לענף `main` או בהפעלה ידנית באמצעות `workflow_dispatch`. ריצת schedule בודקת את המוצר אך אינה פורסת.
+הבדיקות מחולקות לשתי שכבות. ה־workflow בקובץ `.github/workflows/gate.yml` הוא השכבה החוסמת: הוא מריץ build ואת כל הבדיקות בכל push ו־pull request, אך ב־Playwright רק את הפרויקטים `desktop-chromium` ו־`api` (`npm run test:gate`), ולכן מתקין רק את דפדפן Chromium. ה־workflow בקובץ `.github/workflows/sanity.yml` מריץ את מלוא הבדיקות בכל פרויקטי הדפדפן (`npm run test:all`) בשעה 02:00 UTC — 05:00 בישראל בשעון קיץ — וגם בהפעלה ידנית באמצעות `workflow_dispatch`. cron של GitHub פועל ב־UTC בלבד ואינו מתחשב בשעון קיץ, ולכן בחורף הריצה נופלת ב־04:00 מקומי. כל פעולות GitHub הרשמיות משתמשות בגרסאות Node.js 24 (`checkout@v6`,‏ `setup-node@v6`,‏ `setup-python@v6`,‏ `upload-artifact@v6`) כדי להימנע מאזהרת ה־Node.js 20 שהוצא משימוש. פריסת production מתבצעת רק לאחר הצלחה מלאה של ה־gate, ורק ב־push לענף `main` או בהפעלה ידנית באמצעות `workflow_dispatch`. ריצת ה־sanity בודקת את המוצר אך אינה פורסת.
 
 ה־workflow מוכן בקוד, אך הפעלתו בחשבון עדיין דורשת את ה־secrets והגנות הענף המפורטים ב־[TODO.md](TODO.md). עד להשלמתם אפשר לפרוס ידנית רק לאחר מעבר מלא של הבדיקות.
 
