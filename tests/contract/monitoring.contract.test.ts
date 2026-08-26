@@ -96,22 +96,49 @@ describe('monitoring contract', () => {
     const packageJson = JSON.parse(read('package.json'));
     const parallelRunner = read('scripts/run-tests-in-parallel.sh');
     const containerRunner = read('scripts/run-tests-and-generate-allure.sh');
-    const workflow = read('.github/workflows/ci.yml');
+    const gate = read('.github/workflows/gate.yml');
+    const sanity = read('.github/workflows/sanity.yml');
     const playwrightConfig = read('playwright.config.ts');
 
     expect(packageJson.scripts['test:all']).toBe('sh scripts/run-tests-in-parallel.sh');
+    expect(packageJson.scripts['test:gate']).toBe('E2E_SCRIPT=test:e2e:gate sh scripts/run-tests-in-parallel.sh');
     expect(parallelRunner).toContain('npm run "$VITEST_SCRIPT" &');
     expect(parallelRunner).toContain('npm run "$SERVER_TEST_SCRIPT" &');
-    expect(parallelRunner).toContain('npm run test:e2e &');
+    expect(parallelRunner).toContain('npm run "$E2E_SCRIPT" &');
     expect(parallelRunner).toContain('wait "$vitest_pid"');
     expect(parallelRunner).toContain('wait "$server_pid"');
     expect(parallelRunner).toContain('wait "$playwright_pid"');
     expect(parallelRunner).toContain('vitest=$vitest_status pytest=$server_status playwright=$playwright_status');
     expect(containerRunner).toContain('SERVER_TEST_SCRIPT=test:server:allure');
-    expect(workflow).toContain('Run Vitest, Pytest and Playwright in parallel');
-    expect(workflow).toContain('run: npm run test:all');
-    expect(workflow).toContain('actions/upload-artifact@v6');
-    expect(workflow).not.toContain('actions/upload-artifact@v5');
+    for (const workflow of [gate, sanity]) {
+      expect(workflow).toContain('Run Vitest, Pytest and Playwright in parallel');
+      expect(workflow).toContain('actions/upload-artifact@v6');
+      expect(workflow).not.toContain('actions/upload-artifact@v5');
+    }
     expect(playwrightConfig).toContain('workers: process.env.CI ? 2 : undefined');
+  });
+
+  /* Two tiers: a blocking gate on every push and pull request, and the whole
+     suite overnight. The split is only worth having if the gate stays the fast
+     one and the nightly stays the complete one, so both halves are pinned. */
+  it('gates every push on the fast tier and runs the full browser matrix nightly', () => {
+    const gate = read('.github/workflows/gate.yml');
+    const sanity = read('.github/workflows/sanity.yml');
+
+    expect(gate).toContain('run: npm run test:gate');
+    expect(gate).toContain('npx playwright install --with-deps chromium\n');
+    expect(gate).toMatch(/on:\n  push:\n  pull_request:\n  workflow_dispatch:/);
+    // Production still ships only from a green gate on main.
+    expect(gate).toContain('needs: gate');
+    expect(gate).toContain("needs.gate.result == 'success'");
+
+    expect(sanity).toContain('run: npm run test:all');
+    expect(sanity).toContain('npx playwright install --with-deps chromium webkit');
+    // 02:00 UTC is 05:00 in Israel while daylight saving is in effect.
+    expect(sanity).toContain("- cron: '0 2 * * *'");
+    expect(sanity).toContain('workflow_dispatch:');
+    expect(sanity).not.toContain('cancel-in-progress: true');
+    // The nightly tier must never deploy; only the gate does.
+    expect(sanity).not.toContain('vercel');
   });
 });

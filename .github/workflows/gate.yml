@@ -1,24 +1,26 @@
-name: CI
+name: Gate
 
+# The blocking tier: everything except the extra browser projects. Vitest, Pytest
+# and the Playwright desktop-chromium and api projects catch essentially every
+# real defect, while webkit and the Android profiles — which roughly tripled the
+# Playwright time — move to the nightly Sanity run.
 on:
   push:
   pull_request:
-  schedule:
-    - cron: '0 22 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: gate-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  validate:
+  gate:
     name: Build and test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -45,11 +47,12 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
+      # Only the browser the gate projects actually drive.
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium webkit
+        run: npx playwright install --with-deps chromium
 
       - name: Run Vitest, Pytest and Playwright in parallel
-        run: npm run test:all
+        run: npm run test:gate
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
@@ -64,10 +67,10 @@ jobs:
 
   deploy-production:
     name: Deploy latest version to Vercel
-    needs: validate
+    needs: gate
     if: >-
       ${{
-        needs.validate.result == 'success' &&
+        needs.gate.result == 'success' &&
         (github.event_name == 'workflow_dispatch' ||
          (github.event_name == 'push' && github.ref == 'refs/heads/main'))
       }}
