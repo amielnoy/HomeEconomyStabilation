@@ -107,7 +107,17 @@ export class AppStateCodec {
     for (const rule of this.defaults.rules) {
       if (!rules.some((candidate) => candidate.match === rule.match && candidate.cat === rule.cat)) rules.push({ ...rule });
     }
-    return { tx: tx as BankTransaction[], overrides, rules, cats, budgets, accounts: [], month: null };
+    /* A category added to the defaults after a customer last saved would otherwise
+       never reach them, because categories are restored wholesale where rules are
+       merged. Each missing default returns at its own position rather than on the
+       end, so the chart palette — which follows category order — stays put. */
+    const restoredCats = [...cats];
+    this.defaults.cats.forEach((category, index) => {
+      if (!restoredCats.some((candidate) => candidate.id === category.id)) {
+        restoredCats.splice(Math.min(index, restoredCats.length), 0, { ...category });
+      }
+    });
+    return { tx: tx as BankTransaction[], overrides, rules, cats: restoredCats, budgets, accounts: [], month: null };
   }
 }
 

@@ -158,6 +158,7 @@ const DEFAULT_CATS: Category[] = [
   { id: 'transit',  name: 'תחבורה ודלק',    kind: 'expense' },
   { id: 'health',   name: 'בריאות וביטוח',  kind: 'expense' },
   { id: 'savings',  name: 'חיסכון והעברות', kind: 'neutral' },
+  { id: 'loans',    name: 'הלוואות',       kind: 'expense' },
   { id: 'fees',     name: 'עמלות וריבית',   kind: 'expense' },
   { id: 'other',    name: 'אחר',            kind: 'expense' },
   { id: 'income',   name: 'הכנסות',         kind: 'income'  },
@@ -171,6 +172,11 @@ const DEFAULT_RULES = [
   ['בזק', 'home'], ['הוט', 'home'], ['סלקום', 'home'], ['פרטנר', 'home'], ['פלאפון', 'home'],
   ['ועד בית', 'home'], ['שכירות', 'home'], ['משכנתא', 'home'], ['פזגז', 'home'], ['סופרגז', 'home'],
   ['אמישראגז', 'home'],
+  /* Ahead of the fees and savings blocks: a repayment is usually worded as a
+     transfer or a standing order, and "העברה" would otherwise claim it first.
+     משכנתא stays in the housing block above — a mortgage is where someone lives
+     before it is a loan. Both spellings appear on real statements. */
+  ['הלווא', 'loans'], ['הלוא', 'loans'],
   ['שופרסל', 'food'], ['רמי לוי', 'food'], ['ויקטורי', 'food'], ['יינות ביתן', 'food'],
   ['אושר עד', 'food'], ['טיב טעם', 'food'], ['יוחננוף', 'food'], ['מגה בעיר', 'food'],
   ['פז ', 'transit'], ['דלק ', 'transit'], ['סונול', 'transit'], ['דור אלון', 'transit'],
