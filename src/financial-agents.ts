@@ -326,24 +326,28 @@ function monthlyOutflowCushion(transactions: AgentTransaction[]): number {
 }
 
 /** Typical daily outflow that is *not* part of a recurring group — the household's
-    ordinary discretionary rate, measured over the 90 days before `asOfTime`. */
+    ordinary discretionary rate, measured over at most the 90 days before `asOfTime`. */
 function discretionaryDailyRate(transactions: AgentTransaction[], asOfTime: number, recurringKeys: ReadonlySet<string>): number {
   const windowStart = asOfTime - 89 * DAY;
-  const perDay = new Map<string, number>();
+  let earliest = Infinity;
+  let total = 0;
   for (const item of transactions) {
-    if (item.out <= 0) continue;
     const time = dateValue(item.date);
+    if (time <= asOfTime) earliest = Math.min(earliest, time);
+    if (item.out <= 0) continue;
     if (time < windowStart || time > asOfTime) continue;
     if (recurringKeys.has(merchantKey(item.desc))) continue;
-    perDay.set(item.date, (perDay.get(item.date) || 0) + item.out);
+    total += item.out;
   }
-  if (!perDay.size) return 0;
-  const days: number[] = [];
-  for (let time = windowStart; time <= asOfTime; time += DAY) {
-    days.push(perDay.get(new Date(time).toISOString().slice(0, 10)) || 0);
-  }
+  if (total <= 0) return 0;
+  /* Divide by the days actually on record, not a nominal 90. A household that has
+     imported a single month of statements spent that money over those thirty days;
+     spreading it across ninety would understate the rate threefold and collapse the
+     guidance that is derived from it. The window still caps how far back we look. */
+  const measuredFrom = Math.max(windowStart, earliest);
+  const daysOnRecord = Math.max(1, Math.round((asOfTime - measuredFrom) / DAY) + 1);
   // Mean, not median: most days are zero, and the cadence of spending is what matters.
-  return days.reduce((sum, value) => sum + value, 0) / days.length;
+  return total / daysOnRecord;
 }
 
 export function paydayAgent(transactions: AgentTransaction[]): PaydayRunway | null {
