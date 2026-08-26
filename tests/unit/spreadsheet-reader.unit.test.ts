@@ -68,9 +68,61 @@ describe('spreadsheet reader', () => {
     expect(workbook.sheets[0]!.name).not.toBe('mislabelled.csv');
   });
 
-  it('refuses an HTML table masquerading as a statement', async () => {
-    await expect(readWorkbook(buffer('<html><table><tr><td>1</td></tr></table></html>'), 'x.xls'))
-      .rejects.toThrow('HTML_TABLE');
+  it('reads an HTML table shipped under an .xls name', async () => {
+    const workbook = await readWorkbook(buffer(
+      '<html><body><table>'
+      + '<tr><th>תאריך</th><th>תיאור פעולה</th><th>חובה</th></tr>'
+      + '<tr><td>01/08/2026</td><td>שופרסל דיל</td><td>120.50</td></tr>'
+      + '</table></body></html>',
+    ), 'statement.xls');
+    expect(values(workbook)).toEqual([
+      ['תאריך', 'תיאור פעולה', 'חובה'],
+      ['01/08/2026', 'שופרסל דיל', '120.50'],
+    ]);
+  });
+
+  it('keeps columns aligned with the header across colspan and rowspan', async () => {
+    const workbook = await readWorkbook(buffer(
+      '<table>'
+      + '<tr><td rowspan="2">a</td><td>b</td><td>c</td></tr>'
+      + '<tr><td colspan="2">d</td></tr>'
+      + '<tr><td>e</td><td>f</td><td>g</td></tr>'
+      + '</table>',
+    ), 'spans.xls');
+    expect(values(workbook)).toEqual([
+      ['a', 'b', 'c'],
+      ['a', 'd', null],
+      ['e', 'f', 'g'],
+    ]);
+  });
+
+  it('reads the statement table rather than the layout table wrapping it', async () => {
+    const workbook = await readWorkbook(buffer(
+      '<table><tr><td><table><tr><td>תאריך</td><td>סכום</td></tr></table></td></tr></table>',
+    ), 'nested.xls');
+    expect(workbook.sheets).toHaveLength(1);
+    expect(values(workbook)).toEqual([['תאריך', 'סכום']]);
+  });
+
+  /* Decoded as UTF-8 these bytes are replacement characters, which match no
+     categorisation rule and would quietly land every row in "other". */
+  it('honours a declared windows-1255 charset instead of assuming UTF-8', async () => {
+    const body = '<html><head><meta charset="windows-1255"></head><body><table><tr><td>'
+      + 'שופרסל</td></tr></table></body></html>';
+    const bytes = new Uint8Array([...body].map((character) => {
+      const code = character.codePointAt(0)!;
+      // windows-1255 maps Hebrew U+05D0..U+05EA onto 0xE0..0xFA.
+      return code >= 0x05d0 && code <= 0x05ea ? code - 0x05d0 + 0xe0 : code;
+    }));
+    const workbook = await readWorkbook(bytes.buffer as ArrayBuffer, 'hebrew.xls');
+    expect(workbook.sheets[0]!.rows[0]![0]!.v).toBe('שופרסל');
+  });
+
+  it('keeps bank-controlled markup inside a cell as text', async () => {
+    const workbook = await readWorkbook(buffer(
+      '<table><tr><td>&lt;img src=x onerror=alert(1)&gt;</td></tr></table>',
+    ), 'xss.xls');
+    expect(workbook.sheets[0]!.rows[0]![0]!.v).toBe('<img src=x onerror=alert(1)>');
   });
 
   it('treats anything else as delimited text rather than failing', async () => {

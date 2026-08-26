@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { htmlBankReport } from './reports';
 
 test.beforeEach(async ({ homePage }) => {
   await homePage.openFresh();
@@ -11,6 +12,20 @@ test('uploads and processes the supplied bank workbook', async ({ homePage }) =>
   await expect(homePage.dashboard.monthChips).toContainText('אוגוסט 2026');
   await expect(homePage.dashboard.transactionRows).toHaveCount(5);
   await expect(homePage.dashboard.accountSummary).toContainText('04-279-661711');
+});
+
+/* Several Israeli banks name an HTML document .xls. Excel opens it, so the bank
+   calls it a spreadsheet; before this it failed the import with nothing said about
+   why, and the customer had no way to tell a bad file from an unsupported one. */
+test('imports a statement that is really an HTML table named .xls', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport(htmlBankReport());
+
+  await expect(homePage.dashboard.root).toBeVisible();
+  await expect(homePage.dashboard.transactionRows).toHaveCount(4);
+  await expect(homePage.dashboard.accountSummary).toContainText('04-279-661711');
+  // Hebrew survives the windows-1255 body, so the rules can still categorise it.
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'שופרסל דיל' })).toHaveCount(1);
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'משיכה מבנקט' })).toHaveCount(1);
 });
 
 test('exposes the credit-card upload control in the live UI', async ({ homePage }) => {

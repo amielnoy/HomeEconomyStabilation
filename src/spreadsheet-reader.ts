@@ -575,13 +575,106 @@ export function parseCSV(text: string, name = 'CSV'): Workbook {
   return { sheets: [{ name, rows }] };
 }
 
+/* -------------------------------------------------------------------- HTML */
+
+/* Several Israeli banks export a file named .xls that is really an HTML document
+   with a <table> in it. Excel opens it, so the bank calls it a spreadsheet, and
+   every real spreadsheet parser rejects it. The table itself is ordinary, so
+   reading it as one is cheap and covers those exports. Only textContent is ever
+   read: markup in a bank-controlled cell stays text and never becomes nodes. */
+
+/** A colspan/rowspan, clamped. A broken or hostile span must not be allowed to
+    allocate an arbitrarily wide row. */
+function spanOf(element: Element, attribute: string): number {
+  const parsed = Number.parseInt(element.getAttribute(attribute) ?? '1', 10);
+  return Number.isFinite(parsed) && parsed > 1 ? Math.min(parsed, 64) : 1;
+}
+
+/* Empty cells stay holes rather than empty strings, matching parseCSV, so that
+   findHeader sees the same shape whichever format the statement arrived in. */
+function htmlCell(element: Element): SpreadsheetCell | null {
+  const text = (element.textContent ?? '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+  return text === '' ? null : { t: 's', v: text };
+}
+
+/* A cell carrying rowspan keeps occupying its column on the rows underneath it.
+   Without that, every column to its right slides one place left on those rows and
+   stops lining up with the header. */
+function htmlRows(table: Element): Array<Array<SpreadsheetCell | null>> {
+  const rows: Array<Array<SpreadsheetCell | null>> = [];
+  const carried: Array<{ cell: SpreadsheetCell | null; left: number } | undefined> = [];
+  for (const tr of table.querySelectorAll('tr')) {
+    const row: Array<SpreadsheetCell | null> = [];
+    let column = 0;
+    const fillCarried = () => {
+      let carry = carried[column];
+      while (carry && carry.left > 0) {
+        row[column] = carry.cell;
+        carry.left -= 1;
+        column += 1;
+        carry = carried[column];
+      }
+    };
+    for (const element of tr.children) {
+      const tag = element.tagName.toLowerCase();
+      if (tag !== 'td' && tag !== 'th') continue;
+      fillCarried();
+      const cell = htmlCell(element);
+      const across = spanOf(element, 'colspan');
+      const down = spanOf(element, 'rowspan');
+      for (let i = 0; i < across; i += 1) {
+        // Only the first column of a spanned cell carries the value, so an amount
+        // is never counted once per column it happens to stretch over.
+        const value = i === 0 ? cell : null;
+        row[column] = value;
+        if (down > 1) carried[column] = { cell: value, left: down - 1 };
+        column += 1;
+      }
+    }
+    fillCarried();
+    rows.push(row);
+  }
+  return rows;
+}
+
+export function parseHTMLTable(text: string, name = 'HTML'): Workbook {
+  const document = new DOMParser().parseFromString(text, 'text/html');
+  /* Bank exports wrap the statement in layout tables. Only the innermost tables
+     hold data; a wrapper would otherwise contribute a sheet of merged nonsense. */
+  const tables = [...document.querySelectorAll('table')].filter((table) => !table.querySelector('table'));
+  const sheets = tables
+    .map((table, index) => {
+      const caption = (table.querySelector('caption')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+      return {
+        name: caption || (index === 0 ? name : `${name} (${index + 1})`),
+        rows: htmlRows(table),
+      };
+    })
+    .filter((sheet) => sheet.rows.some((row) => row.some((cell) => cell !== null)));
+  return { sheets: sheets.length ? sheets : [{ name, rows: [] }] };
+}
+
+/* Israeli bank exports are commonly windows-1255 rather than UTF-8, and decoding
+   those as UTF-8 replaces every Hebrew description with U+FFFD — which then
+   matches no categorisation rule and lands the transaction in "other". The
+   declared charset is ASCII whichever encoding the body uses, so it can be read
+   before committing to one. */
+function decodeDocument(bytes: Uint8Array): string {
+  const declared = /charset\s*=\s*["']?\s*([\w-]+)/i
+    .exec(latin1(bytes, 0, Math.min(bytes.length, 4096)))?.[1]?.toLowerCase();
+  if (declared && !/^utf-?8$/.test(declared)) {
+    try { return new TextDecoder(declared).decode(bytes); } catch { /* unknown label: fall back to UTF-8 */ }
+  }
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
 /* ------------------------------------------------------------------ facade */
 
 export async function readWorkbook(arrayBuffer: ArrayBuffer, filename = ''): Promise<Workbook> {
   const b = new Uint8Array(arrayBuffer);
   if (b[0] === 0xd0 && b[1] === 0xcf) return parseXLS(arrayBuffer);
   if (b[0] === 0x50 && b[1] === 0x4b) return parseXLSX(arrayBuffer);
-  const text = new TextDecoder('utf-8').decode(b);
-  if (/^\s*</.test(text) && /<table/i.test(text)) throw new Error('HTML_TABLE');
+  const text = decodeDocument(b);
+  if (/^\s*</.test(text) && /<table/i.test(text)) return parseHTMLTable(text, filename || 'HTML');
   return parseCSV(text, filename || 'CSV');
 }

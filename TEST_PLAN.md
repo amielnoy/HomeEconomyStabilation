@@ -52,7 +52,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 
 | File | Coverage |
 | --- | --- |
-| `tests/unit/spreadsheet-reader.unit.test.ts` | Legacy .xls, .xlsx and CSV reading: delimiters, quoting, CRLF, magic-byte dispatch and the HTML-table refusal |
+| `tests/unit/spreadsheet-reader.unit.test.ts` | Legacy .xls, .xlsx, CSV and HTML-table reading: delimiters, quoting, CRLF, magic-byte dispatch, colspan/rowspan alignment and windows-1255 decoding |
 | `tests/unit/financial-agents.unit.test.ts` | Eight agents, saving estimates, Strategy injection, safe-to-spend edges and date clamping |
 | `tests/unit/localization.unit.test.ts` | Supported locale validation, RTL/LTR, UTC formatting and named parameters |
 | `tests/unit/credit-card-importer.unit.test.ts` | Charges, refunds and invalid workbook rows |
