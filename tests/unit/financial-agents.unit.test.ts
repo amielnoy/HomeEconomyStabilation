@@ -164,6 +164,25 @@ describe('independent financial agents', () => {
     expect(result!.weeklyAllowance).toBeCloseTo(result!.dailyAllowance! * 7, 5);
   });
 
+  it('rates spending over the days on record rather than a nominal ninety', () => {
+    // Forty-six days of history, ₪500 of it discretionary. Dividing by a fixed
+    // ninety-day window would report the household spending a third of its real
+    // rate, and hand back a "safe to spend" figure to match.
+    const result = paydayAgent([
+      tx('2026-03-01', 'Salary Employer', 0, { out: 0, in: 9000 }),
+      tx('2026-04-01', 'Salary Employer', 0, { out: 0, in: 9000 }),
+      tx('2026-04-10', 'Corner Grocery', 300),
+      tx('2026-04-15', 'Bookshop', 200, { bal: 5000 }),
+    ]);
+
+    const daysOnRecord = 46, daysRemaining = 16;
+    expect(result).toMatchObject({ asOf: '2026-04-15', available: 5000, daysRemaining, limitedBy: 'spending-rate' });
+    expect(result!.typicalSpend).toBeCloseTo((500 / daysOnRecord) * daysRemaining, 5);
+    expect(result!.freeToSpend).toBeCloseTo((500 / daysOnRecord) * daysRemaining, 5);
+    // The old fixed denominator would have landed here instead.
+    expect(result!.typicalSpend).not.toBeCloseTo((500 / 90) * daysRemaining, 5);
+  });
+
   it('returns an explicit unavailable result when no balance exists', () => {
     expect(paydayAgent([
       tx('2026-01-01', 'Salary Employer', 0, { out: 0, in: 9000 }),

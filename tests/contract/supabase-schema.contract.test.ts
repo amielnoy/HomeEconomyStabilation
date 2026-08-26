@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CLOUD_SNAPSHOT_SCHEMA_VERSION } from '../../src/cloud-sync';
@@ -33,6 +33,38 @@ describe('Supabase persistence contract', () => {
     expect(store).toContain('/auth/v1/user');
     expect(`${config}\n${store}`).not.toMatch(/service[_-]?role/i);
     expect(`${config}\n${store}`).not.toContain('SUPABASE_SECRET_KEY');
+  });
+
+  /* Every column an upsert puts in its body lands in the `on conflict do update set`
+     clause PostgREST generates, so a column-level grant that omits any of them fails
+     the *second* write with 42501 while the first still succeeds. The fake client the
+     store tests use cannot enforce grants, so the invariant is checked against the SQL. */
+  it('grants update on every column the merge-duplicates upserts send', () => {
+    const upserted: Record<string, readonly string[]> = {
+      user_profiles: ['user_id', 'preferred_locale'],
+      app_snapshots: ['user_id', 'payload', 'schema_version'],
+      consent_acceptances: ['user_id', 'purpose', 'statement_version', 'locale', 'accepted_at', 'withdrawn_at'],
+    };
+    const migrationsDir = resolve(root, 'supabase/migrations');
+    const sql = readdirSync(migrationsDir)
+      .filter((name) => name.endsWith('.sql'))
+      .map((name) => readFileSync(resolve(migrationsDir, name), 'utf8'))
+      .join('\n');
+
+    const granted = new Map<string, Set<string>>();
+    for (const [, columns, table] of sql.matchAll(/grant\s+update\s*\(([^)]*)\)\s*on\s+table\s+public\.(\w+)/gi)) {
+      const set = granted.get(table) ?? new Set<string>();
+      for (const column of columns.split(',')) set.add(column.trim());
+      granted.set(table, set);
+    }
+
+    for (const [table, columns] of Object.entries(upserted)) {
+      expect(store).toContain(table);
+      for (const column of columns) {
+        expect({ table, column, granted: [...(granted.get(table) ?? [])] })
+          .toMatchObject({ granted: expect.arrayContaining([column]) });
+      }
+    }
   });
 
   it('keeps the database default and write constraint aligned with the runtime snapshot version', () => {
