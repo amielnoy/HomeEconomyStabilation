@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { richBankReport } from './reports';
 
 /* Deliberately below the touch minimum. Each entry is an exemption someone has to
    justify, rather than a control that was quietly left out of a list. */
@@ -106,5 +107,31 @@ test.describe('mobile browser usability', () => {
     expect(await homePage.hasHorizontalOverflow()).toBe(false);
     await homePage.savingsDirectory.goBack();
     await expect(homePage.dashboard.root).toBeVisible();
+  });
+
+  /* The empty state fits trivially. The dashboard is where a wide table can stretch the
+     page: the category breakdown did exactly that in French, and a phone browser answers
+     page-level overflow by zooming the whole interface out to fit. A table wider than the
+     viewport has to scroll inside its own .tblwrap instead of taking the page with it. */
+  test('keeps the populated dashboard within the viewport in every locale', async ({ homePage }) => {
+    await homePage.upload.uploadBankReport(richBankReport());
+    await expect(homePage.dashboard.root).toBeVisible();
+
+    for (const locale of ['he', 'en', 'am', 'fr'] as const) {
+      await homePage.language.choose(locale);
+      await expect(homePage.html).toHaveAttribute('lang', locale);
+      expect(
+        await homePage.hasHorizontalOverflow(),
+        `the ${locale} dashboard should fit the viewport`,
+      ).toBe(false);
+
+      await homePage.dashboard.categoryTableToggle.click();
+      await expect(homePage.page.getByTestId('cat-table')).toBeVisible();
+      expect(
+        await homePage.hasHorizontalOverflow(),
+        `the ${locale} category table should scroll inside its own region`,
+      ).toBe(false);
+      await homePage.dashboard.categoryTableToggle.click();
+    }
   });
 });
