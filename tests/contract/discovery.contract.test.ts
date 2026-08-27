@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -24,6 +24,22 @@ describe('assistant and search discovery contract', () => {
       expect(existsSync(resolve(root, file)), `${file} is missing from the repository`).toBe(true);
       expect(deployScript, `${file} is never copied into public/`).toContain(`'${file}'`);
     }
+  });
+
+  /* IndexNow is how Bing — and so Edge, Copilot and DuckDuckGo — learns about a change
+     without waiting to be crawled. Ownership is proven by a file whose *name* is the
+     key and whose *contents* are the same key; if those two ever disagree, or the file
+     never deploys, every submission is rejected and nothing says so out loud. */
+  it('proves IndexNow ownership with a key file that deploys and agrees with itself', () => {
+    const keyFiles = readdirSync(root).filter((name) => /^[0-9a-f]{32}\.txt$/.test(name));
+    expect(keyFiles, 'expected exactly one IndexNow key file at the root').toHaveLength(1);
+
+    const [keyFile] = keyFiles;
+    expect(read(keyFile).trim()).toBe(keyFile.replace(/\.txt$/, ''));
+    // Matched by pattern in the deploy script rather than named, so key rotation
+    // cannot leave the published keyLocation pointing at a file that is not there.
+    expect(deployScript).toContain('[0-9a-f]{32}\\.txt');
+    expect(read('scripts/submit-indexnow.ts')).toContain('api.indexnow.org/IndexNow');
   });
 
   it('names the assistant crawlers explicitly rather than relying on the wildcard', () => {
@@ -91,7 +107,7 @@ describe('assistant and search discovery contract', () => {
     }
     expect(css).not.toContain('tech(');
 
-    const preloaded = [...html.matchAll(/rel="preload"[^>]*href="fonts\/([^"]+)"/g)];
+    const preloaded = [...read('mazan-habait.html').matchAll(/rel="preload"[^>]*href="fonts\/([^"]+)"/g)];
     expect(preloaded.length).toBeGreaterThan(0);
     for (const [, file] of preloaded) {
       // A preload the stylesheet never requests is wasted bytes and a console warning.
@@ -112,16 +128,30 @@ describe('assistant and search discovery contract', () => {
     const block = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
     expect(block, 'no JSON-LD block in the document').not.toBeNull();
 
-    const data = JSON.parse(block![1]) as Record<string, unknown>;
+    const data = JSON.parse(block![1]) as { '@context': string; '@graph': Array<Record<string, unknown>> };
     expect(data['@context']).toBe('https://schema.org');
-    expect(data['@type']).toBe('WebApplication');
-    expect(data.url).toBe(`${ORIGIN}/`);
-    expect(data.applicationCategory).toBe('FinanceApplication');
+
+    const graph = data['@graph'];
+    const node = (type: string) => graph.find((entry) => entry['@type'] === type)!;
+    // WebSite is what earns the site name in a result rather than a bare domain,
+    // and Organization is the entity the other two hang off.
+    expect(node('WebSite')).toMatchObject({ url: `${ORIGIN}/`, inLanguage: 'he-IL' });
+    expect(node('Organization')).toBeDefined();
+
+    const app = node('WebApplication');
+    expect(app.url).toBe(`${ORIGIN}/`);
+    expect(app.applicationCategory).toBe('FinanceApplication');
     // The page's central claim is that it is free and needs no account; structured
     // data that disagreed with the visible text would be the kind of mismatch search
     // engines penalise, so the zero price is asserted rather than assumed.
-    expect(data.isAccessibleForFree).toBe(true);
-    expect(data.offers).toMatchObject({ price: '0' });
-    expect(Array.isArray(data.featureList)).toBe(true);
+    expect(app.isAccessibleForFree).toBe(true);
+    expect(app.offers).toMatchObject({ price: '0' });
+    expect(Array.isArray(app.featureList)).toBe(true);
+
+    // A node referring to an @id that no node defines is a silently broken graph.
+    const defined = new Set(graph.map((entry) => entry['@id']));
+    for (const reference of JSON.stringify(graph).matchAll(/"@id":"([^"]+)"/g)) {
+      expect(defined, `dangling @id ${reference[1]}`).toContain(reference[1]);
+    }
   });
 });

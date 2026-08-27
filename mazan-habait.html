@@ -33,7 +33,28 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
+  "@graph": [
+{
+  "@type": "WebSite",
+  "@id": "https://home-economy-stabilation.vercel.app/#website",
+  "url": "https://home-economy-stabilation.vercel.app/",
+  "name": "מאזן הבית",
+  "alternateName": "Mazan Habait",
+  "inLanguage": "he-IL",
+  "publisher": { "@id": "https://home-economy-stabilation.vercel.app/#publisher" }
+},
+{
+  "@type": "Organization",
+  "@id": "https://home-economy-stabilation.vercel.app/#publisher",
+  "name": "מאזן הבית",
+  "url": "https://home-economy-stabilation.vercel.app/",
+  "sameAs": ["https://github.com/amielnoy/HomeEconomyStabilation"]
+},
+{
   "@type": "WebApplication",
+  "@id": "https://home-economy-stabilation.vercel.app/#app",
+  "isPartOf": { "@id": "https://home-economy-stabilation.vercel.app/#website" },
+  "publisher": { "@id": "https://home-economy-stabilation.vercel.app/#publisher" },
   "name": "מאזן הבית",
   "alternateName": "Mazan Habait",
   "url": "https://home-economy-stabilation.vercel.app/",
@@ -58,8 +79,9 @@
     "זיהוי חיובים חוזרים, מנויים, כפילויות וחריגות",
     "הנחיית «כמה אפשר להוציא» עד המשכורת הבאה"
   ],
-  "sameAs": ["https://github.com/amielnoy/HomeEconomyStabilation"],
   "softwareHelp": "https://home-economy-stabilation.vercel.app/Architecture.html"
+}
+  ]
 }
 </script>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
