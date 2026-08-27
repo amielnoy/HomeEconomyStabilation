@@ -63,6 +63,14 @@
 }
 </script>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<!-- The Hebrew subsets of the heading and body faces, which every default-locale
+     render needs before it can paint text. Discovered two stylesheets deep otherwise,
+     which is late enough to cost a visible reflow. Latin and Ethiopic are left to
+     ordinary discovery: the first is small, the second only Amharic reaches. -->
+<link rel="preload" as="font" type="font/woff2" href="fonts/frank-ruhl-libre-hebrew.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="fonts/assistant-hebrew.woff2" crossorigin>
+<meta name="theme-color" content="#0d6473" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080e10" media="(prefers-color-scheme: dark)">
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="design-system.css">
 <style>

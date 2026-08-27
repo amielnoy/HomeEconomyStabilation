@@ -71,6 +71,34 @@ describe('assistant and search discovery contract', () => {
     }
   });
 
+  /* Largest Contentful Paint is a ranking input, and text cannot paint until its face
+     arrives. Two things here are worth holding still: every declared file must exist,
+     and no `src` may carry a descriptor the browser rejects. `tech()` silently
+     invalidated the whole `src` once, which drops the face to a system fallback while
+     the page still looks broadly right. */
+  it('declares one variable face per subset, each pointing at a file that exists', () => {
+    const css = read('fonts/fonts.css');
+    const faces = [...css.matchAll(/@font-face\s*\{([\s\S]*?)\}/g)].map((match) => match[1]);
+    expect(faces).toHaveLength(6);
+
+    for (const face of faces) {
+      const src = face.match(/src: url\(([^)]+)\) format\('woff2'\);/);
+      expect(src, `a face has no plain woff2 src: ${face.trim().slice(0, 60)}`).not.toBeNull();
+      expect(existsSync(resolve(root, 'fonts', src![1])), `${src![1]} is declared but absent`).toBe(true);
+      // A range, not a single value: one file serves every weight on the axis.
+      expect(face).toMatch(/font-weight: \d{3} \d{3};/);
+      expect(face).toContain('font-display: swap');
+    }
+    expect(css).not.toContain('tech(');
+
+    const preloaded = [...html.matchAll(/rel="preload"[^>]*href="fonts\/([^"]+)"/g)];
+    expect(preloaded.length).toBeGreaterThan(0);
+    for (const [, file] of preloaded) {
+      // A preload the stylesheet never requests is wasted bytes and a console warning.
+      expect(css, `${file} is preloaded but no face uses it`).toContain(`url(${file})`);
+    }
+  });
+
   it('points both duplicate addresses of the application at one canonical URL', () => {
     expect(html).toContain(`<link rel="canonical" href="${ORIGIN}/">`);
     expect(html).toMatch(/<meta name="description" content="[^"]{80,}">/);
