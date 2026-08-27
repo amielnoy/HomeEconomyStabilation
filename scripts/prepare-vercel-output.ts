@@ -12,6 +12,12 @@ const files = [
   'openapi.json',
   'favicon.svg',
   'design-system.css',
+  // Discovery files. A crawler only ever sees these if they reach `public/`, so a
+  // new one added at the repo root must be named here too — the contract test
+  // `discovery.contract.test.ts` fails when it is not.
+  'robots.txt',
+  'sitemap.xml',
+  'llms.txt',
   'fonts',
   'resources',
   'dist',

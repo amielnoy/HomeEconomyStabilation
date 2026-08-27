@@ -23,7 +23,12 @@ describe('TypeScript source contract', () => {
   it('loads all project-owned browser behavior from compiled TypeScript modules', () => {
     for (const file of ['mazan-habait.html', 'Architecture.html', 'api-docs.html', 'scalar-docs.html']) {
       const html = readFileSync(resolve(root, file), 'utf8');
-      expect(html, `${file} contains inline JavaScript`).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>/i);
+      /* `application/ld+json` is exempt because it is not script: the browser treats
+         it as a data block, never executes it, and CSP `script-src` does not govern
+         it — which is why the structured data in the head coexists with the
+         no-unsafe-inline policy asserted below. Executable inline script stays banned. */
+      expect(html, `${file} contains inline JavaScript`)
+        .not.toMatch(/<script(?![^>]*\bsrc=)(?![^>]*\btype="application\/ld\+json")[^>]*>/i);
     }
     expect(readFileSync(resolve(root, 'Architecture.html'), 'utf8')).toContain('dist/architecture.js');
     expect(readFileSync(resolve(root, 'api-docs.html'), 'utf8')).toContain('/dist/api-docs.js');

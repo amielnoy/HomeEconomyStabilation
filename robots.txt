@@ -1,0 +1,42 @@
+# Mazan Habait — https://home-economy-stabilation.vercel.app
+#
+# The site is a static marketing page plus a client-side tool. Household data is
+# read in the browser and never rendered into the HTML, so there is nothing here
+# a crawler could reach that a visitor could not. Assistants are welcome.
+
+# --- Assistant and answer-engine crawlers, named so the intent is explicit ----
+# OpenAI: training, the ChatGPT search index, and live user-triggered fetches.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+# Anthropic: training, the Claude search index, and live user-triggered fetches.
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: anthropic-ai
+# Google Gemini grounding, kept separate from ordinary Google indexing.
+User-agent: Google-Extended
+# Microsoft Copilot, Perplexity, Apple Intelligence, Meta AI, Amazon, Mistral.
+User-agent: Bingbot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Applebot
+User-agent: Applebot-Extended
+User-agent: meta-externalagent
+User-agent: Amazonbot
+User-agent: MistralAI-User
+# Common Crawl, which many other models are trained from.
+User-agent: CCBot
+User-agent: cohere-ai
+User-agent: Diffbot
+User-agent: omgili
+Allow: /
+
+# --- Everyone else ------------------------------------------------------------
+User-agent: *
+Allow: /
+# The JSON API needs a bearer token and returns nothing useful to a crawler.
+# The documentation *pages* for it are indexable and listed in the sitemap.
+Disallow: /api/
+
+Sitemap: https://home-economy-stabilation.vercel.app/sitemap.xml

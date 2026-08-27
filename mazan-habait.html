@@ -4,6 +4,64 @@
 <meta charset="utf-8">
 <meta data-testid="viewport-meta" name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title data-i18n="title">מאזן הבית</title>
+
+<!-- Discovery. The description and social tags stay in Hebrew because that is what
+     the document ships as: `lang` and the visible text are switched by script after
+     load, and a crawler reads neither. Assistants and answer engines are welcome to
+     this page — no household data ever reaches the HTML, so there is nothing here a
+     visitor could not already see. -->
+<meta name="description" content="כלי חינמי להבנת כלכלת הבית מתוך דוח הבנק. טוענים קובץ מהבנק או מחברת האשראי ומקבלים קטגוריות, תקציבים, תחזית תזרים והמלצות — הכול רץ בדפדפן, בלי הרשמה ובלי שליחת הנתונים לשרת.">
+<link rel="canonical" href="https://home-economy-stabilation.vercel.app/">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="מאזן הבית">
+<meta property="og:locale" content="he_IL">
+<meta property="og:title" content="מאזן הבית — כלכלת הבית, מדוח הבנק">
+<meta property="og:description" content="טוענים דוח בנק ומקבלים תמונת מצב, תקציבים, תחזית והמלצות פעולה. הכול בדפדפן, בלי הרשמה ובלי שליחת הנתונים לשרת.">
+<meta property="og:url" content="https://home-economy-stabilation.vercel.app/">
+<meta property="og:image" content="https://home-economy-stabilation.vercel.app/favicon.svg">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="מאזן הבית — כלכלת הבית, מדוח הבנק">
+<meta name="twitter:description" content="טוענים דוח בנק ומקבלים תמונת מצב, תקציבים, תחזית והמלצות פעולה. הכול בדפדפן, בלי הרשמה ובלי שליחת הנתונים לשרת.">
+
+<link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt">
+
+<!-- A data block, not a script: `type` is not JavaScript, so the CSP `script-src
+     'self'` does not apply and nothing here executes. Every claim below is one the
+     page itself makes in visible text. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "מאזן הבית",
+  "alternateName": "Mazan Habait",
+  "url": "https://home-economy-stabilation.vercel.app/",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["he", "en", "am", "fr"],
+  "countriesSupported": "IL",
+  "description": "כלי חינמי להבנת כלכלת הבית מתוך דוח הבנק. הקובץ נקרא בדפדפן ואינו נשלח לשרת: מתקבלים קטגוריות, תקציבים, תחזית תזרים, זיהוי חיובים חוזרים והמלצות פעולה.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "ILS"
+  },
+  "featureList": [
+    "קריאת דוחות בנק בפורמטים xls, xlsx ו-csv",
+    "קריאת דוח כרטיס אשראי והתאמתו לחיוב המרוכז בבנק",
+    "שיוך אוטומטי לקטגוריות עם כללים ולמידה מתיקונים ידניים",
+    "תקציב לכל קטגוריה ומעקב חריגה",
+    "תחזית תזרים חודשית",
+    "זיהוי חיובים חוזרים, מנויים, כפילויות וחריגות",
+    "הנחיית «כמה אפשר להוציא» עד המשכורת הבאה"
+  ],
+  "sameAs": ["https://github.com/amielnoy/HomeEconomyStabilation"],
+  "softwareHelp": "https://home-economy-stabilation.vercel.app/Architecture.html"
+}
+</script>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="design-system.css">
