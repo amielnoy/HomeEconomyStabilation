@@ -21,7 +21,7 @@ describe('savings and investments directory component', () => {
     const directory = document.querySelector('[data-testid="savings-directory"]')!;
     const links = [...directory.querySelectorAll<HTMLAnchorElement>('[data-testid$="-link"]')];
 
-    expect(links).toHaveLength(18);
+    expect(links).toHaveLength(20);
     expect(links.slice(0, 4).map((link) => new URL(link.href).hostname)).toEqual([
       'gemelnet.cma.gov.il',
       'pensyanet.cma.gov.il',
@@ -40,6 +40,28 @@ describe('savings and investments directory component', () => {
       'www.whatsapp.com',
     ]);
     expect(directory.querySelector('[data-testid="support-organizations-section"]')).not.toBeNull();
+  });
+
+  it('offers both communities and names what each one costs in privacy', () => {
+    const section = document.querySelector('[data-testid="community-section"]')!;
+    const whatsapp = section.querySelector<HTMLAnchorElement>('[data-testid="community-whatsapp-link"]')!;
+    const telegram = section.querySelector<HTMLAnchorElement>('[data-testid="community-telegram-link"]')!;
+
+    // Neither is presented as the safer choice: each card states the protection it
+    // gives and the one it withholds, so the reader picks the trade-off they want.
+    expect(whatsapp.textContent).toContain('מוצפן מקצה לקצה');
+    expect(whatsapp.textContent).toContain('מחייבת מספר טלפון');
+    expect(telegram.textContent).toContain('להסתיר את מספר הטלפון');
+    expect(telegram.textContent).toContain('אינן מוצפנות מקצה לקצה');
+    expect(whatsapp.querySelector('.ds-status')?.getAttribute('data-tone'))
+      .toBe(telegram.querySelector('.ds-status')?.getAttribute('data-tone'));
+  });
+
+  it('warns that the on-device promise stops at the community door', () => {
+    const disclaimer = document.querySelector('[data-testid="community-disclaimer"]');
+
+    expect(disclaimer?.textContent).toContain('שירות חיצוני');
+    expect(disclaimer?.textContent).toContain('אל תשתפו דוחות בנק');
   });
 
   it('uses official registries and explains how to verify independence', () => {
