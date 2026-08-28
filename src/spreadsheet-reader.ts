@@ -27,6 +27,16 @@ function latin1(bytes: Uint8Array, start: number, len: number): string {
   return s;
 }
 
+/* Both spreadsheet readers address rows by index, so every row the file never mentions —
+   the blank lines above a statement's heading, most often — is left as a hole rather than
+   an empty row. The importers walk rows and index into them, so one hole is a TypeError
+   that surfaces to the customer as "the file could not be read". Filling them here keeps
+   that promise in the one place every reader already passes through. */
+function densify(rows: Array<Array<SpreadsheetCell | null>>): Array<Array<SpreadsheetCell | null>> {
+  for (let index = 0; index < rows.length; index += 1) rows[index] ??= [];
+  return rows;
+}
+
 /* Excel serial date -> Date (UTC-anchored, so the calendar day never drifts). */
 function serialToDate(serial: number, date1904: boolean): Date {
   const epoch = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30);
@@ -405,7 +415,7 @@ function parseXLS(buf: ArrayBuffer): Workbook {
         }
       }
     }
-    sheets.push({ name: bs.name, rows });
+    sheets.push({ name: bs.name, rows: densify(rows) });
   }
   return { sheets };
 }
@@ -517,10 +527,19 @@ async function parseXLSX(buf: ArrayBuffer): Promise<Workbook> {
     const rows: Array<Array<SpreadsheetCell | null>> = [];
     if (bytes) {
       const doc = xmlDoc(bytes);
+      /* r="A1" and r="1" are optional in the format, and writers that leave them out
+         parsed as NaN — which silently dropped every cell in the file. Position then
+         comes from document order, exactly as the format intends. */
+      let nextRow = 0;
       for (const row of doc.getElementsByTagName('row')) {
-        const ri = Number(row.getAttribute('r')) - 1;
+        const declaredRow = Number.parseInt(row.getAttribute('r') ?? '', 10);
+        const ri = Number.isFinite(declaredRow) && declaredRow > 0 ? declaredRow - 1 : nextRow;
+        nextRow = ri + 1;
+        let nextColumn = 0;
         for (const c of row.getElementsByTagName('c')) {
-          const ci = colFromRef(c.getAttribute('r') || '');
+          const declaredColumn = colFromRef(c.getAttribute('r') ?? '');
+          const ci = declaredColumn >= 0 ? declaredColumn : nextColumn;
+          nextColumn = ci + 1;
           const t = c.getAttribute('t');
           const sIdx = +(c.getAttribute('s') || 0);
           const isEl = c.getElementsByTagName('is')[0];
@@ -549,7 +568,7 @@ async function parseXLSX(buf: ArrayBuffer): Promise<Workbook> {
         }
       }
     }
-    sheets.push({ name: sh.getAttribute('name') ?? '', rows });
+    sheets.push({ name: sh.getAttribute('name') ?? '', rows: densify(rows) });
   }
   return { sheets };
 }
@@ -679,8 +698,15 @@ function mlCell(cell: Element): SpreadsheetCell | null {
     return Number.isFinite(parsed) ? { t: 'n', v: parsed } : { t: 's', v: text };
   }
   if (type === 'DateTime') {
-    const parsed = new Date(text);
-    return Number.isNaN(parsed.getTime()) ? { t: 's', v: text } : { t: 'd', v: parsed };
+    /* The format writes no timezone, so Date would read it as local time and
+       toISOString would report the day before anywhere east of UTC — every Israeli
+       transaction sliding back a day. Anchoring to UTC matches serialToDate. */
+    const parts = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(text);
+    if (!parts) return { t: 's', v: text };
+    return { t: 'd', v: new Date(Date.UTC(
+      Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]),
+      Number(parts[4] ?? 0), Number(parts[5] ?? 0), Number(parts[6] ?? 0),
+    )) };
   }
   return { t: 's', v: text };
 }
@@ -731,17 +757,39 @@ function decodeDocument(bytes: Uint8Array): string {
 
 /* ------------------------------------------------------------------ facade */
 
+/** What the bytes turned out to be, whatever the file was named. */
+export type WorkbookFormat = 'xls' | 'xlsx' | 'spreadsheetml' | 'html' | 'csv';
+
+/* Which container a file is decides how it is read, and it is the first thing worth
+   knowing when an import produces nothing — a report the customer calls Excel landing on
+   `csv` says the sniffing missed. Naming the format here rather than at each call site
+   keeps the diagnosis and the dispatch reading from the same rules. */
+function classify(bytes: Uint8Array): { format: WorkbookFormat; text: string | null } {
+  if (bytes[0] === 0xd0 && bytes[1] === 0xcf) return { format: 'xls', text: null };
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b) return { format: 'xlsx', text: null };
+  const text = decodeDocument(bytes);
+  if (/^\s*</.test(text) && text.includes(SPREADSHEETML_NS)) return { format: 'spreadsheetml', text };
+  if (/^\s*</.test(text) && /<table/i.test(text)) return { format: 'html', text };
+  return { format: 'csv', text };
+}
+
+/** The detected container, for diagnostics. Reading may still fall back — a document that
+    names the SpreadsheetML namespace but yields no rows is read as HTML. */
+export function workbookFormat(arrayBuffer: ArrayBuffer): WorkbookFormat {
+  return classify(new Uint8Array(arrayBuffer)).format;
+}
+
 export async function readWorkbook(arrayBuffer: ArrayBuffer, filename = ''): Promise<Workbook> {
-  const b = new Uint8Array(arrayBuffer);
-  if (b[0] === 0xd0 && b[1] === 0xcf) return parseXLS(arrayBuffer);
-  if (b[0] === 0x50 && b[1] === 0x4b) return parseXLSX(arrayBuffer);
-  const text = decodeDocument(b);
-  if (/^\s*</.test(text) && text.includes(SPREADSHEETML_NS)) {
-    const workbook = parseSpreadsheetML(text, filename || 'XML');
+  const { format, text } = classify(new Uint8Array(arrayBuffer));
+  if (format === 'xls') return parseXLS(arrayBuffer);
+  if (format === 'xlsx') return parseXLSX(arrayBuffer);
+  if (format === 'spreadsheetml') {
+    const workbook = parseSpreadsheetML(text!, filename || 'XML');
     /* An Excel-saved HTML file can name office namespaces too, so a document that
        yields nothing here is still offered to the HTML reader below. */
     if (workbook.sheets.some((sheet) => sheet.rows.length)) return workbook;
+    return parseHTMLTable(text!, filename || 'HTML');
   }
-  if (/^\s*</.test(text) && /<table/i.test(text)) return parseHTMLTable(text, filename || 'HTML');
-  return parseCSV(text, filename || 'CSV');
+  if (format === 'html') return parseHTMLTable(text!, filename || 'HTML');
+  return parseCSV(text!, filename || 'CSV');
 }

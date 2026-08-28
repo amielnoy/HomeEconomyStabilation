@@ -2,6 +2,14 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseCSV, readWorkbook } from '../../src/spreadsheet-reader';
+import { Blob as NodeBlob } from 'node:buffer';
+import { spreadsheetMl, toArrayBuffer, xlsxWorkbook } from '../helpers/workbook-fixtures';
+
+/* Inflating a real .xlsx goes through Blob.stream() and DecompressionStream. jsdom supplies
+   the DOMParser the reader needs but a Blob without stream(), so the compressed path — the
+   one every real workbook takes — could not run under this environment at all, and every
+   fixture quietly used stored entries instead. Node's Blob closes that gap. */
+(globalThis as unknown as { Blob: unknown }).Blob = NodeBlob;
 
 const buffer = (text: string): ArrayBuffer => {
   const bytes = new TextEncoder().encode(text);
@@ -165,6 +173,110 @@ describe('spreadsheet reader', () => {
     ), 'gaps.xls');
 
     expect(values(workbook)).toEqual([['א', null, 'ג']]);
+  });
+
+  /* Nothing exercised the zip path: the shared-string table, inline strings and the
+     style-driven date detection are all reachable only from a real .xlsx. */
+  it('reads an .xlsx through the zip, shared strings and inline strings', async () => {
+    const workbook = await readWorkbook(xlsxWorkbook([
+      [{ value: 'תאריך עסקה', shared: true }, { value: 'שם בית העסק' }, { value: 'סכום חיוב', shared: true }],
+      [{ value: '03/08/2026' }, { value: 'שופרסל דיל', shared: true }, { value: 431 }],
+    ], { sheetName: 'עסקאות' }), 'card.xlsx');
+
+    expect(workbook.sheets[0]!.name).toBe('עסקאות');
+    expect(values(workbook)).toEqual([
+      ['תאריך עסקה', 'שם בית העסק', 'סכום חיוב'],
+      ['03/08/2026', 'שופרסל דיל', 431],
+    ]);
+  });
+
+  it('turns a date-formatted .xlsx serial into a calendar date', async () => {
+    const workbook = await readWorkbook(xlsxWorkbook([
+      [{ value: 'תאריך' }, { value: 'סכום' }],
+      // 46237 is 2026-08-03 in the 1900 system.
+      [{ value: 46237, date: true }, { value: 431 }],
+    ]), 'serial.xlsx');
+
+    const cell = workbook.sheets[0]!.rows[1]![0]!;
+    expect(cell.t).toBe('d');
+    expect((cell.v as Date).toISOString().slice(0, 10)).toBe('2026-08-03');
+  });
+
+  /* r="A1" is optional in the format and several writers leave it out. Without it the
+     row index parsed as NaN and every cell in the file was dropped on the floor. */
+  it('keeps positions when a writer omits the optional r references', async () => {
+    const workbook = await readWorkbook(xlsxWorkbook([
+      [{ value: 'תאריך עסקה' }, { value: 'שם בית העסק' }, { value: 'סכום חיוב' }],
+      [{ value: '03/08/2026' }, { value: 'שופרסל' }, { value: 431 }],
+    ], { omitReferences: true }), 'no-refs.xlsx');
+
+    expect(values(workbook)).toEqual([
+      ['תאריך עסקה', 'שם בית העסק', 'סכום חיוב'],
+      ['03/08/2026', 'שופרסל', 431],
+    ]);
+  });
+
+  it('honours an ss: prefix on SpreadsheetML elements', async () => {
+    const workbook = await readWorkbook(toArrayBuffer(spreadsheetMl([
+      [{ value: 'תאריך עסקה' }, { value: 'שם בית העסק' }],
+      [{ value: '03/08/2026' }, { value: 'שופרסל' }],
+    ], { prefixed: true })), 'prefixed.xls');
+
+    expect(values(workbook)).toEqual([['תאריך עסקה', 'שם בית העסק'], ['03/08/2026', 'שופרסל']]);
+  });
+
+  it('reads a SpreadsheetML DateTime cell as a date', async () => {
+    const workbook = await readWorkbook(toArrayBuffer(spreadsheetMl([
+      [{ value: 'תאריך' }],
+      [{ value: '2026-08-03T00:00:00.000', type: 'DateTime' }],
+    ])), 'dates.xls');
+
+    const cell = workbook.sheets[0]!.rows[1]![0]!;
+    expect(cell.t).toBe('d');
+    expect((cell.v as Date).toISOString().slice(0, 10)).toBe('2026-08-03');
+  });
+
+  /* A merged heading spans the columns underneath it; ignoring the span slid every
+     later value one column left, under the wrong heading. */
+  it('keeps SpreadsheetML columns aligned across a merged cell', async () => {
+    const workbook = await readWorkbook(toArrayBuffer(spreadsheetMl([
+      [{ value: 'א', mergeAcross: 1 }, { value: 'ג' }],
+    ])), 'merged.xls');
+
+    expect(values(workbook)).toEqual([['א', null, 'ג']]);
+  });
+
+  /* Every fixture here stored its entries uncompressed, so the inflate path had no
+     coverage at all — and a real .xlsx is always deflated. */
+  it('inflates a compressed .xlsx', async () => {
+    const workbook = await readWorkbook(xlsxWorkbook([
+      [{ value: 'תאריך עסקה', shared: true }, { value: 'שם בית העסק' }, { value: 'סכום חיוב' }],
+      [{ value: '03/08/2026' }, { value: 'שופרסל דיל' }, { value: 431 }],
+    ], { deflate: true, sheetName: 'עסקאות' }), 'card.xlsx');
+
+    expect(values(workbook)).toEqual([
+      ['תאריך עסקה', 'שם בית העסק', 'סכום חיוב'],
+      ['03/08/2026', 'שופרסל דיל', 431],
+    ]);
+  });
+
+  /* A statement's table rarely starts at the first row: an issuer puts a title, an account
+     number and a blank line above it. Those rows are never written to the file, and the
+     reader addresses rows by index, so they came back as holes rather than empty rows —
+     and the importers, which index into every row they walk, threw on the first one. In the
+     application that became "the file could not be read" for a perfectly good statement. */
+  it('returns empty rows rather than holes above a table that starts low', async () => {
+    const workbook = await readWorkbook(xlsxWorkbook([
+      [{ value: 'תאריך' }, { value: 'שם בית עסק' }, { value: 'סכום חיוב' }],
+      [{ value: '03/08/2026' }, { value: 'שופרסל' }, { value: 431 }],
+    ], { deflate: true, startRow: 4 }), 'low.xlsx');
+
+    const rows = workbook.sheets[0]!.rows;
+    expect(rows).toHaveLength(6);
+    for (let index = 0; index < rows.length; index += 1) {
+      expect(Array.isArray(rows[index]), `row ${index} is a hole`).toBe(true);
+    }
+    expect(values(workbook)[5]).toEqual(['03/08/2026', 'שופרסל', 431]);
   });
 
   it('rejects a compound file whose signature does not match', async () => {
