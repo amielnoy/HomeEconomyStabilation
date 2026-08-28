@@ -1,4 +1,4 @@
-import { creditCardImporter, type Workbook } from './credit-card-importer.js';
+import { creditCardImporter, describeColumns, type Workbook } from './credit-card-importer.js';
 import { readWorkbook } from './spreadsheet-reader.js';
 import { createPrivacySafeSnapshot } from './privacy.js';
 import { createLocaleFormatters, formatMessage, getLocaleConfig, isSupportedLocale, resolveLocale, type Locale } from './localization.js';
@@ -1411,6 +1411,10 @@ function importBackup(file: File) {
   fr.readAsText(file);
 }
 
+/* A Latin file name inside a Hebrew sentence is reordered by the bidi algorithm and
+   reads back to front; isolating it keeps the name as the customer sees it on disk. */
+const isolate = (text: string): string => `\u2068${text}\u2069`;
+
 /* The card strategy only accepts layouts it recognises, and an issuer the patterns do
    not cover used to leave the customer with "the file could not be read" and no way
    forward. The statement reader is looser about column names, so it gets the file next
@@ -1427,7 +1431,10 @@ function importCardWorkbook(workbook: Workbook, filename: string): { rows: BankT
 async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank') {
   const files = [...fileList];
   if (!files.length) return;
-  let added = 0, dup = 0, bad = 0;
+  let added = 0, dup = 0;
+  /* A count of unreadable files leaves the customer with nothing to act on and support
+     with nothing to diagnose. Each failure carries its own reason instead. */
+  const failures: string[] = [];
   const have = new Set(S.tx.map((t) => t.id));
   for (const file of files) {
     try {
@@ -1436,24 +1443,31 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank')
       const { rows, account } = source === 'card'
         ? importCardWorkbook(wb, file.name)
         : bankImporter.import(wb, file.name, source);
-      if (!rows.length) { bad++; continue; }
+      if (!rows.length) {
+        const columns = describeColumns(wb);
+        failures.push(columns
+          ? t('fileColumnsUnrecognized', { file: isolate(file.name), columns })
+          : t('fileUnreadable', { file: isolate(file.name) }));
+        continue;
+      }
       if (account && !S.accounts.includes(account)) S.accounts.push(account);
       for (const t of rows) {
         if (have.has(t.id)) { dup++; continue; }
         have.add(t.id); S.tx.push(t); added++;
       }
     } catch (e) {
-      bad++;
+      failures.push(t('fileUnreadable', { file: isolate(file.name) }));
     }
   }
   save();
-  trackMarketingEvent('report_import_completed', { source, added, duplicates: dup, failed: bad });
+  trackMarketingEvent('report_import_completed', { source, added, duplicates: dup, failed: failures.length });
   S.month = null;
   render();
   const parts = [];
   if (added) parts.push(t('transactionsAdded', { count: added }));
   if (dup) parts.push(t('transactionsDuplicated', { count: dup }));
-  if (bad) parts.push(t('filesUnreadable', { count: bad }));
+  /* One or two failures are worth spelling out; a batch of them would fill the screen. */
+  if (failures.length) parts.push(failures.length > 2 ? t('filesUnreadable', { count: failures.length }) : failures.join(' · '));
   toast(parts.join(' · ') || t('noTransactionsInFile'));
 }
 

@@ -234,6 +234,8 @@
   "transactionsAdded": "{count} ግብይቶች ታክለዋል",
   "transactionsDuplicated": "{count} ግብይቶች ቀድሞ ነበሩ",
   "filesUnreadable": "{count} ፋይሎች ሊነበቡ አልቻሉም",
+  "fileUnreadable": "{file}ን መክፈት አልቻልንም። ከካርድ አውጪው በExcel ወይም CSV እንደገና ለማውጣት ይሞክሩ።",
+  "fileColumnsUnrecognized": "በ{file} ውስጥ የሪፖርት አምዶች አልታወቁም። የተገኙ አምዶች፦ {columns}",
   "noTransactionsInFile": "በፋይሉ ውስጥ ግብይት አልተገኘም",
   "transactionAdded": "ግብይቱ ታክሏል",
   "nothingToDelete": "የሚሰረዝ ነገር የለም",

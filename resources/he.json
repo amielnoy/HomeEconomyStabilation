@@ -234,6 +234,8 @@
   "transactionsAdded": "{count} תנועות נוספו",
   "transactionsDuplicated": "{count} תנועות כבר היו קיימות",
   "filesUnreadable": "{count} קבצים לא נקראו",
+  "fileUnreadable": "לא הצלחנו לפתוח את {file}. נסו לייצא שוב מאתר הכרטיס בפורמט Excel או CSV.",
+  "fileColumnsUnrecognized": "לא זוהו עמודות של דוח ב{file}. העמודות שנמצאו: {columns}",
   "noTransactionsInFile": "לא נמצאו תנועות בקובץ",
   "transactionAdded": "התנועה נוספה",
   "nothingToDelete": "אין מה למחוק",

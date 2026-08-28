@@ -1,4 +1,5 @@
 import type { FilePayload } from '@playwright/test';
+import { xlsxWorkbook } from '../helpers/workbook-fixtures';
 
 /* The sample workbook carries five transactions across one month, which is enough to
    render the dashboard but not enough to reach the agents that need history: savings
@@ -144,4 +145,52 @@ export function spreadsheetMlCardReport(): FilePayload {
     + row([{ value: '12/08/2026' }, { value: 'נטפליקס' }, { value: '54.9', numeric: true }])
     + '</Table></Worksheet></Workbook>';
   return { name: 'card-statement.xls', mimeType: 'application/vnd.ms-excel', buffer: Buffer.from(xml) };
+}
+
+/* The same statement as a real .xlsx, so the browser drives the zip reader, the
+   shared-string table and the style-driven date detection rather than only CSV. */
+export function xlsxCardReport(): FilePayload {
+  // 46237 and 46241 are 2026-08-03 and 2026-08-07 in the 1900 date system.
+  const bytes = xlsxWorkbook([
+    [{ value: 'תאריך העסקה', shared: true }, { value: 'שם בית העסק', shared: true }, { value: 'סכום החיוב', shared: true }],
+    [{ value: 46237, date: true }, { value: 'שופרסל דיל', shared: true }, { value: 431 }],
+    [{ value: 46241, date: true }, { value: 'נטפליקס', shared: true }, { value: 54.9 }],
+  ], { sheetName: 'עסקאות' });
+  return {
+    name: 'card-statement.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: Buffer.from(bytes),
+  };
+}
+
+/* An issuer export in windows-1255, which is what a great many Israeli sites still send.
+   Decoded as UTF-8 every merchant name becomes replacement characters, so the import
+   succeeds and the month is still unreadable. */
+export function windows1255CardReport(): FilePayload {
+  const body = '<html><head><meta charset="windows-1255"></head><body><table>'
+    + '<tr><td>תאריך עסקה</td><td>שם בית העסק</td><td>סכום חיוב</td></tr>'
+    + '<tr><td>03/08/2026</td><td>שופרסל דיל</td><td>431.00</td></tr>'
+    + '<tr><td>07/08/2026</td><td>נטפליקס</td><td>54.90</td></tr>'
+    + '</table></body></html>';
+  const bytes = Uint8Array.from([...body].map((character) => {
+    const code = character.codePointAt(0)!;
+    // windows-1255 maps Hebrew U+05D0..U+05EA onto 0xE0..0xFA.
+    return code >= 0x05d0 && code <= 0x05ea ? code - 0x05d0 + 0xe0 : code;
+  }));
+  return { name: 'card-1255.xls', mimeType: 'application/vnd.ms-excel', buffer: Buffer.from(bytes) };
+}
+
+/* The same .xlsx written without the optional r="A1" cell references, which several
+   writers omit and which the reader used to parse into nothing at all. */
+export function xlsxCardReportWithoutReferences(): FilePayload {
+  const bytes = xlsxWorkbook([
+    [{ value: 'תאריך העסקה' }, { value: 'שם בית העסק' }, { value: 'סכום החיוב' }],
+    [{ value: '03/08/2026' }, { value: 'שופרסל דיל' }, { value: 431 }],
+    [{ value: '07/08/2026' }, { value: 'נטפליקס' }, { value: 54.9 }],
+  ], { sheetName: 'עסקאות', omitReferences: true });
+  return {
+    name: 'card-no-refs.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: Buffer.from(bytes),
+  };
 }

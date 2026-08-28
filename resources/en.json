@@ -234,6 +234,8 @@
   "transactionsAdded": "{count} transactions added",
   "transactionsDuplicated": "{count} transactions already existed",
   "filesUnreadable": "{count} files could not be read",
+  "fileUnreadable": "We could not open {file}. Try exporting it again from the card issuer as Excel or CSV.",
+  "fileColumnsUnrecognized": "No statement columns were recognised in {file}. Columns found: {columns}",
   "noTransactionsInFile": "No transactions were found in the file",
   "transactionAdded": "Transaction added",
   "nothingToDelete": "There is nothing to delete",

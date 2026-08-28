@@ -234,6 +234,8 @@
   "transactionsAdded": "{count} opérations ajoutées",
   "transactionsDuplicated": "{count} opérations étaient déjà présentes",
   "filesUnreadable": "{count} fichiers n’ont pas pu être lus",
+  "fileUnreadable": "Impossible d’ouvrir {file}. Réexportez-le depuis l’émetteur de la carte en Excel ou CSV.",
+  "fileColumnsUnrecognized": "Aucune colonne de relevé reconnue dans {file}. Colonnes trouvées : {columns}",
   "noTransactionsInFile": "Aucune opération trouvée dans le fichier",
   "transactionAdded": "Opération ajoutée",
   "nothingToDelete": "Rien à supprimer",

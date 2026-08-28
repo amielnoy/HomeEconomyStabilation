@@ -1,5 +1,8 @@
 import { test, expect } from './fixtures';
-import { htmlBankReport, issuerCardReport, spreadsheetMlCardReport } from './reports';
+import {
+  htmlBankReport, issuerCardReport, spreadsheetMlCardReport, windows1255CardReport,
+  xlsxCardReport, xlsxCardReportWithoutReferences,
+} from './reports';
 
 test.beforeEach(async ({ homePage }) => {
   await homePage.openFresh();
@@ -55,6 +58,132 @@ test('imports a credit-card report exported as SpreadsheetML named .xls', async 
   await expect(homePage.dashboard.root).toBeVisible();
   await expect(homePage.dashboard.transactionRows).toHaveCount(2);
   await expect(homePage.dashboard.transactionRows.filter({ hasText: 'שופרסל דיל' })).toHaveCount(1);
+});
+
+/* "1 file could not be read" gave the customer nothing to act on and support nothing to
+   diagnose; naming the columns the reader did find identifies the layout at a glance. */
+test('names the file and the columns it found when a report is not recognised', async ({ homePage }) => {
+  await homePage.upload.creditCardInput.setInputFiles({
+    name: 'mystery.csv', mimeType: 'text/csv',
+    buffer: Buffer.from(['עמודה א,עמודה ב,עמודה ג', '1,2,3'].join('\n')),
+  });
+
+  await expect(homePage.toast).toContainText('mystery.csv');
+  await expect(homePage.toast).toContainText('עמודה א · עמודה ב · עמודה ג');
+  await expect(homePage.emptyState).toBeVisible();
+});
+
+/* Exporting from an issuer's English interface produced English headings, which matched
+   nothing and failed the whole file. */
+test('imports a card report exported with English column names', async ({ homePage }) => {
+  await homePage.upload.uploadCreditCardReport({
+    name: 'card-en.csv', mimeType: 'text/csv',
+    buffer: Buffer.from([
+      'Transaction Date,Merchant Name,Transaction Amount,Billing Amount',
+      '03/08/2026,SHUFERSAL DEAL,431.00,431.00',
+      '07/08/2026,AMAZON US,40.00,148.20',
+    ].join('\n')),
+  });
+
+  await expect(homePage.dashboard.root).toBeVisible();
+  await expect(homePage.dashboard.transactionRows).toHaveCount(2);
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'AMAZON US' })).toContainText('148.2');
+});
+
+/* The .xlsx path — zip, shared strings, styled date serials — was never driven from the
+   browser, and it is the format the issuers' "download to Excel" produces most often. */
+test('imports a credit-card report exported as .xlsx', async ({ homePage }) => {
+  await homePage.upload.uploadCreditCardReport(xlsxCardReport());
+
+  await expect(homePage.dashboard.root).toBeVisible();
+  await expect(homePage.dashboard.transactionRows).toHaveCount(2);
+  await expect(homePage.dashboard.monthChips).toContainText('אוגוסט 2026');
+});
+
+/* Choosing several files at once is the ordinary way to load a year, and one bad file
+   among them must not cost the customer the good ones. */
+test('imports the readable files and explains the one it could not read', async ({ homePage }) => {
+  await homePage.upload.creditCardInput.setInputFiles([
+    issuerCardReport(),
+    { name: 'mystery.csv', mimeType: 'text/csv', buffer: Buffer.from('עמודה א,עמודה ב\n1,2') },
+  ]);
+
+  await expect(homePage.dashboard.root).toBeVisible();
+  await expect(homePage.dashboard.transactionRows).toHaveCount(4);
+  await expect(homePage.toast).toContainText('4 תנועות נוספו');
+  await expect(homePage.toast).toContainText('mystery.csv');
+});
+
+/* A file the reader cannot understand must leave the data already imported alone. */
+test('keeps imported transactions when a later file is not recognised', async ({ homePage }) => {
+  await homePage.upload.uploadCreditCardReport(issuerCardReport());
+  await expect(homePage.dashboard.transactionRows).toHaveCount(4);
+
+  await homePage.upload.creditCardInput.setInputFiles({
+    name: 'broken.csv', mimeType: 'text/csv', buffer: Buffer.from('כותרת אחת\nערך'),
+  });
+
+  await expect(homePage.dashboard.transactionRows).toHaveCount(4);
+  await expect(homePage.dashboard.root).toBeVisible();
+});
+
+/* Loading the same download twice is the most ordinary mistake there is; it must not
+   double the month's spending. */
+test('counts a re-imported card report as duplicates rather than doubling it', async ({ homePage }) => {
+  await homePage.upload.uploadCreditCardReport(issuerCardReport());
+  await expect(homePage.dashboard.transactionRows).toHaveCount(4);
+
+  await homePage.upload.uploadCreditCardReport(issuerCardReport());
+
+  await expect(homePage.toast).toContainText('4 תנועות כבר היו קיימות');
+  await expect(homePage.dashboard.transactionRows).toHaveCount(4);
+});
+
+/* An import that succeeds and leaves every merchant name as replacement characters is
+   worse than one that fails: the dashboard fills up and none of it can be categorised. */
+test('keeps Hebrew merchant names when the card export is windows-1255', async ({ homePage }) => {
+  await homePage.upload.uploadCreditCardReport(windows1255CardReport());
+
+  await expect(homePage.dashboard.root).toBeVisible();
+  await expect(homePage.dashboard.transactionRows).toHaveCount(2);
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'שופרסל דיל' })).toHaveCount(1);
+  await expect(homePage.dashboard.transactionRows.first()).not.toContainText('\ufffd');
+});
+
+/* The cell reference is optional in the format, and a writer that omits it produced a
+   workbook the reader turned into nothing — an empty report from a good file. */
+test('imports an .xlsx written without cell references', async ({ homePage }) => {
+  await homePage.upload.uploadCreditCardReport(xlsxCardReportWithoutReferences());
+
+  await expect(homePage.dashboard.root).toBeVisible();
+  await expect(homePage.dashboard.transactionRows).toHaveCount(2);
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'נטפליקס' })).toHaveCount(1);
+});
+
+/* The failure message is shown to whoever is looking at the screen, in their language. */
+test('explains an unrecognised card layout in the interface language', async ({ homePage }) => {
+  await homePage.language.choose('en');
+
+  await homePage.upload.creditCardInput.setInputFiles({
+    name: 'mystery.csv', mimeType: 'text/csv', buffer: Buffer.from('Column A,Column B\n1,2'),
+  });
+
+  await expect(homePage.toast).toContainText('mystery.csv');
+  await expect(homePage.toast).toContainText('Column A · Column B');
+});
+
+/* Every earlier card fix was verified on the empty state; the header keeps its controls
+   after an import too, and that is when the customer uses them again. */
+test('keeps the upload labels whole after a report is imported', async ({ homePage, page }) => {
+  await page.setViewportSize({ width: 348, height: 720 });
+  await homePage.upload.uploadCreditCardReport(issuerCardReport());
+  await expect(homePage.dashboard.root).toBeVisible();
+
+  for (const trigger of [homePage.bankUploadTrigger, homePage.cardUploadTrigger]) {
+    const cut = await trigger.locator('span').first()
+      .evaluate((element) => element.scrollWidth > element.clientWidth + 1);
+    expect(cut).toBe(false);
+  }
 });
 
 test('classifies evidenced transfers and alimony while leaving unexplained debits as other', async ({ homePage }) => {
