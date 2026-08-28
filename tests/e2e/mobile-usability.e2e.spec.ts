@@ -6,6 +6,12 @@ import { richBankReport } from './reports';
 const TOUCH_TARGET_EXCEPTIONS = [
   // Wrapped by a full-width <label> that carries the tap area.
   '#cloud-consent-check',
+  /* The upload controls are a <label class="btn"> wrapping the file input. The label is
+     the 48px target; the input is visually hidden and exists to hold keyboard focus,
+     because marking it `hidden` took the product's primary action out of the tab order
+     altogether. Its own box is deliberately 1px. */
+  '#file',
+  '#card-file',
 ] as const;
 
 test.describe('mobile browser usability', () => {
@@ -51,6 +57,37 @@ test.describe('mobile browser usability', () => {
     await homePage.mobileMenuToggle.click();
     await expect(homePage.secondaryActions).toBeVisible();
     expect(await homePage.touchTargetsBelow(homePage.mobileSecondaryControls)).toEqual([]);
+  });
+
+  /* A phone at a large text size or zoom reports a viewport far narrower than the device
+     is. Two upload labels plus the overflow toggle stopped fitting on one row there, and
+     because the label is nowrap with nothing clipping it, "טעינת דוח כרטיס" spilled past
+     the pill and off the screen as "טע" — the customer could not read what the control
+     did. Every locale has to survive it, and the longest label is not the Hebrew one. */
+  test('keeps both upload labels whole when zoom narrows the viewport', async ({ homePage, page }) => {
+    await page.setViewportSize({ width: 280, height: 640 });
+
+    for (const locale of ['he', 'en', 'am', 'fr'] as const) {
+      await homePage.language.choose(locale);
+      await expect(homePage.html).toHaveAttribute('lang', locale);
+      expect(await homePage.hasHorizontalOverflow(), `${locale} should not overflow`).toBe(false);
+
+      for (const trigger of [homePage.bankUploadTrigger, homePage.cardUploadTrigger]) {
+        const label = trigger.locator('span').first();
+        const overflow = await label.evaluate((element) => ({
+          text: element.textContent ?? '',
+          hidden: element.scrollWidth > element.clientWidth + 1,
+        }));
+        expect(overflow.hidden, `${locale}: "${overflow.text}" is cut off inside its button`).toBe(false);
+      }
+
+      const [bank, card] = await Promise.all([
+        homePage.bankUploadTrigger.boundingBox(),
+        homePage.cardUploadTrigger.boundingBox(),
+      ]);
+      // Each upload takes its own row here rather than being squeezed under its label.
+      expect(card!.y).toBeGreaterThan(bank!.y + bank!.height - 1);
+    }
   });
 
   test('supports the complete import, recommendations, settings and directory journey', async ({ homePage }) => {

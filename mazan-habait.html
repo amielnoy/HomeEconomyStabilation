@@ -155,7 +155,15 @@ button,input,select,label{ font:inherit; color:inherit; }
 button{ cursor:pointer; }
 :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
 .num{ font-variant-numeric:tabular-nums; }
-.vh{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+/* min-height is pinned too: the coarse-pointer rules give every input a 48px touch
+   target, which would inflate a visually hidden control into a 48px box sitting invisibly
+   over the layout. The tap area belongs to the label wrapping it, not to it. */
+.vh{ position:absolute; width:1px; height:1px; min-height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+/* The upload controls are a label wrapping a file input. The input carries the keyboard
+   focus but is visually hidden, so without this the ring lands on something nobody can
+   see and the control looks unfocused while it is focused. Marking the input `hidden`
+   instead would take it out of the tab order altogether, which is where it started. */
+.btn:has(input:focus-visible){ outline:3px solid var(--ds-focus); outline-offset:3px; }
 
 /* =========================================================== topbar ====== */
 .topbar{
@@ -697,6 +705,34 @@ body.drawer-open{ overflow:hidden; }
   .tblwrap,.chartwrap,.monthbar{ overscroll-behavior-inline:contain; }
   .table-scroll-hint{ display:block; }
 }
+/* Two upload labels beside the overflow toggle need about 330px between them. Below that
+   the grid squeezed each pill narrower than its own text, and the label — nowrap, with
+   nothing clipping it — spilled out past the rounded edge and was cut off by the screen
+   edge, leaving "טע" where "טעינת דוח כרטיס" belongs. A phone at a large text size or
+   zoom level lands here routinely. Giving each upload its own row keeps both readable. */
+/* Wherever the two uploads divide the width between them rather than being given it, a
+   label that does not fit wraps to a second line instead of being cut. A pixel breakpoint
+   cannot decide this, because it cannot know the language: the width that is comfortable
+   for "טעינת דוח כרטיס" is short by half for "Importer un relevé bancaire", which is how
+   the English and French labels came to be cut on an ordinary phone while Hebrew looked
+   fine. Letting the content decide covers every language at every width. */
+@media (max-width:600px), (pointer: coarse) and (max-width:900px){
+  .actions > .btn:not(.mobile-menu-toggle){ white-space:normal; padding-block:8px; text-align:center; }
+  .actions > .btn:not(.mobile-menu-toggle) > span{ overflow:visible; text-overflow:clip; }
+}
+
+/* Narrow enough that the two uploads no longer fit beside each other in any language. */
+@media (max-width:340px){
+  .actions{ grid-template-columns:minmax(0,1fr) 48px; }
+  .actions > .btn:not(.mobile-menu-toggle){ grid-column:1; }
+  .mobile-menu-toggle{ grid-column:2; grid-row:1; }
+}
+
+/* Whatever the width, a label may never escape its pill: a text size or zoom nobody
+   anticipated has to truncate inside the button rather than spill across the page. */
+.actions > .btn{ overflow:hidden; }
+.actions > .btn > span{ min-width:0; overflow:hidden; text-overflow:ellipsis; }
+
 </style>
 
 </head>
@@ -721,12 +757,12 @@ body.drawer-open{ overflow:hidden; }
       <label class="btn primary" data-testid="bank-upload-trigger">
         <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 14V4m0 0L6 8m4-4 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 14v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
         <span data-i18n="bankUpload">טעינת דוח בנק</span>
-        <input type="file" id="file" accept=".xls,.xlsx,.csv,.html,.htm" multiple hidden data-testid="file">
+        <input type="file" id="file" accept=".xls,.xlsx,.csv,.html,.htm" multiple class="vh" data-testid="file">
       </label>
       <label class="btn" data-testid="card-upload-trigger">
         <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3 8h14M6 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         <span data-i18n="cardUpload">טעינת דוח כרטיס</span>
-        <input type="file" id="card-file" accept=".xls,.xlsx,.csv,.html,.htm" multiple hidden data-testid="card-file">
+        <input type="file" id="card-file" accept=".xls,.xlsx,.csv,.html,.htm" multiple class="vh" data-testid="card-file">
       </label>
       <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
       <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
