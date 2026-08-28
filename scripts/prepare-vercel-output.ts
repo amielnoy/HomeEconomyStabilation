@@ -30,6 +30,15 @@ const indexNowKeys = readdirSync(root).filter((name) => /^[0-9a-f]{32}\.txt$/.te
 
 rmSync(output, { recursive: true, force: true });
 mkdirSync(output, { recursive: true });
+/* `npm run debug` emits source maps into dist/ so that breakpoints land in the
+   TypeScript rather than in the compiled output. Shipping them would publish the whole
+   source with the deployment, so they are filtered here rather than deleted from dist/:
+   deleting them would break whatever debug session happens to be running. */
+const isSourceMap = (path: string): boolean => path.endsWith('.map');
+
 for (const file of [...files, ...indexNowKeys]) {
-  cpSync(resolve(root, file), resolve(output, file), { recursive: true });
+  cpSync(resolve(root, file), resolve(output, file), {
+    recursive: true,
+    filter: (source) => !isSourceMap(source),
+  });
 }

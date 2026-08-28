@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Starts the compiler and the server, then opens the page in Chrome attached to the
+      // debugger. Breakpoints go in src/*.ts: the served source maps point back at the
+      // TypeScript, and webRoot maps the served URLs onto this folder.
+      "name": "Debug app (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:8765/mazan-habait.html",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "preLaunchTask": "app: watch and serve",
+      // The report importer runs entirely in the page, so there is nothing to skip into.
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      // The same session without starting anything, for when `npm run debug` is already
+      // running in a terminal or a browser test left its server behind.
+      "name": "Debug app (server already running)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:8765/mazan-habait.html",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // Delegates to the same script `npm run debug` uses, so the editor and the terminal
+      // start the application exactly the same way: compiler in watch mode with source
+      // maps, and a static server on the project root that reuses one already listening.
+      "label": "app: watch and serve",
+      "type": "shell",
+      "command": "npm run debug",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": {
+        "owner": "typescript",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.*)\\((\\d+),(\\d+)\\):\\s+(error|warning)\\s+TS(\\d+):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        },
+        // The task never exits, so the debugger has to be told when it is ready rather
+        // than waiting for it to finish.
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Starting compilation in watch mode.*",
+          "endsPattern": ".*(Application:|Found \\d+ errors\\. Watching for file changes).*"
+        }
+      }
+    }
+  ]
+}
