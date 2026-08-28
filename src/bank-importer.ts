@@ -5,15 +5,17 @@ const BIDI = /[‎‏‪-‮⁦-⁩]/g;
 type HeaderKey = 'date' | 'vdate' | 'ref' | 'desc' | 'out' | 'in' | 'amt' | 'bal';
 type HeaderMap = Partial<Record<HeaderKey, number>>;
 
+/* A statement exported from an English interface carries English headings; matching only
+   the Hebrew ones rejected the file outright. */
 const HEADERS: Record<HeaderKey, RegExp[]> = {
-  date: [/^תאריך$/, /^תאריך\s*פעולה/, /^תאריך\s*עסקה/, /מועד\s*עסקה/],
-  vdate: [/תאריך\s*ערך/],
-  ref: [/אסמכתא/, /מספר\s*אסמכתא/],
-  desc: [/תיאור\s*פעולה/, /^תיאור$/, /פרטים/, /^סוג\s*תנועה/, /שם\s*בית\s*עסק/, /בית\s*עסק/, /שם\s*העסק/, /ספק/],
-  out: [/^חובה/, /^חיוב/, /^יציאה/, /סכום\s*חיוב/, /סכום\s*עסקה/],
-  in: [/^זכות/, /^זיכוי/, /^כניסה/],
-  amt: [/^סכום/],
-  bal: [/יתרה/],
+  date: [/^תאריך$/, /^תאריך\s*פעולה/, /^תאריך\s*עסקה/, /מועד\s*עסקה/, /^date$/i, /(transaction|purchase|posting)\s*date/i],
+  vdate: [/תאריך\s*ערך/, /value\s*date/i],
+  ref: [/אסמכתא/, /מספר\s*אסמכתא/, /reference/i],
+  desc: [/תיאור\s*פעולה/, /^תיאור$/, /פרטים/, /^סוג\s*תנועה/, /שם\s*בית\s*עסק/, /בית\s*עסק/, /שם\s*העסק/, /ספק/, /merchant/i, /business/i, /description/i, /details/i, /payee/i, /narrative/i],
+  out: [/^חובה/, /^חיוב/, /^יציאה/, /סכום\s*חיוב/, /סכום\s*עסקה/, /^debit$/i, /^charge/i, /^withdrawal/i, /(billing|billed)\s*amount/i],
+  in: [/^זכות/, /^זיכוי/, /^כניסה/, /^credit$/i, /^deposit/i],
+  amt: [/^סכום/, /^amount/i],
+  bal: [/יתרה/, /balance/i],
 };
 
 export const cleanTransactionText = (value: unknown): string =>
@@ -96,6 +98,8 @@ export class BankImportStrategy {
       if (!header) continue;
       const pending = /המתנה|זמני/.test(cleanTransactionText(sheet.name));
       for (const row of rows.slice(header.row + 1)) {
+        /* A reader that ever hands back a hole must cost a skipped row, not the file. */
+        if (!row) continue;
         const date = dateValue(row[header.map.date ?? -1]);
         if (!date) continue;
         const desc = cleanTransactionText(row[header.map.desc ?? -1]?.v);

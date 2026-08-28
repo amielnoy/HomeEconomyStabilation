@@ -38,13 +38,17 @@ export interface ImportStrategy {
 type HeaderKey = 'date' | 'ref' | 'desc' | 'amount' | 'in' | 'out';
 type HeaderMap = Partial<Record<HeaderKey, number>>;
 
+/* An issuer's site exports in whatever language the customer was browsing in, so the
+   same statement arrives with Hebrew or English column names. */
 const HEADER_PATTERNS: Record<HeaderKey, RegExp[]> = {
-  date: [/^תאריך$/, /תאריך\s*עסקה/, /מועד\s*עסקה/],
-  ref: [/אסמכתא/, /מספר\s*עסקה/, /מספר\s*כרטיס/],
-  desc: [/שם\s*בית\s*עסק/, /בית\s*עסק/, /שם\s*העסק/, /תיאור/, /פרטים/, /ספק/],
-  amount: [/סכום\s*עסקה/, /סכום\s*לחיוב/, /^סכום$/],
-  out: [/^חיוב/, /^חובה/, /סכום\s*חיוב/],
-  in: [/^זיכוי/, /^זכות/, /החזר/],
+  date: [/^תאריך$/, /תאריך\s*עסקה/, /מועד\s*עסקה/, /^date$/i, /(transaction|purchase|posting)\s*date/i, /date\s*of\s*transaction/i],
+  ref: [/אסמכתא/, /מספר\s*עסקה/, /מספר\s*כרטיס/, /reference/i, /^card\b/i, /voucher/i],
+  desc: [/שם\s*בית\s*עסק/, /בית\s*עסק/, /שם\s*העסק/, /תיאור/, /פרטים/, /ספק/, /merchant/i, /business/i, /description/i, /details/i, /payee/i, /vendor/i, /narrative/i],
+  amount: [/סכום\s*עסקה/, /סכום\s*לחיוב/, /^סכום$/, /^amount$/i, /(transaction|original|purchase)\s*amount/i],
+  /* The billed column is the shekels that left the account, so it belongs with the other
+     charge columns rather than with the transaction amount it sits beside. */
+  out: [/^חיוב/, /^חובה/, /סכום\s*חיוב/, /^debit$/i, /^charge/i, /^withdrawal/i, /(billing|billed)\s*amount/i, /amount\s*(charged|in\s*ils)/i],
+  in: [/^זיכוי/, /^זכות/, /החזר/, /^credit$/i, /^refund/i, /^deposit/i],
 };
 
 /* Issuers write the same column with or without the definite article — Max exports
@@ -81,13 +85,23 @@ const dateValue = (cell: SpreadsheetCell | null | undefined): string | null => {
   return `${year.length === 2 ? `20${year}` : year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 };
 
+/* An issuer names the date a charge is due "חיוב לתאריך", which starts with the same word
+   as the charge itself. Matched as a money column it claims the slot the real amount
+   needed, and every row then reads its amount out of a date cell, scores zero and is
+   dropped — a file of 158 transactions importing as none. A column whose name says when
+   is never a column that says how much. */
+const DATE_WORDED = /תאריך|מועד|date/i;
+const MONEY_KEYS: readonly HeaderKey[] = ['amount', 'out', 'in'];
+
 const headerMap = (row: ReadonlyArray<SpreadsheetCell | null>): HeaderMap => {
   const map: HeaderMap = {};
   row.forEach((cell, index) => {
     if (!cell || cell.t !== 's') return;
     const text = clean(cell.v);
     for (const [key, patterns] of Object.entries(HEADER_PATTERNS) as Array<[HeaderKey, RegExp[]]>) {
-      if (map[key] === undefined && headerMatches(patterns, text)) map[key] = index;
+      if (map[key] !== undefined) continue;
+      if (MONEY_KEYS.includes(key) && DATE_WORDED.test(text)) continue;
+      if (headerMatches(patterns, text)) map[key] = index;
     }
   });
   return map;
@@ -111,10 +125,18 @@ export class CreditCardImportStrategy implements ImportStrategy {
   import(workbook: Workbook, filename: string): TransactionRecord[] {
     const transactions: TransactionRecord[] = [];
     for (const sheet of workbook.sheets) {
-      const headerIndex = sheet.rows.findIndex((row) => isHeaderRow(headerMap(row)));
-      if (headerIndex < 0) continue;
-      const map = headerMap(sheet.rows[headerIndex]!);
-      for (const row of sheet.rows.slice(headerIndex + 1)) {
+      /* An issuer's sheet is not one table. This one holds a summary, then domestic
+         purchases, then foreign ones, then the full detail — each with its own heading and
+         its own columns. Mapping the first heading and reading everything below it under
+         those columns takes a later block's currency for a reference number, and its
+         amounts from whatever column happens to sit where the first block kept them. Each
+         heading replaces the mapping for the rows that follow it. */
+      let map: HeaderMap | null = null;
+      for (const row of sheet.rows) {
+        if (!row) continue;
+        const candidate = headerMap(row);
+        if (isHeaderRow(candidate)) { map = candidate; continue; }
+        if (!map) continue;
         const date = dateValue(row[map.date ?? -1]);
         if (!date) continue;
         const desc = clean(row[map.desc ?? -1]?.v);
@@ -137,6 +159,20 @@ export class CreditCardImportStrategy implements ImportStrategy {
     }
     return transactions;
   }
+}
+
+/* When nothing matches, "the file could not be read" tells the customer nothing and
+   tells support less. The row that looks most like a heading is the one piece of
+   evidence that identifies an unsupported layout, so it travels with the failure. */
+export function describeColumns(workbook: Workbook): string {
+  let best: string[] = [];
+  for (const sheet of workbook.sheets) {
+    for (const row of sheet.rows.slice(0, 30)) {
+      const texts = (row ?? []).filter((cell) => cell?.t === 's').map((cell) => clean(cell!.v)).filter(Boolean);
+      if (texts.length > best.length) best = texts;
+    }
+  }
+  return best.join(' · ');
 }
 
 export class ImportStrategyFactory {
