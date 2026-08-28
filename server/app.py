@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from hashlib import sha256
 from secrets import token_bytes
+from time import monotonic
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -10,6 +11,7 @@ from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from .config import bearer_token, read_supabase_config
+from .logging_config import log_event, route_name
 from .metrics import record_response, render_metrics
 from .models import CloudConsentInput, ConsentAcceptance, ProfileInput, SnapshotInput, UserProfile
 from .request_guard import GuardFailure, SnapshotRequestGuard
@@ -92,9 +94,20 @@ def _consent_json(consent: ConsentAcceptance | None) -> dict[str, object] | None
 
 @app.middleware("http")
 async def response_contract(request: Request, call_next):
+    started = monotonic()
     response = await call_next(request)
     response.headers["Cache-Control"] = "no-store"
     record_response(request.method, request.url.path, response.status_code)
+    # Bounded values only: a route label rather than the path, and no headers, query or
+    # body — the same boundary the metrics labels hold.
+    log_event(
+        "warn" if response.status_code >= 500 else "info",
+        "http.request",
+        route=route_name(request.url.path),
+        method=request.method,
+        status=response.status_code,
+        duration_ms=round((monotonic() - started) * 1000, 1),
+    )
     return response
 
 

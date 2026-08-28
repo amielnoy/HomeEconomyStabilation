@@ -1,10 +1,11 @@
 import { creditCardImporter, describeColumns, type Workbook } from './credit-card-importer.js';
-import { readWorkbook } from './spreadsheet-reader.js';
+import { readWorkbook, workbookFormat } from './spreadsheet-reader.js';
 import { createPrivacySafeSnapshot } from './privacy.js';
 import { createLocaleFormatters, formatMessage, getLocaleConfig, isSupportedLocale, resolveLocale, type Locale } from './localization.js';
 import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js';
 import { runFinancialAgents, type FinancialAgentResults } from './financial-agents.js';
 import { LocalConsentRepository } from './consent.js';
+import { Logger, resolveLevel } from './logging.js';
 import type { AppState, BankTransaction, Category, Rule } from './domain-model.js';
 import { AppStateCodec, LocalStorageStateRepository } from './state-repository.js';
 import { bankImporter, cleanTransactionText as clean, transactionId as txId } from './bank-importer.js';
@@ -1427,10 +1428,47 @@ function importCardWorkbook(workbook: Workbook, filename: string): { rows: BankT
   return bankImporter.import(workbook, filename, 'card');
 }
 
+/* ------------------------------------------------------------------ log -- */
+
+const LOG_LEVEL_KEY = 'mazan-habait.log-level';
+
+const readStoredLevel = (): string | null => {
+  try { return localStorage.getItem(LOG_LEVEL_KEY); } catch { return null; }
+};
+
+/* Console as well as the buffer: the buffer is what a customer sends, the console is what
+   a developer already has open. */
+const log = new Logger({
+  level: resolveLevel(location.search, readStoredLevel()),
+  console,
+  /* A dated copy per day, pruned to the last few, so a problem reported the morning after
+     still has the records that describe it. */
+  storage: (() => { try { return localStorage; } catch { return null; } })(),
+});
+
+/* Reachable from the console so support can ask for `copy(__log.toText())` without asking
+   anyone to install or rebuild anything. */
+(window as unknown as Record<string, unknown>).__log = log;
+
+/* Every interactive control already carries a data-testid — a contract test keeps it that
+   way — so one delegated listener records every command, and covers controls added later
+   without anyone remembering to log them. Only the control's name is recorded: a value
+   could be a merchant, a category or an amount. */
+const COMMAND_SELECTOR = 'button, a[href], select, summary, label.btn, [role="button"]';
+
+function logCommand(event: Event): void {
+  const target = event.target instanceof Element ? event.target : null;
+  const control = target?.closest(COMMAND_SELECTOR) ?? target?.closest('[data-testid]');
+  if (!(control instanceof HTMLElement)) return;
+  const name = control.dataset.testid ?? control.closest<HTMLElement>('[data-testid]')?.dataset.testid;
+  if (name) log.info('ui.command', { control: name, via: event.type });
+}
+
 /* ---------------------------------------------------------- file load -- */
 async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank') {
   const files = [...fileList];
   if (!files.length) return;
+  log.info('report.import.started', { source, files: files.length });
   let added = 0, dup = 0;
   /* A count of unreadable files leaves the customer with nothing to act on and support
      with nothing to diagnose. Each failure carries its own reason instead. */
@@ -1440,11 +1478,24 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank')
     try {
       const buf = await file.arrayBuffer();
       const wb = await readWorkbook(buf, file.name);
+      /* The container, the sheet count and the row count, which together say whether a
+         file that imported nothing was misread or simply empty. The file name is not
+         recorded: customers name statements after their account. */
+      log.info('report.read', {
+        source,
+        format: workbookFormat(buf),
+        bytes: buf.byteLength,
+        sheets: wb.sheets.length,
+        rows: wb.sheets.reduce((total, sheet) => total + sheet.rows.length, 0),
+      });
       const { rows, account } = source === 'card'
         ? importCardWorkbook(wb, file.name)
         : bankImporter.import(wb, file.name, source);
       if (!rows.length) {
         const columns = describeColumns(wb);
+        /* The heading row is the one piece of evidence that identifies an unsupported
+           layout, and it is already shown to the customer in the failure message. */
+        log.warn('report.import.rejected', { source, reason: columns ? 'columns-unrecognised' : 'unreadable', columns });
         failures.push(columns
           ? t('fileColumnsUnrecognized', { file: isolate(file.name), columns })
           : t('fileUnreadable', { file: isolate(file.name) }));
@@ -1456,10 +1507,12 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank')
         have.add(t.id); S.tx.push(t); added++;
       }
     } catch (e) {
+      log.error('report.import.failed', { source, error: e instanceof Error ? e.message : 'unknown' });
       failures.push(t('fileUnreadable', { file: isolate(file.name) }));
     }
   }
   save();
+  log.info('report.import.completed', { source, added, duplicates: dup, failed: failures.length });
   trackMarketingEvent('report_import_completed', { source, added, duplicates: dup, failed: failures.length });
   S.month = null;
   render();
@@ -1473,6 +1526,16 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank')
 
 /* ---------------------------------------------------------------- wire -- */
 function wire() {
+  /* Capture phase, so a command is recorded even when its own handler stops propagation
+     or replaces the screen the control was on. */
+  document.addEventListener('click', logCommand, true);
+  document.addEventListener('change', logCommand, true);
+  /* The records worth having are the ones written just before the tab went away, and the
+     interval between writes is exactly when that happens. pagehide fires on the mobile
+     path that never fires unload at all. */
+  window.addEventListener('pagehide', () => log.flush());
+  document.addEventListener('visibilitychange', () => { if (document.hidden) log.flush(); });
+
   $('#file').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files) handleFiles(input.files); input.value = ''; });
   $('#card-file').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files) handleFiles(input.files, 'card'); input.value = ''; });
   const drop = $('#drop');
