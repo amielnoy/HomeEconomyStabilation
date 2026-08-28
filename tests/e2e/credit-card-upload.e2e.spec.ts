@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { htmlBankReport } from './reports';
+import { htmlBankReport, issuerCardReport } from './reports';
 
 test.beforeEach(async ({ homePage }) => {
   await homePage.openFresh();
@@ -33,6 +33,18 @@ test('exposes the credit-card upload control in the live UI', async ({ homePage 
 
   await expect(input).toHaveAttribute('accept', /\.xls/);
   await expect(input).toHaveAttribute('multiple', '');
+});
+
+/* The control was wired up but no issuer's column names matched it, so choosing a card
+   report left the customer on the empty state with "the file could not be read". */
+test('imports a credit-card report through the card upload control', async ({ homePage }) => {
+  await homePage.upload.uploadCreditCardReport(issuerCardReport());
+
+  await expect(homePage.dashboard.root).toBeVisible();
+  await expect(homePage.dashboard.transactionRows).toHaveCount(4);
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'שופרסל דיל' })).toHaveCount(1);
+  // Billed in shekels, not the 40 dollars the purchase was made in.
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'AMAZON US' })).toContainText('148.2');
 });
 
 test('classifies evidenced transfers and alimony while leaving unexplained debits as other', async ({ homePage }) => {

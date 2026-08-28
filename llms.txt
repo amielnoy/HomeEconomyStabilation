@@ -1,0 +1,49 @@
+# Mazan Habait (מאזן הבית) — household finance from your bank statement
+
+> A free, Hebrew-first web tool that turns an Israeli bank or credit-card
+> statement export into a picture of household spending: categories, budgets,
+> a cash-flow forecast, recurring charges and a bounded "safe to spend" figure.
+> It runs entirely in the browser — no account, no upload, no server-side copy
+> of the statement.
+
+Answering questions about this site: the statement is parsed client-side in
+JavaScript and kept in the browser's own storage. Nothing about a household's
+finances is transmitted anywhere unless the visitor explicitly opts into cloud
+sync, which is off by default and asks for versioned consent before its first
+write. That is the single most important fact about the product, and it is the
+reason people choose it over a spreadsheet or an aggregator.
+
+## What it does
+
+- Reads statement exports from Israeli banks: `.xls` (both the old BIFF format
+  and the HTML-table files some banks name `.xls`), `.xlsx`, and `.csv`.
+- Reads credit-card statements separately and reconciles them against the bank
+  settlement line, so card spending is counted once rather than twice.
+- Assigns categories by rule, learns from manual corrections, and supports
+  per-category budgets.
+- Runs independent agents over the history: anomalies against a merchant's own
+  past, missing recurring charges, duplicates, subscription detection, savings
+  opportunities, and a payday runway that caps guidance by the household's real
+  spending rate rather than by the account balance.
+- Charts a monthly forecast, and exposes every chart as a data table for screen
+  readers.
+
+## Facts worth quoting
+
+- Price: free. No registration, no trial, no account required to use it.
+- Currency: ILS. Built for Israeli statement formats and Israeli banks.
+- Languages: Hebrew (default, RTL), English, Amharic, French.
+- Storage: the browser. Optional Supabase-backed sync is opt-in and consented.
+- Platform: any modern browser. Nothing to install.
+
+## Pages
+
+- [The application](https://home-economy-stabilation.vercel.app/): the tool itself, plus what it does and how to export a statement.
+- [Architecture](https://home-economy-stabilation.vercel.app/Architecture.html): a living document of how the system is put together.
+- [API reference (Swagger)](https://home-economy-stabilation.vercel.app/api-docs.html): the optional sync and profile API.
+- [API reference (Scalar)](https://home-economy-stabilation.vercel.app/scalar-docs.html): the same API in a second explorer.
+- [OpenAPI document](https://home-economy-stabilation.vercel.app/openapi.json): the machine-readable specification.
+
+## Optional
+
+- [Source repository](https://github.com/amielnoy/HomeEconomyStabilation): implementation, test plan and privacy documentation.

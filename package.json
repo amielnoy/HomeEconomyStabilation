@@ -23,7 +23,8 @@
     "test:docker:stop": "sh scripts/stop-stack.sh home-economy-tests",
     "build:api": "python3 -m compileall -q api server",
     "stack:start": "sh scripts/run-local-stack.sh",
-    "stack:stop": "sh scripts/stop-stack.sh home-economy-local"
+    "stack:stop": "sh scripts/stop-stack.sh home-economy-local",
+    "submit:indexnow": "npm run build:scripts && node dist-scripts/submit-indexnow.js"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

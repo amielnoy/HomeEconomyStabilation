@@ -4,7 +4,95 @@
 <meta charset="utf-8">
 <meta data-testid="viewport-meta" name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title data-i18n="title">מאזן הבית</title>
+
+<!-- Discovery. The description and social tags stay in Hebrew because that is what
+     the document ships as: `lang` and the visible text are switched by script after
+     load, and a crawler reads neither. Assistants and answer engines are welcome to
+     this page — no household data ever reaches the HTML, so there is nothing here a
+     visitor could not already see. -->
+<meta name="description" content="כלי חינמי להבנת כלכלת הבית מתוך דוח הבנק. טוענים קובץ מהבנק או מחברת האשראי ומקבלים קטגוריות, תקציבים, תחזית תזרים והמלצות — הכול רץ בדפדפן, בלי הרשמה ובלי שליחת הנתונים לשרת.">
+<link rel="canonical" href="https://home-economy-stabilation.vercel.app/">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="מאזן הבית">
+<meta property="og:locale" content="he_IL">
+<meta property="og:title" content="מאזן הבית — כלכלת הבית, מדוח הבנק">
+<meta property="og:description" content="טוענים דוח בנק ומקבלים תמונת מצב, תקציבים, תחזית והמלצות פעולה. הכול בדפדפן, בלי הרשמה ובלי שליחת הנתונים לשרת.">
+<meta property="og:url" content="https://home-economy-stabilation.vercel.app/">
+<meta property="og:image" content="https://home-economy-stabilation.vercel.app/favicon.svg">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="מאזן הבית — כלכלת הבית, מדוח הבנק">
+<meta name="twitter:description" content="טוענים דוח בנק ומקבלים תמונת מצב, תקציבים, תחזית והמלצות פעולה. הכול בדפדפן, בלי הרשמה ובלי שליחת הנתונים לשרת.">
+
+<link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt">
+
+<!-- A data block, not a script: `type` is not JavaScript, so the CSP `script-src
+     'self'` does not apply and nothing here executes. Every claim below is one the
+     page itself makes in visible text. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+{
+  "@type": "WebSite",
+  "@id": "https://home-economy-stabilation.vercel.app/#website",
+  "url": "https://home-economy-stabilation.vercel.app/",
+  "name": "מאזן הבית",
+  "alternateName": "Mazan Habait",
+  "inLanguage": "he-IL",
+  "publisher": { "@id": "https://home-economy-stabilation.vercel.app/#publisher" }
+},
+{
+  "@type": "Organization",
+  "@id": "https://home-economy-stabilation.vercel.app/#publisher",
+  "name": "מאזן הבית",
+  "url": "https://home-economy-stabilation.vercel.app/",
+  "sameAs": ["https://github.com/amielnoy/HomeEconomyStabilation"]
+},
+{
+  "@type": "WebApplication",
+  "@id": "https://home-economy-stabilation.vercel.app/#app",
+  "isPartOf": { "@id": "https://home-economy-stabilation.vercel.app/#website" },
+  "publisher": { "@id": "https://home-economy-stabilation.vercel.app/#publisher" },
+  "name": "מאזן הבית",
+  "alternateName": "Mazan Habait",
+  "url": "https://home-economy-stabilation.vercel.app/",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "isAccessibleForFree": true,
+  "inLanguage": ["he", "en", "am", "fr"],
+  "countriesSupported": "IL",
+  "description": "כלי חינמי להבנת כלכלת הבית מתוך דוח הבנק. הקובץ נקרא בדפדפן ואינו נשלח לשרת: מתקבלים קטגוריות, תקציבים, תחזית תזרים, זיהוי חיובים חוזרים והמלצות פעולה.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "ILS"
+  },
+  "featureList": [
+    "קריאת דוחות בנק בפורמטים xls, xlsx ו-csv",
+    "קריאת דוח כרטיס אשראי והתאמתו לחיוב המרוכז בבנק",
+    "שיוך אוטומטי לקטגוריות עם כללים ולמידה מתיקונים ידניים",
+    "תקציב לכל קטגוריה ומעקב חריגה",
+    "תחזית תזרים חודשית",
+    "זיהוי חיובים חוזרים, מנויים, כפילויות וחריגות",
+    "הנחיית «כמה אפשר להוציא» עד המשכורת הבאה"
+  ],
+  "softwareHelp": "https://home-economy-stabilation.vercel.app/Architecture.html"
+}
+  ]
+}
+</script>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<!-- The Hebrew subsets of the heading and body faces, which every default-locale
+     render needs before it can paint text. Discovered two stylesheets deep otherwise,
+     which is late enough to cost a visible reflow. Latin and Ethiopic are left to
+     ordinary discovery: the first is small, the second only Amharic reaches. -->
+<link rel="preload" as="font" type="font/woff2" href="fonts/frank-ruhl-libre-hebrew.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="fonts/assistant-hebrew.woff2" crossorigin>
+<meta name="theme-color" content="#0d6473" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080e10" media="(prefers-color-scheme: dark)">
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="design-system.css">
 <style>
@@ -455,6 +543,8 @@ body.drawer-open{ overflow:hidden; }
 .directory-section header p{ margin:3px 0 0; color:var(--muted); font-size:13px; }
 .directory-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
 .directory-grid--featured .ds-link-card{ min-height:190px; }
+/* Two cards would otherwise sit in a quarter each and leave half the row empty. */
+.directory-grid--pair{ grid-template-columns:repeat(2,minmax(0,1fr)); }
 .advisor-checklist{ margin-top:12px; padding:16px 18px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); }
 .advisor-checklist h4{ margin:0; font-size:15px; }
 .advisor-checklist p{ margin:3px 0 8px; color:var(--muted); font-size:13px; }
@@ -784,6 +874,27 @@ body.drawer-open{ overflow:hidden; }
         </a>
         <a class="ds-link-card" data-testid="support-community-paamonim-whatsapp-link" href="https://www.whatsapp.com/channel/0029Vaf1Mru17EmsEzCjnf3G" target="_blank" rel="noopener noreferrer">
           <span class="ds-status" data-tone="neutral" data-i18n="communityChannel">ערוץ קהילה</span><h4 data-i18n="paamonimWhatsApp">ערוץ WhatsApp של פעמונים</h4><p data-i18n="paamonimWhatsAppDescription">עדכונים ותוכן שימושי של פעמונים בנושא התנהלות כלכלית.</p><span class="link-cta" data-i18n="openWhatsAppCommunity">פתיחת הערוץ ב־WhatsApp ↗</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- TODO(community): both invite links below are REPLACE_ME placeholders. Swap in
+         the real ones before release — grep for REPLACE_ME to find every occurrence. -->
+    <section class="directory-section" aria-labelledby="community-h" data-testid="community-section">
+      <header>
+        <h3 id="community-h" data-i18n="community" data-testid="community-h">קהילת מאזן הבית</h3>
+        <p data-i18n="communityNote">שתי קהילות, אותו תוכן. בחרו לפי רמת הפרטיות שמתאימה לכם — כל אחת מוותרת על משהו אחר.</p>
+      </header>
+      <aside class="directory-notice" data-testid="community-disclaimer" aria-label="מידע חשוב" data-i18n-aria-label="importantInfo">
+        <strong data-i18n="beforeJoining">לפני שמצטרפים</strong>
+        <span data-i18n="communityDisclaimer">הקהילות מתארחות בשירות חיצוני, ולכן ההבטחה שהנתונים נשארים במכשיר אינה חלה עליהן. כל מה שתכתבו שם גלוי לחברי הקהילה ונשמר אצל השירות — אל תשתפו דוחות בנק, מספרי חשבון או פרטים מזהים.</span>
+      </aside>
+      <div class="directory-grid directory-grid--featured directory-grid--pair">
+        <a class="ds-link-card" data-testid="community-whatsapp-link" href="https://chat.whatsapp.com/REPLACE_ME" target="_blank" rel="noopener noreferrer">
+          <span class="ds-status" data-tone="neutral" data-i18n="communityEncrypted">הצפנה מקצה לקצה</span><h4 data-i18n="communityWhatsApp">קהילת WhatsApp</h4><p data-i18n="communityWhatsAppDescription">תוכן ההודעות מוצפן מקצה לקצה, אבל ההצטרפות מחייבת מספר טלפון — והוא גלוי לשאר חברי הקהילה.</p><span class="link-cta" data-i18n="joinWhatsAppCommunity">הצטרפות ב־WhatsApp ↗</span>
+        </a>
+        <a class="ds-link-card" data-testid="community-telegram-link" href="https://t.me/REPLACE_ME" target="_blank" rel="noopener noreferrer">
+          <span class="ds-status" data-tone="neutral" data-i18n="communityNoPhone">בלי לחשוף טלפון</span><h4 data-i18n="communityTelegram">קהילת Telegram</h4><p data-i18n="communityTelegramDescription">אפשר להשתתף עם שם משתמש בלבד ולהסתיר את מספר הטלפון, אבל הודעות בקבוצה נשמרות בשרתי Telegram ואינן מוצפנות מקצה לקצה.</p><span class="link-cta" data-i18n="joinTelegramCommunity">הצטרפות ב־Telegram ↗</span>
         </a>
       </div>
     </section>
