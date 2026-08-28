@@ -52,11 +52,12 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 
 | File | Coverage |
 | --- | --- |
-| `tests/unit/spreadsheet-reader.unit.test.ts` | Legacy .xls, .xlsx, CSV and HTML-table reading: delimiters, quoting, CRLF, magic-byte dispatch, colspan/rowspan alignment and windows-1255 decoding |
+| `tests/unit/spreadsheet-reader.unit.test.ts` | Legacy .xls, .xlsx, SpreadsheetML 2003, CSV and HTML-table reading: delimiters, quoting, CRLF, magic-byte dispatch, colspan/rowspan alignment, shared and inline strings, optional cell references, date serials and windows-1255 decoding |
 | `tests/unit/financial-agents.unit.test.ts` | Eight agents, saving estimates, Strategy injection, safe-to-spend edges and date clamping |
+| `tests/unit/logging.unit.test.ts` | Shared record shape, level filtering, bounded ring buffer, redaction of financial identifiers, refusal of structured values, console mirroring, JSON-lines output, runtime level resolution, dated daily copies, the midnight roll, retention pruning, archive ordering and storage exhaustion yielding the log rather than the state |
 | `tests/unit/localization.unit.test.ts` | Supported locale validation, RTL/LTR, UTC formatting and named parameters |
-| `tests/unit/credit-card-importer.unit.test.ts` | Charges, refunds and invalid workbook rows |
-| `tests/unit/bank-importer.unit.test.ts` | Bank headers, account extraction, transaction normalization and stable IDs |
+| `tests/unit/credit-card-importer.unit.test.ts` | Charges, refunds, headings with the definite article, billed versus transaction amounts, metadata rows above the heading, multi-sheet cards, pending sheets and invalid workbook rows |
+| `tests/unit/bank-importer.unit.test.ts` | Hebrew and English bank headers, account extraction, card-source signed amounts, transaction normalization and stable IDs |
 | `tests/unit/categorization.unit.test.ts` | Transfer/alimony classification, unknown fallbacks, income and manual-override precedence |
 | `tests/unit/marketing.unit.test.ts` | Allowed attribution, first/last touch and bounded local event history |
 | `tests/unit/privacy.unit.test.ts` | Identifier redaction, allowlisted snapshots and removal/rejection of unknown sensitive properties |
@@ -72,6 +73,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/server/test_config.py` | Environment validation and strict bearer-token parsing |
 | `tests/server/test_models.py` | Pydantic allowlists, size bounds and financial-identifier rejection |
 | `tests/server/test_metrics.py` | Bounded route/method/operation labels and rejection of raw path or identity data in Prometheus output |
+| `tests/server/test_logging_config.py` | JSON-lines records in the shared shape, level names matching the browser, level filtering, handlers not stacking on reconfiguration, bounded route names, exceptions recorded by type without a traceback, every request logged with bounded metadata, a dated backup per day anchored to UTC, retention limits and their refusal of misconfiguration, the size cap surviving repeated same-day rollovers and pruning of the numbered copies |
 | `tests/server/test_request_guard.py` | Media type, body size and bounded rate limiting |
 | `tests/server/test_repositories.py` | Profile, snapshot and consent CRUD with owner filters and stable failures |
 | `tests/server/test_app.py` | FastAPI health, methods, profile/consent persistence, authentication boundary and consent-gated snapshot writes |
@@ -80,10 +82,18 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 
 | File | Coverage |
 | --- | --- |
-| `tests/api/credit-card-importer.api.test.ts` | Stable importer output and unsupported workbook rejection |
+| `tests/api/spreadsheet-reader.api.test.ts` | The reader facade: one workbook shape from every container, dispatch on content rather than file name, thrown errors for unreadable bytes and sheet naming |
+| `tests/api/credit-card-importer.api.test.ts` | Stable importer output, heading description for unsupported layouts, caller-workbook immutability and unsupported workbook rejection |
 | `tests/api/financial-agents.api.test.ts` | Stable result slot for every agent |
 | `tests/api/localization.api.test.ts` | Public locale configuration and formatter factory |
 | `tests/api/marketing.api.test.ts` | Stable attribution payload and callable analytics boundary |
+
+## Integration suites
+
+| File | Coverage |
+| --- | --- |
+| `tests/integration/import-pipeline.integration.test.ts` | Raw report bytes through the reader into the importers for CSV, SpreadsheetML, HTML-as-.xls, .xlsx and the legacy .xls fixture, plus statement and card exports from one container shape, each source's sign convention, account attribution, a shared row shape across both uploads, a compressed multi-block export whose table starts low, the statement fallback for the card control, windows-1255 merchant names, .xlsx without cell references, SpreadsheetML calendar days, heading description for unreadable layouts and repeat-import ID stability |
+| `tests/integration/locale-rendering.integration.test.ts` | Markup, resource files and the localization module applied to each other: every translated node filled, no key left showing, direction pairing, import-failure parameter substitution and rendered header label lengths |
 
 ## Contract and security suites
 
@@ -92,12 +102,17 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/contract/design-system-contract.test.ts` | Semantic tokens, recipe ownership, variants, disabled/focus states, contrast preferences, touch targets, typography and directional drawers |
 | `tests/contract/discovery.contract.test.ts` | Assistant-crawler allowlist, canonical URL and duplicate suppression, sitemap and llms.txt link resolution, structured-data graph integrity, IndexNow key ownership, variable-font face declarations and deployment of every discovery file |
 | `tests/contract/documentation-contract.test.ts` | README, architecture, design system, privacy, Supabase, TODO, monitoring and this test plan stay synchronized |
-| `tests/contract/importer-contract.test.ts` | Dashboard transaction shape |
+| `tests/contract/control-labels.contract.test.ts` | Header action labels present, distinguishable and short enough to fit in every locale, and every data-i18n and translated aria-label key resolving |
+| `tests/contract/importer-contract.test.ts` | Dashboard transaction shape, dense rows and legal cell typing from every reader, stable and distinct transaction IDs, and resolvable import messages |
+| `tests/contract/responsive-layout.contract.test.ts` | Narrow-width header rules declared after the wider rules they override, shrinkable grid tracks, constrained overflow for nowrap actions, wrapping instead of truncation at the narrowest width, no pinned control widths and pinned text sizing |
+| `tests/contract/logging-contract.test.ts` | Browser and API agreeing on record fields, level names, origin field, one-line records, bounded retention on both sides and runtime level configuration |
 | `tests/contract/localization-contract.test.ts` | Key parity, named-parameter parity and complete HTML/runtime translation coverage |
 | `tests/contract/monitoring.contract.test.ts` | Prometheus, bounded route labels, application/database Grafana dashboards, profile/consent/snapshot panels, privacy-safe Supabase metrics and combined Allure publication |
 | `tests/contract/openapi.contract.test.ts` | Snapshot, profile and consent operations, privacy-minimised schema v2, bearer security, responses and self-hosted Swagger/Scalar |
 | `tests/contract/security-sanity.contract.test.ts` | Dangerous sinks, HTTPS opener isolation, file types and remote scripts |
 | `tests/contract/supabase-schema.contract.test.ts` | Tables, grants, RLS ownership, publishable-key boundary and migration/runtime schema-version parity |
+| `tests/security/import-safety.security.test.ts` | Imported reports as untrusted input: external-entity refusal, prototype-pollution resistance, markup kept as text, clamped spans, refusal of truncated archives, rejection of unreadable amounts and a network-free import |
+| `tests/security/localization-safety.security.test.ts` | Translations as authored input: no markup or executable URLs, no prototype-polluting resource keys and no re-expansion of a placeholder arriving inside a parameter |
 | `tests/contract/test-id-contract.test.ts` | Stable test IDs for static/dynamic controls and Page Object selector discipline |
 | `tests/contract/typescript-source.contract.test.ts` | No project-owned JavaScript source or inline scripts; browser behavior comes from compiled TypeScript modules |
 
@@ -123,13 +138,16 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/e2e/architecture.e2e.spec.ts` | Architecture content, responsive layout and accessibility |
 | `tests/e2e/cloud-consent.e2e.spec.ts` | Consent acceptance and withdrawal without upload |
 | `tests/e2e/cloud-metadata.sanity.api.e2e.spec.ts` | Anonymous profile/consent refusal, malformed metadata rejection, no-store responses and stable method contracts |
-| `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import, evidence-based transfer/alimony categorization, honest unknown fallback, upload availability and recommendations |
+| `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import across CSV, SpreadsheetML, .xlsx with and without cell references, windows-1255 encoding and English column names, multi-file imports, localized unrecognised-layout reporting, duplicate re-imports, header labels after import, evidence-based transfer/alimony categorization, honest unknown fallback, upload availability and recommendations |
 | `tests/e2e/card-reconciliation.e2e.spec.ts` | A card settlement and its itemised card lines are counted once, not twice |
 | `tests/e2e/financial-agents.e2e.spec.ts` | Eight agents, saving evidence, safe-to-spend, explicit approvals and translation |
 | `tests/e2e/i18n-dynamic.e2e.spec.ts` | Generated English, French and Amharic copy without Hebrew leakage |
 | `tests/e2e/localization.e2e.spec.ts` | Persistence, RTL/LTR, ILS formatting and mobile overflow in every locale |
 | `tests/e2e/marketing-landing.e2e.spec.ts` | Attribution privacy, CTA visual hierarchy and tap size, four locales and dark mode |
-| `tests/e2e/mobile-usability.e2e.spec.ts` | Touch targets and complete Android/iOS browser journey |
+| `tests/e2e/dual-upload.e2e.spec.ts` | Both uploads together: the two reports shown as one list, order independence, duplicate re-imports of each adding nothing, the bank account surviving a card import, an unreadable file costing only itself and both sources recorded in the log |
+| `tests/e2e/logging.e2e.spec.ts` | The running application's log: the whole import path recorded, detected format and shape, rejection reasons, every customer command, no statement contents or file names in either the buffer or the dated copy, bounded buffer, level raised from the query string and a dated copy surviving a reload |
+| `tests/e2e/mobile-usability.e2e.spec.ts` | Touch targets, whole upload labels at a zoom-narrowed viewport and complete Android/iOS browser journey |
+| `tests/e2e/responsive-header.e2e.spec.ts` | The header across the zoom-narrowed width band, swept every 10px in all four languages: no overflow or cut labels at six widths, stacking only when the labels stop fitting, tappable and keyboard-reachable uploads, focus ring on the pill, overflow menu and failure message inside the viewport, WCAG reflow width and import from the stacked header |
 | `tests/e2e/http-api.api.e2e.spec.ts` | Real HTTP health GET/HEAD, method/media rejection, anonymous snapshot protection and unknown routes |
 | `tests/e2e/savings-directory.e2e.spec.ts` | Empty-state access, 18 links, licensed-adviser registries, requested Dorit Gov Ari profile, support section, WhatsApp channel, French and return journey |
 | `tests/e2e/savings-opportunities.sanity.e2e.spec.ts` | Annual/one-time separation, evidence disclosure and absence of automatic cancellation |
