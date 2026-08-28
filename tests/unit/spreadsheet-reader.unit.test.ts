@@ -130,6 +130,43 @@ describe('spreadsheet reader', () => {
     expect(values(workbook)).toEqual([['תאריך', 'סכום'], ['01/08/2026', '120']]);
   });
 
+  /* An issuer's "Excel" download is often SpreadsheetML 2003: XML named .xls. Its
+     <Table> made the HTML reader claim the file, which then found no <tr> and returned
+     an empty sheet, so a perfectly good card report imported as nothing. */
+  it('reads a SpreadsheetML 2003 workbook named .xls', async () => {
+    const workbook = await readWorkbook(buffer(
+      '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"'
+      + ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="עסקאות"><Table>'
+      + '<Row><Cell><Data ss:Type="String">תאריך עסקה</Data></Cell>'
+      + '<Cell><Data ss:Type="String">שם בית העסק</Data></Cell>'
+      + '<Cell><Data ss:Type="String">סכום חיוב</Data></Cell></Row>'
+      + '<Row><Cell><Data ss:Type="String">03/08/2026</Data></Cell>'
+      + '<Cell><Data ss:Type="String">שופרסל</Data></Cell>'
+      + '<Cell><Data ss:Type="Number">431</Data></Cell></Row>'
+      + '</Table></Worksheet></Workbook>',
+    ), 'card.xls');
+
+    expect(workbook.sheets[0]!.name).toBe('עסקאות');
+    expect(values(workbook)).toEqual([
+      ['תאריך עסקה', 'שם בית העסק', 'סכום חיוב'],
+      ['03/08/2026', 'שופרסל', 431],
+    ]);
+  });
+
+  /* ss:Index is how the format writes a gap. Ignoring it slid every later value one
+     column left, under the wrong heading. */
+  it('keeps SpreadsheetML columns aligned across a skipped index', async () => {
+    const workbook = await readWorkbook(buffer(
+      '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"'
+      + ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="s"><Table>'
+      + '<Row><Cell><Data ss:Type="String">א</Data></Cell>'
+      + '<Cell ss:Index="3"><Data ss:Type="String">ג</Data></Cell></Row>'
+      + '</Table></Worksheet></Workbook>',
+    ), 'gaps.xls');
+
+    expect(values(workbook)).toEqual([['א', null, 'ג']]);
+  });
+
   it('rejects a compound file whose signature does not match', async () => {
     const bytes = new Uint8Array(600);
     bytes[0] = 0xd0; bytes[1] = 0xcf;
