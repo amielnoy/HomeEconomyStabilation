@@ -47,12 +47,23 @@ const HEADER_PATTERNS: Record<HeaderKey, RegExp[]> = {
   in: [/^זיכוי/, /^זכות/, /החזר/],
 };
 
+/* Issuers write the same column with or without the definite article — Max exports
+   "שם בית העסק" and "תאריך העסקה" where Cal writes "שם בית עסק" and "תאריך עסקה" — so a
+   pattern spelled one way silently misses the other issuer's export, and the whole file
+   is reported unreadable. Matching the de-articled text as well as the original lets one
+   pattern cover both spellings without doubling the list. */
+const withoutArticles = (text: string): string => text.replace(/(^|\s)ה(?=\S{2,})/g, '$1');
+export const headerMatches = (patterns: readonly RegExp[], text: string): boolean =>
+  patterns.some((pattern) => pattern.test(text) || pattern.test(withoutArticles(text)));
+
 const clean = (value: unknown): string => String(value ?? '').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, '').replace(/\s+/g, ' ').trim();
 const numeric = (cell: SpreadsheetCell | null | undefined): number => {
   const value = cell?.v;
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
-    const parsed = Number(value.replace(/[₪,\s()]/g, ''));
+    /* Accounting exports write a refund as "(20)"; stripping the brackets alone would
+       book it as a charge of 20. */
+    const parsed = Number(value.replace(/[₪,\s]/g, '').replace(/^\((.+)\)$/, '-$1'));
     return Number.isFinite(parsed) ? parsed : 0;
   }
   return 0;
@@ -76,11 +87,14 @@ const headerMap = (row: ReadonlyArray<SpreadsheetCell | null>): HeaderMap => {
     if (!cell || cell.t !== 's') return;
     const text = clean(cell.v);
     for (const [key, patterns] of Object.entries(HEADER_PATTERNS) as Array<[HeaderKey, RegExp[]]>) {
-      if (map[key] === undefined && patterns.some((pattern) => pattern.test(text))) map[key] = index;
+      if (map[key] === undefined && headerMatches(patterns, text)) map[key] = index;
     }
   });
   return map;
 };
+
+const isHeaderRow = (map: HeaderMap): boolean => map.date !== undefined && map.desc !== undefined
+  && (map.amount !== undefined || map.out !== undefined || map.in !== undefined);
 
 const hashId = (transaction: Omit<TransactionRecord, 'id'>): string => {
   const raw = [transaction.date, transaction.ref, transaction.out.toFixed(2), transaction.in.toFixed(2), transaction.desc].join('|');
@@ -91,28 +105,28 @@ const hashId = (transaction: Omit<TransactionRecord, 'id'>): string => {
 
 export class CreditCardImportStrategy implements ImportStrategy {
   canHandle(workbook: Workbook): boolean {
-    return workbook.sheets.some((sheet) => sheet.rows.some((row) => {
-      const map = headerMap(row);
-      return map.date !== undefined && map.desc !== undefined && (map.amount !== undefined || map.out !== undefined);
-    }));
+    return workbook.sheets.some((sheet) => sheet.rows.some((row) => isHeaderRow(headerMap(row))));
   }
 
   import(workbook: Workbook, filename: string): TransactionRecord[] {
     const transactions: TransactionRecord[] = [];
     for (const sheet of workbook.sheets) {
-      const headerIndex = sheet.rows.findIndex((row) => {
-        const map = headerMap(row);
-        return map.date !== undefined && map.desc !== undefined && (map.amount !== undefined || map.out !== undefined);
-      });
+      const headerIndex = sheet.rows.findIndex((row) => isHeaderRow(headerMap(row)));
       if (headerIndex < 0) continue;
       const map = headerMap(sheet.rows[headerIndex]!);
       for (const row of sheet.rows.slice(headerIndex + 1)) {
         const date = dateValue(row[map.date ?? -1]);
         if (!date) continue;
         const desc = clean(row[map.desc ?? -1]?.v);
-        const rawAmount = numeric(row[map.amount ?? map.out ?? -1]);
-        const out = map.in === undefined && rawAmount >= 0 ? rawAmount : 0;
-        const incoming = map.in === undefined && rawAmount < 0 ? -rawAmount : numeric(row[map.in ?? -1]);
+        /* The billed column wins over the transaction column: on a foreign-currency
+           purchase "סכום עסקה" is in the merchant's currency and only "סכום חיוב" is the
+           shekels that left the account. */
+        const signed = numeric(row[map.out ?? map.amount ?? -1]);
+        const credited = map.in === undefined ? 0 : Math.abs(numeric(row[map.in]));
+        /* A statement with its own credit column still keeps charges in the charge
+           column; reading only the credit column there dropped every charge in the file. */
+        const out = signed > 0 ? signed : 0;
+        const incoming = credited || (signed < 0 ? -signed : 0);
         if (!out && !incoming) continue;
         const transaction: Omit<TransactionRecord, 'id'> = {
           date, vdate: date, ref: clean(row[map.ref ?? -1]?.v), desc, out, in: incoming,

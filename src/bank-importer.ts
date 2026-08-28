@@ -1,5 +1,5 @@
 import type { BankTransaction } from './domain-model.js';
-import type { SpreadsheetCell, Workbook } from './credit-card-importer.js';
+import { headerMatches, type SpreadsheetCell, type Workbook } from './credit-card-importer.js';
 
 const BIDI = /[‎‏‪-‮⁦-⁩]/g;
 type HeaderKey = 'date' | 'vdate' | 'ref' | 'desc' | 'out' | 'in' | 'amt' | 'bal';
@@ -47,7 +47,7 @@ const dateValue = (cell: SpreadsheetCell | null | undefined): string | null => {
 const matchHeader = (value: unknown): HeaderKey | null => {
   const text = cleanTransactionText(value);
   for (const [key, patterns] of Object.entries(HEADERS) as Array<[HeaderKey, RegExp[]]>) {
-    if (patterns.some((pattern) => pattern.test(text))) return key;
+    if (headerMatches(patterns, text)) return key;
   }
   return null;
 };

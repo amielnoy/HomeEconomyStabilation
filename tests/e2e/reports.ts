@@ -115,3 +115,17 @@ export function htmlBankReport(): FilePayload {
 
   return { name: 'leumi-statement.xls', mimeType: 'application/vnd.ms-excel', buffer: Buffer.from(bytes) };
 }
+
+/* A credit-card export as the issuers actually write one: the columns carry the definite
+   article, the transaction amount sits beside the billed amount, and a refund comes back
+   as its own row. */
+export function issuerCardReport(): FilePayload {
+  const lines = [
+    'תאריך העסקה,שם בית העסק,קטגוריה,סכום העסקה,סכום החיוב',
+    '03/08/2026,שופרסל דיל,מזון,431.00,431.00',
+    '07/08/2026,AMAZON US,קניות,40.00,148.20',
+    '12/08/2026,נטפליקס,פנאי,54.90,54.90',
+    '18/08/2026,החזר רכישה,קניות,-60.00,-60.00',
+  ];
+  return { name: 'card-statement.csv', mimeType: 'text/csv', buffer: Buffer.from(lines.join('\n')) };
+}

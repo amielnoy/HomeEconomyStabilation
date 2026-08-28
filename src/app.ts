@@ -1,4 +1,4 @@
-import { creditCardImporter } from './credit-card-importer.js';
+import { creditCardImporter, type Workbook } from './credit-card-importer.js';
 import { readWorkbook } from './spreadsheet-reader.js';
 import { createPrivacySafeSnapshot } from './privacy.js';
 import { createLocaleFormatters, formatMessage, getLocaleConfig, isSupportedLocale, resolveLocale, type Locale } from './localization.js';
@@ -1411,6 +1411,18 @@ function importBackup(file: File) {
   fr.readAsText(file);
 }
 
+/* The card strategy only accepts layouts it recognises, and an issuer the patterns do
+   not cover used to leave the customer with "the file could not be read" and no way
+   forward. The statement reader is looser about column names, so it gets the file next
+   rather than the customer getting nothing. */
+function importCardWorkbook(workbook: Workbook, filename: string): { rows: BankTransaction[]; account: string | null } {
+  try {
+    const rows: BankTransaction[] = creditCardImporter.import(workbook, filename);
+    if (rows.length) return { rows, account: null };
+  } catch (e) { /* unrecognised card layout: fall through to the statement reader */ }
+  return bankImporter.import(workbook, filename, 'card');
+}
+
 /* ---------------------------------------------------------- file load -- */
 async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank') {
   const files = [...fileList];
@@ -1421,11 +1433,9 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank')
     try {
       const buf = await file.arrayBuffer();
       const wb = await readWorkbook(buf, file.name);
-      const cardImporter = creditCardImporter;
-      const imported = source === 'card' && cardImporter
-        ? { rows: cardImporter.import(wb, file.name), account: null }
+      const { rows, account } = source === 'card'
+        ? importCardWorkbook(wb, file.name)
         : bankImporter.import(wb, file.name, source);
-      const { rows, account } = imported;
       if (!rows.length) { bad++; continue; }
       if (account && !S.accounts.includes(account)) S.accounts.push(account);
       for (const t of rows) {
