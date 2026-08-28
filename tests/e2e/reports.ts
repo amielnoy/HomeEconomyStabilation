@@ -129,3 +129,19 @@ export function issuerCardReport(): FilePayload {
   ];
   return { name: 'card-statement.csv', mimeType: 'text/csv', buffer: Buffer.from(lines.join('\n')) };
 }
+
+/* The same statement as SpreadsheetML 2003 — XML named .xls, which is what several
+   issuers hand out when the customer asks for Excel. */
+export function spreadsheetMlCardReport(): FilePayload {
+  const row = (cells: ReadonlyArray<{ value: string; numeric?: boolean }>) => '<Row>'
+    + cells.map((c) => `<Cell><Data ss:Type="${c.numeric ? 'Number' : 'String'}">${c.value}</Data></Cell>`).join('')
+    + '</Row>';
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>'
+    + '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"'
+    + ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="עסקאות"><Table>'
+    + row([{ value: 'תאריך העסקה' }, { value: 'שם בית העסק' }, { value: 'סכום החיוב' }])
+    + row([{ value: '03/08/2026' }, { value: 'שופרסל דיל' }, { value: '431', numeric: true }])
+    + row([{ value: '12/08/2026' }, { value: 'נטפליקס' }, { value: '54.9', numeric: true }])
+    + '</Table></Worksheet></Workbook>';
+  return { name: 'card-statement.xls', mimeType: 'application/vnd.ms-excel', buffer: Buffer.from(xml) };
+}

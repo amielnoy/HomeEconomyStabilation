@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { htmlBankReport, issuerCardReport } from './reports';
+import { htmlBankReport, issuerCardReport, spreadsheetMlCardReport } from './reports';
 
 test.beforeEach(async ({ homePage }) => {
   await homePage.openFresh();
@@ -45,6 +45,16 @@ test('imports a credit-card report through the card upload control', async ({ ho
   await expect(homePage.dashboard.transactionRows.filter({ hasText: 'שופרסל דיל' })).toHaveCount(1);
   // Billed in shekels, not the 40 dollars the purchase was made in.
   await expect(homePage.dashboard.transactionRows.filter({ hasText: 'AMAZON US' })).toContainText('148.2');
+});
+
+/* Asking an issuer for Excel can return XML named .xls; it reached the HTML reader,
+   which found no table rows in it and left the customer with an empty report. */
+test('imports a credit-card report exported as SpreadsheetML named .xls', async ({ homePage }) => {
+  await homePage.upload.uploadCreditCardReport(spreadsheetMlCardReport());
+
+  await expect(homePage.dashboard.root).toBeVisible();
+  await expect(homePage.dashboard.transactionRows).toHaveCount(2);
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'שופרסל דיל' })).toHaveCount(1);
 });
 
 test('classifies evidenced transfers and alimony while leaving unexplained debits as other', async ({ homePage }) => {

@@ -654,14 +654,75 @@ export function parseHTMLTable(text: string, name = 'HTML'): Workbook {
   return { sheets: sheets.length ? sheets : [{ name, rows: [] }] };
 }
 
+/* ----------------------------------------------------------- SpreadsheetML */
+
+/* "Save as Excel" on several issuer sites produces SpreadsheetML 2003: an XML
+   document named .xls. Excel opens it, so the issuer calls it a spreadsheet, and it
+   is neither a compound file nor a zip. Worse, its <Table> element makes the HTML
+   reader claim the file — which then finds no <tr> and returns a sheet with no rows,
+   so the customer is told the report is empty rather than unsupported. */
+const SPREADSHEETML_NS = 'urn:schemas-microsoft-com:office:spreadsheet';
+
+/* The namespace may be the default or carry any prefix, so attributes are read by
+   namespace first and by the conventional ss: spelling only as a fallback. */
+function mlAttribute(element: Element, name: string): string | null {
+  return element.getAttributeNS(SPREADSHEETML_NS, name) ?? element.getAttribute(`ss:${name}`) ?? element.getAttribute(name);
+}
+
+function mlCell(cell: Element): SpreadsheetCell | null {
+  const data = [...cell.getElementsByTagNameNS('*', 'Data')][0] ?? [...cell.getElementsByTagNameNS('*', 'data')][0];
+  const text = (data?.textContent ?? '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+  if (text === '') return null;
+  const type = data ? mlAttribute(data, 'Type') : null;
+  if (type === 'Number') {
+    const parsed = Number(text);
+    return Number.isFinite(parsed) ? { t: 'n', v: parsed } : { t: 's', v: text };
+  }
+  if (type === 'DateTime') {
+    const parsed = new Date(text);
+    return Number.isNaN(parsed.getTime()) ? { t: 's', v: text } : { t: 'd', v: parsed };
+  }
+  return { t: 's', v: text };
+}
+
+export function parseSpreadsheetML(text: string, name = 'XML'): Workbook {
+  const document = new DOMParser().parseFromString(text, 'application/xml');
+  const worksheets = [...document.getElementsByTagNameNS('*', 'Worksheet')];
+  const sheets = worksheets.map((worksheet, index) => {
+    const rows: Array<Array<SpreadsheetCell | null>> = [];
+    /* Both rows and cells may carry ss:Index and skip ahead, which is how the format
+       writes a gap; ignoring it would shift every later column out of its heading. */
+    let nextRow = 1;
+    for (const row of [...worksheet.getElementsByTagNameNS('*', 'Row')]) {
+      const rowIndex = Number(mlAttribute(row, 'Index') ?? nextRow) - 1;
+      nextRow = rowIndex + 2;
+      const cells: Array<SpreadsheetCell | null> = [];
+      let nextColumn = 1;
+      for (const cell of [...row.children].filter((child) => child.localName === 'Cell')) {
+        const column = Number(mlAttribute(cell, 'Index') ?? nextColumn) - 1;
+        cells[column] = mlCell(cell);
+        nextColumn = column + 2 + Number(mlAttribute(cell, 'MergeAcross') ?? 0);
+      }
+      rows[rowIndex] = cells;
+    }
+    /* A skipped ss:Index leaves a hole, and a hole is not an empty row: the importers
+       index into every row they walk, so each one has to be a real array. */
+    for (let index = 0; index < rows.length; index += 1) rows[index] ??= [];
+    return { name: mlAttribute(worksheet, 'Name') || (index === 0 ? name : `${name} (${index + 1})`), rows };
+  });
+  return { sheets: sheets.length ? sheets : [{ name, rows: [] }] };
+}
+
 /* Israeli bank exports are commonly windows-1255 rather than UTF-8, and decoding
    those as UTF-8 replaces every Hebrew description with U+FFFD — which then
    matches no categorisation rule and lands the transaction in "other". The
    declared charset is ASCII whichever encoding the body uses, so it can be read
    before committing to one. */
 function decodeDocument(bytes: Uint8Array): string {
-  const declared = /charset\s*=\s*["']?\s*([\w-]+)/i
-    .exec(latin1(bytes, 0, Math.min(bytes.length, 4096)))?.[1]?.toLowerCase();
+  const head = latin1(bytes, 0, Math.min(bytes.length, 4096));
+  /* An XML export declares its encoding on the declaration rather than in a meta
+     charset, and those are windows-1255 as often as bank HTML is. */
+  const declared = (/charset\s*=\s*["']?\s*([\w-]+)/i.exec(head) ?? /encoding\s*=\s*["']([\w-]+)["']/i.exec(head))?.[1]?.toLowerCase();
   if (declared && !/^utf-?8$/.test(declared)) {
     try { return new TextDecoder(declared).decode(bytes); } catch { /* unknown label: fall back to UTF-8 */ }
   }
@@ -675,6 +736,12 @@ export async function readWorkbook(arrayBuffer: ArrayBuffer, filename = ''): Pro
   if (b[0] === 0xd0 && b[1] === 0xcf) return parseXLS(arrayBuffer);
   if (b[0] === 0x50 && b[1] === 0x4b) return parseXLSX(arrayBuffer);
   const text = decodeDocument(b);
+  if (/^\s*</.test(text) && text.includes(SPREADSHEETML_NS)) {
+    const workbook = parseSpreadsheetML(text, filename || 'XML');
+    /* An Excel-saved HTML file can name office namespaces too, so a document that
+       yields nothing here is still offered to the HTML reader below. */
+    if (workbook.sheets.some((sheet) => sheet.rows.length)) return workbook;
+  }
   if (/^\s*</.test(text) && /<table/i.test(text)) return parseHTMLTable(text, filename || 'HTML');
   return parseCSV(text, filename || 'CSV');
 }
