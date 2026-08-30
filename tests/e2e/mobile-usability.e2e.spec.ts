@@ -6,12 +6,12 @@ import { richBankReport } from './reports';
 const TOUCH_TARGET_EXCEPTIONS = [
   // Wrapped by a full-width <label> that carries the tap area.
   '#cloud-consent-check',
-  /* The upload controls are a <label class="btn"> wrapping the file input. The label is
-     the 48px target; the input is visually hidden and exists to hold keyboard focus,
-     because marking it `hidden` took the product's primary action out of the tab order
-     altogether. Its own box is deliberately 1px. */
+  /* The bank upload is a <label class="btn"> wrapping its file input. The label is the 48px
+     target; the input is visually hidden and exists to hold keyboard focus, because marking
+     it `hidden` took the product's primary action out of the tab order altogether. Its own
+     box is deliberately 1px. The card upload needs no exemption: it is a real button, and
+     its input is `hidden` so it is never enumerated. */
   '#file',
-  '#card-file',
 ] as const;
 
 test.describe('mobile browser usability', () => {

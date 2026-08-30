@@ -213,6 +213,7 @@
           "bal": { "oneOf": [{ "type": "number" }, { "type": "null" }] },
           "pending": { "type": "boolean" },
           "source": { "type": "string", "enum": ["bank", "card"] },
+          "cardKind": { "type": "string", "enum": ["bank", "external"], "description": "Who issues the card. Decides whether its detail cancels the statement settlement." },
           "id": { "type": "string", "maxLength": 200 },
           "cat": { "type": "string", "maxLength": 100 },
           "kind": { "type": "string", "enum": ["expense", "income", "neutral"] }

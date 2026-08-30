@@ -6,7 +6,7 @@ import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js
 import { runFinancialAgents, type FinancialAgentResults } from './financial-agents.js';
 import { LocalConsentRepository } from './consent.js';
 import { Logger, resolveLevel } from './logging.js';
-import type { AppState, BankTransaction, Category, Rule } from './domain-model.js';
+import type { AppState, BankTransaction, CardIssuer, Category, Rule } from './domain-model.js';
 import { AppStateCodec, LocalStorageStateRepository } from './state-repository.js';
 import { bankImporter, cleanTransactionText as clean, transactionId as txId } from './bank-importer.js';
 import { RuleBasedTransactionCategorizer } from './categorization.js';
@@ -269,6 +269,14 @@ function signed(t: BankTransaction) { return t.in - t.out; }
    detail the aggregate is the only record there is, and stays an expense. */
 function decorate() {
   S.tx.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  /* Every card settles by debiting the account, whoever issued it — which is why the
+     default rules categorise ישראכרט, כאל, מקס and the rest as `credit` in the first place.
+     So a settlement line is on the statement for a non-bank card exactly as it is for a
+     bank one, and card detail is the same money described twice in both cases. Who issues
+     the card is recorded on the row and shown to the customer, but it cannot decide this:
+     letting it exclude a card from the window left the settlement standing as an expense
+     beside the detail that itemises it, and reported a household's month as 5,000 when it
+     had spent 2,700. */
   const cardDates = S.tx.filter((t) => t.source === 'card').map((t) => dOf(t.date).getTime());
   // A card period is settled by the bank in arrears, so the window runs past the
   // newest card line rather than stopping level with it.
@@ -1464,11 +1472,50 @@ function logCommand(event: Event): void {
   if (name) log.info('ui.command', { control: name, via: event.type });
 }
 
+/* ------------------------------------------------------ card chooser -- */
+
+/* Whether a card's detail cancels the statement's aggregate charge depends on who issues
+   the card, and no export states it — so the customer is asked once, before the file
+   dialog, and the answer travels with the rows that import. */
+let pendingCardKind: CardIssuer | null = null;
+
+/* querySelector rather than the $ helper: its DomElement is a convenience shape for the
+   controls this file mostly touches, and a dialog's own API is not in it. */
+const cardSourceDialog = (): HTMLDialogElement => document.querySelector<HTMLDialogElement>('#card-source')!;
+
+function openCardSource(): void {
+  const dialog = cardSourceDialog();
+  pendingCardKind = null;
+  /* A dialog keeps the value it closed with. Left over from the previous visit, a
+     dismissal would read as whatever was chosen last time and open the file dialog the
+     customer just declined. */
+  dialog.returnValue = '';
+  log.info('ui.card-source.opened');
+  dialog.showModal();
+}
+
+/* `close` fires for every dismissal — a choice, the cancel button, or Escape — so the
+   file picker opens only when returnValue names an issuer. */
+function onCardSourceClosed(): void {
+  const chosen = cardSourceDialog().returnValue;
+  /* Chromium returns focus to the opener on its own; WebKit leaves it on the body, which
+     loses a keyboard or screen-reader user their place. Restoring it here rather than
+     relying on the browser is what the settings drawer already does. */
+  $('#btn-card-import').focus();
+  if (chosen !== 'bank' && chosen !== 'external') {
+    log.info('ui.card-source.dismissed');
+    return;
+  }
+  pendingCardKind = chosen;
+  log.info('ui.card-source.chosen', { cardKind: chosen });
+  document.querySelector<HTMLInputElement>('#card-file')!.click();
+}
+
 /* ---------------------------------------------------------- file load -- */
-async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank') {
+async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank', cardKind?: CardIssuer) {
   const files = [...fileList];
   if (!files.length) return;
-  log.info('report.import.started', { source, files: files.length });
+  log.info('report.import.started', { source, files: files.length, ...(cardKind ? { cardKind } : {}) });
   let added = 0, dup = 0;
   /* A count of unreadable files leaves the customer with nothing to act on and support
      with nothing to diagnose. Each failure carries its own reason instead. */
@@ -1504,6 +1551,9 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank')
       if (account && !S.accounts.includes(account)) S.accounts.push(account);
       for (const t of rows) {
         if (have.has(t.id)) { dup++; continue; }
+        /* Which card this came from is the customer's answer, not the file's — no issuer
+           export says whether the bank settles it. */
+        if (cardKind) t.cardKind = cardKind;
         have.add(t.id); S.tx.push(t); added++;
       }
     } catch (e) {
@@ -1537,7 +1587,14 @@ function wire() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) log.flush(); });
 
   $('#file').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files) handleFiles(input.files); input.value = ''; });
-  $('#card-file').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files) handleFiles(input.files, 'card'); input.value = ''; });
+  $('#btn-card-import').addEventListener('click', openCardSource);
+  $('#card-source').addEventListener('close', onCardSourceClosed);
+  $('#card-file').addEventListener('change', (e) => {
+    const input = e.currentTarget as HTMLInputElement;
+    if (input.files) handleFiles(input.files, 'card', pendingCardKind ?? undefined);
+    input.value = '';
+    pendingCardKind = null;
+  });
   const drop = $('#drop');
   const stop = (e: Event) => { e.preventDefault(); e.stopPropagation(); };
   ['dragenter', 'dragover'].forEach((n) => document.addEventListener(n, (e) => {

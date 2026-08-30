@@ -43,6 +43,9 @@ class Transaction(BaseModel):
     bal: float | None = Field(ge=-1_000_000_000, le=1_000_000_000)
     pending: bool
     source: Literal["bank", "card"] | None = None
+    # Who issues the card, which is what decides whether its detail cancels the statement's
+    # aggregate charge. Absent on rows imported before the distinction existed.
+    cardKind: Literal["bank", "external"] | None = None
     src: SnapshotSource
     id: str | None = Field(default=None, max_length=200)
     cat: str | None = Field(default=None, max_length=100)

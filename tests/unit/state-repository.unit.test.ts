@@ -73,4 +73,28 @@ describe('application state boundary', () => {
     expect(storage.get('state')).not.toMatch(/04-279|account-123|"accounts"/);
     expect(repository.load()?.tx[0].src).toBe('bank-report');
   });
+
+  /* The codec rejects a whole transaction that carries a key it does not know, so a field
+     added to the domain without being added here does not lose the field — it loses the
+     row, and the dashboard comes back empty after a reload. */
+  it('keeps a transaction that names its card issuer', () => {
+    const codec = new AppStateCodec(defaults);
+    const restored = codec.decode({
+      tx: [{ ...transaction, source: 'card', cardKind: 'external' }],
+      overrides: {}, rules: [], cats: defaults.cats, budgets: {},
+    });
+
+    expect(restored?.tx).toHaveLength(1);
+    expect(restored?.tx[0]?.cardKind).toBe('external');
+  });
+
+  it('refuses a card issuer outside the two it knows', () => {
+    const codec = new AppStateCodec(defaults);
+    const restored = codec.decode({
+      tx: [{ ...transaction, source: 'card', cardKind: 'amex' }],
+      overrides: {}, rules: [], cats: defaults.cats, budgets: {},
+    });
+
+    expect(restored?.tx ?? []).toHaveLength(0);
+  });
 });

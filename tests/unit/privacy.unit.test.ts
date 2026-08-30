@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  createPrivacySafeSnapshot, isPrivacySafeTransaction, redactFinancialIdentifiers,
+  createPrivacySafeSnapshot,
+  isPrivacySafeTransaction,
+  redactFinancialIdentifiers,
+  sanitizeTransaction,
 } from '../../src/privacy';
 
 describe('privacy-safe persistence', () => {
@@ -65,5 +68,35 @@ describe('account identifiers the privacy notice promises not to keep', () => {
   it('is idempotent, so a redacted description survives a second save unchanged', () => {
     const once = redactFinancialIdentifiers('חשבון 123456789');
     expect(redactFinancialIdentifiers(once)).toBe(once);
+  });
+
+  /* Who issues a card decides whether its detail cancels the statement's aggregate charge,
+     so the answer has to survive the privacy boundary rather than being sanitised away —
+     and it is a two-value enum, carrying nothing about the customer. */
+  it('carries the card issuer through the privacy boundary', () => {
+    const sanitized = sanitizeTransaction({
+      date: '2026-08-03', vdate: '2026-08-03', desc: 'סופר', out: 431, in: 0, bal: null,
+      pending: false, source: 'card', cardKind: 'external', src: 'card.xlsx',
+    });
+
+    expect(sanitized.cardKind).toBe('external');
+    expect(isPrivacySafeTransaction(sanitized)).toBe(true);
+  });
+
+  it('rejects a card issuer it does not recognise', () => {
+    expect(isPrivacySafeTransaction({
+      date: '2026-08-03', vdate: '2026-08-03', ref: '', desc: 'סופר', out: 431, in: 0, bal: null,
+      pending: false, source: 'card', cardKind: 'visa', src: 'card-report',
+    })).toBe(false);
+  });
+
+  it('leaves a row without an issuer alone', () => {
+    const sanitized = sanitizeTransaction({
+      date: '2026-08-03', vdate: '2026-08-03', desc: 'סופר', out: 431, in: 0, bal: null,
+      pending: false, source: 'card', src: 'card.xlsx',
+    });
+
+    expect('cardKind' in sanitized).toBe(false);
+    expect(isPrivacySafeTransaction(sanitized)).toBe(true);
   });
 });

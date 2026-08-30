@@ -1,4 +1,12 @@
 export type TransactionSource = 'bank' | 'card';
+
+/* Which card a report came from, as the customer answered it — no issuer export states it.
+   It is provenance, shown on the row and kept so the question is not asked twice; it does
+   not decide reconciliation. Every card in this market settles by debiting the account, so
+   a settlement line stands on the statement whoever issued the card, and card detail is the
+   same money described twice in both cases. Absent on rows imported before the question
+   was asked. */
+export type CardIssuer = 'bank' | 'external';
 export type CategoryKind = 'expense' | 'income' | 'neutral';
 
 export interface BankTransaction {
@@ -11,6 +19,7 @@ export interface BankTransaction {
   bal: number | null;
   pending: boolean;
   source?: TransactionSource;
+  cardKind?: CardIssuer;
   src: string;
   id?: string;
   cat?: string;

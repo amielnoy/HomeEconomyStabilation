@@ -20,7 +20,7 @@ const hasOnlyKeys = (value: Record<string, unknown>, keys: readonly string[]): b
   Object.keys(value).every((key) => keys.includes(key));
 
 const transactionKeys = [
-  'date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind',
+  'date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind',
 ] as const;
 
 function parseTransaction(value: unknown): BankTransaction | null {
@@ -34,6 +34,7 @@ function parseTransaction(value: unknown): BankTransaction | null {
   if (value.id !== undefined && !isBoundedString(value.id, 200)) return null;
   if (value.cat !== undefined && !isBoundedString(value.cat, 100)) return null;
   if (value.kind !== undefined && !CATEGORY_KINDS.has(value.kind as CategoryKind)) return null;
+  if (value.cardKind !== undefined && value.cardKind !== 'bank' && value.cardKind !== 'external') return null;
   return sanitizeTransaction(value as unknown as BankTransaction);
 }
 

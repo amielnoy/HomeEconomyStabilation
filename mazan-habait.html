@@ -159,10 +159,12 @@ button{ cursor:pointer; }
    target, which would inflate a visually hidden control into a 48px box sitting invisibly
    over the layout. The tap area belongs to the label wrapping it, not to it. */
 .vh{ position:absolute; width:1px; height:1px; min-height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-/* The upload controls are a label wrapping a file input. The input carries the keyboard
-   focus but is visually hidden, so without this the ring lands on something nobody can
-   see and the control looks unfocused while it is focused. Marking the input `hidden`
-   instead would take it out of the tab order altogether, which is where it started. */
+/* The bank upload is a label wrapping a file input. The input carries the keyboard focus
+   but is visually hidden, so without this the ring lands on something nobody can see and
+   the control looks unfocused while it is focused; marking it `hidden` instead would take
+   it out of the tab order, which is where it started. The card upload needs none of this —
+   it is a real button that opens the source chooser, and its input is `hidden` because the
+   chooser opens it. */
 .btn:has(input:focus-visible){ outline:3px solid var(--ds-focus); outline-offset:3px; }
 
 /* =========================================================== topbar ====== */
@@ -710,6 +712,34 @@ body.drawer-open{ overflow:hidden; }
    nothing clipping it — spilled out past the rounded edge and was cut off by the screen
    edge, leaving "טע" where "טעינת דוח כרטיס" belongs. A phone at a large text size or
    zoom level lands here routinely. Giving each upload its own row keeps both readable. */
+/* The card-source chooser. A native <dialog>, so the browser owns the focus trap, the
+   Escape key and making the rest of the page inert; only the appearance is set here. The
+   page's own palette is used rather than the design tokens because every rule around it
+   already does, and one file is not the place to start a second convention. */
+.picker{
+  border:1px solid var(--line); border-radius:16px; padding:0; max-width:min(420px,calc(100vw - 32px));
+  background:var(--surface); color:var(--ink); box-shadow:var(--ds-shadow-2);
+}
+.picker::backdrop{ background:rgba(12,23,25,.45); }
+.picker-body{ display:grid; gap:12px; padding:22px; }
+.picker-body h2{ margin:0; font-size:20px; font-family:var(--ds-font-display),inherit; }
+.picker-note{ margin:0; color:var(--muted); font-size:14px; }
+.picker-option{
+  display:grid; gap:4px; text-align:start; width:100%; cursor:pointer;
+  padding:14px 16px; border:1px solid var(--line); border-radius:12px;
+  background:var(--surface-2); color:inherit; font:inherit;
+}
+.picker-option:hover{ border-color:var(--accent); background:var(--accent-soft); }
+.picker-option:focus-visible{ outline:3px solid var(--ds-focus); outline-offset:3px; }
+.picker-option-title{ font-weight:600; font-size:16px; }
+.picker-option-hint{ color:var(--muted); font-size:13.5px; line-height:1.45; }
+.picker-cancel{ justify-self:start; }
+@media (max-width:600px), (pointer: coarse) and (max-width:900px){
+  /* The same touch minimum the header controls keep. */
+  .picker-option{ min-height:56px; }
+  .picker-cancel{ justify-self:stretch; justify-content:center; }
+}
+
 /* Wherever the two uploads divide the width between them rather than being given it, a
    label that does not fit wraps to a second line instead of being cut. A pixel breakpoint
    cannot decide this, because it cannot know the language: the width that is comfortable
@@ -759,11 +789,11 @@ body.drawer-open{ overflow:hidden; }
         <span data-i18n="bankUpload">טעינת דוח בנק</span>
         <input type="file" id="file" accept=".xls,.xlsx,.csv,.html,.htm" multiple class="vh" data-testid="file">
       </label>
-      <label class="btn" data-testid="card-upload-trigger">
+      <button class="btn" id="btn-card-import" type="button" aria-haspopup="dialog" data-testid="card-upload-trigger">
         <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3 8h14M6 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         <span data-i18n="cardUpload">טעינת דוח כרטיס</span>
-        <input type="file" id="card-file" accept=".xls,.xlsx,.csv,.html,.htm" multiple class="vh" data-testid="card-file">
-      </label>
+      </button>
+      <input type="file" id="card-file" accept=".xls,.xlsx,.csv,.html,.htm" multiple hidden data-testid="card-file">
       <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
       <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
         <button class="btn" id="btn-recommendations" type="button" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
@@ -1115,6 +1145,26 @@ body.drawer-open{ overflow:hidden; }
 
 <!-- ============================================================= drawer -->
 <div class="scrim" id="scrim" data-testid="scrim"></div>
+<!-- Which card the report came from decides whether its detail cancels the statement's
+     aggregate charge, and only the customer knows. A native <dialog> is used rather than
+     the drawer's hand-rolled modal: the browser provides the focus trap, Escape and
+     inertness that would otherwise be copied. -->
+<dialog class="picker" id="card-source" aria-labelledby="card-source-title" data-testid="card-source-dialog">
+  <form method="dialog" class="picker-body" data-testid="card-source-form">
+    <h2 id="card-source-title" data-i18n="cardSourceTitle" data-testid="card-source-title">איזה כרטיס לטעון?</h2>
+    <p class="picker-note" data-i18n="cardSourceFormats" data-testid="card-source-formats">נתמכים קובצי Excel ו־CSV שהורדתם מאתר המנפיק.</p>
+    <button class="picker-option" type="submit" value="bank" id="card-source-bank" data-testid="card-source-bank">
+      <span class="picker-option-title" data-i18n="cardSourceBank">כרטיס אשראי בנקאי</span>
+      <span class="picker-option-hint" data-i18n="cardSourceBankHint">מונפק על ידי הבנק ומחויב בחיוב חודשי מרוכז בדוח הבנק.</span>
+    </button>
+    <button class="picker-option" type="submit" value="external" id="card-source-external" data-testid="card-source-external">
+      <span class="picker-option-title" data-i18n="cardSourceExternal">כרטיס אשראי חוץ-בנקאי</span>
+      <span class="picker-option-hint" data-i18n="cardSourceExternalHint">מונפק על ידי חברת אשראי ומחויב בהוראת קבע נפרדת.</span>
+    </button>
+    <button class="btn picker-cancel" type="submit" value="" id="card-source-cancel" data-i18n="close" data-testid="card-source-cancel">סגירה</button>
+  </form>
+</dialog>
+
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="dr-h" inert data-testid="drawer">
   <header>
     <h2 id="dr-h" data-i18n="settings" data-testid="dr-h">הגדרות</h2>

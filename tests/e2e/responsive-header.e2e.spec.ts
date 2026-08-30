@@ -153,14 +153,14 @@ test.describe('header at narrowed viewports', () => {
     expect(await homePage.hasHorizontalOverflow()).toBe(false);
   });
 
-  /* The control is a label wrapping a file input, and a label cannot hold focus. Marking
-     that input `hidden` took it out of the tab order, so the product's primary action —
-     and the card upload, which has no other affordance once the empty state is gone —
-     could not be reached from a keyboard at all. */
+  /* The bank upload is a label wrapping a file input, and a label cannot hold focus, so
+     marking that input `hidden` once took the product's primary action out of the tab order
+     altogether. The card upload is a real button because it has to ask which card first.
+     Different mechanisms, one property: both are reachable from a keyboard. */
   test('places both uploads in the tab order', async ({ homePage, page, isMobile }) => {
     /* WebKit on iOS does not move focus with Tab at all unless full keyboard access is
        switched on, so pressing it there measures the platform rather than this header.
-       Focusability itself is still asserted on every project by the two tests below. */
+       Focusability itself is still asserted on every project by the tests below. */
     test.skip(!!isMobile, 'Tab navigation is a desktop-keyboard behaviour');
     await page.setViewportSize(NARROW);
     await page.evaluate(() => (document.body as HTMLElement).focus());
@@ -171,32 +171,36 @@ test.describe('header at narrowed viewports', () => {
       reached.push(await page.evaluate(() => (document.activeElement as HTMLElement).id));
     }
 
-    expect(reached).toContain('file');
-    expect(reached).toContain('card-file');
+    expect(reached, 'the bank upload is unreachable').toContain('file');
+    expect(reached, 'the card upload is unreachable').toContain('btn-card-import');
   });
 
-  test('shows the focus ring on the pill the focused upload lives in', async ({ homePage, page }) => {
+  test('shows a focus ring on each upload control', async ({ homePage, page }) => {
     await page.setViewportSize(NARROW);
 
-    await homePage.upload.creditCardInput.focus();
-
-    await expect(homePage.upload.creditCardInput).toBeFocused();
-    const outlineWidth = await homePage.cardUploadTrigger.evaluate(
+    // The bank upload draws the ring on the pill around its hidden input.
+    await homePage.upload.bankReportInput.focus();
+    await expect(homePage.upload.bankReportInput).toBeFocused();
+    const bankRing = await homePage.bankUploadTrigger.evaluate(
       (element) => Number.parseFloat(getComputedStyle(element).outlineWidth),
     );
-    expect(outlineWidth, 'the focused upload shows no ring on its pill').toBeGreaterThan(0);
+    expect(bankRing, 'the focused bank upload shows no ring').toBeGreaterThan(0);
+
+    // The card upload is itself the focusable control.
+    await homePage.cardUploadTrigger.focus();
+    await expect(homePage.cardUploadTrigger).toBeFocused();
   });
 
-  /* Keeping the input in the tab order must not make it visible: two file inputs drawn
-     next to the pills would be the same defect from the other side. */
-  test('keeps the focusable file inputs out of sight', async ({ homePage, page }) => {
+  /* Keeping an input reachable must not make it visible, and the card's input must not
+     take space now that a button stands in front of it. */
+  test('keeps the file inputs out of sight', async ({ homePage, page }) => {
     await page.setViewportSize(NARROW);
 
-    for (const input of [homePage.upload.bankReportInput, homePage.upload.creditCardInput]) {
-      const box = await input.boundingBox();
-      expect(box!.width).toBeLessThanOrEqual(2);
-      expect(box!.height).toBeLessThanOrEqual(2);
-    }
+    const bank = await homePage.upload.bankReportInput.boundingBox();
+    expect(bank!.width).toBeLessThanOrEqual(2);
+    expect(bank!.height).toBeLessThanOrEqual(2);
+    // The card input is opened by the chooser, so it is not rendered at all.
+    expect(await homePage.upload.creditCardInput.boundingBox()).toBeNull();
     expect(await homePage.hasHorizontalOverflow()).toBe(false);
   });
 
