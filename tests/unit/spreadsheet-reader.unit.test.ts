@@ -279,6 +279,24 @@ describe('spreadsheet reader', () => {
     expect(values(workbook)[5]).toEqual(['03/08/2026', 'שופרסל', 431]);
   });
 
+  /* Isracard's export prefixes every element — <x:workbook>, <x:sheet>, <x:row>, <x:c> —
+     which is valid OOXML and matches nothing when tags are looked up by qualified name. The
+     reader found no sheets at all in such a file, and the customer was told it could not be
+     opened. Reading by local name accepts both spellings. */
+  it('reads an .xlsx whose elements are namespace-prefixed', async () => {
+    const workbook = await readWorkbook(xlsxWorkbook([
+      [{ value: 'תאריך רכישה' }, { value: 'שם בית עסק' }, { value: 'סכום חיוב' }],
+      [{ value: '26/08/2026' }, { value: 'שופרסל' }, { value: 431 }],
+    ], { prefixed: true, deflate: true, sheetName: 'פירוט עסקאות' }), 'isracard.xlsx');
+
+    expect(workbook.sheets).toHaveLength(1);
+    expect(workbook.sheets[0]!.name).toBe('פירוט עסקאות');
+    expect(values(workbook)).toEqual([
+      ['תאריך רכישה', 'שם בית עסק', 'סכום חיוב'],
+      ['26/08/2026', 'שופרסל', 431],
+    ]);
+  });
+
   it('rejects a compound file whose signature does not match', async () => {
     const bytes = new Uint8Array(600);
     bytes[0] = 0xd0; bytes[1] = 0xcf;

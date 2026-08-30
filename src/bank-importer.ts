@@ -8,7 +8,7 @@ type HeaderMap = Partial<Record<HeaderKey, number>>;
 /* A statement exported from an English interface carries English headings; matching only
    the Hebrew ones rejected the file outright. */
 const HEADERS: Record<HeaderKey, RegExp[]> = {
-  date: [/^תאריך$/, /^תאריך\s*פעולה/, /^תאריך\s*עסקה/, /מועד\s*עסקה/, /^date$/i, /(transaction|purchase|posting)\s*date/i],
+  date: [/^תאריך$/, /^תאריך\s*פעולה/, /^תאריך\s*עסקה/, /תאריך\s*רכישה/, /מועד\s*עסקה/, /^date$/i, /(transaction|purchase|posting)\s*date/i],
   vdate: [/תאריך\s*ערך/, /value\s*date/i],
   ref: [/אסמכתא/, /מספר\s*אסמכתא/, /reference/i],
   desc: [/תיאור\s*פעולה/, /^תיאור$/, /פרטים/, /^סוג\s*תנועה/, /שם\s*בית\s*עסק/, /בית\s*עסק/, /שם\s*העסק/, /ספק/, /merchant/i, /business/i, /description/i, /details/i, /payee/i, /narrative/i],

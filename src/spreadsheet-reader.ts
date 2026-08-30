@@ -476,6 +476,13 @@ function colFromRef(ref: string): number {
   return n - 1;
 }
 
+/* A workbook may prefix every element — Isracard's export is <x:workbook>, <x:sheet>,
+   <x:row>, <x:c> — and a lookup by qualified name then matches none of them. The reader
+   found no sheets at all in such a file, which reached the customer as "we could not open
+   it". Matching on local name reads both spellings, and is what parseSpreadsheetML already
+   had to do for the same reason. */
+const tags = (root: Document | Element, name: string): Element[] => [...root.getElementsByTagNameNS('*', name)];
+
 async function parseXLSX(buf: ArrayBuffer): Promise<Workbook> {
   const zip = await unzip(buf);
   const get = (p: string): Uint8Array | undefined => zip[p] || zip[p.replace(/^xl\//, '')];
@@ -484,8 +491,8 @@ async function parseXLSX(buf: ArrayBuffer): Promise<Workbook> {
   let shared: string[] = [];
   if (get('xl/sharedStrings.xml')) {
     const doc = xmlDoc(get('xl/sharedStrings.xml')!);
-    shared = [...doc.getElementsByTagName('si')].map((si) =>
-      [...si.getElementsByTagName('t')].map((t) => t.textContent ?? '').join(''));
+    shared = tags(doc, 'si').map((si) =>
+      tags(si, 't').map((t) => t.textContent ?? '').join(''));
   }
 
   // styles → which cellXfs indices are dates
@@ -494,12 +501,12 @@ async function parseXLSX(buf: ArrayBuffer): Promise<Workbook> {
   if (get('xl/styles.xml')) {
     const doc = xmlDoc(get('xl/styles.xml')!);
     const custom: Record<number, string> = {};
-    for (const nf of doc.getElementsByTagName('numFmt')) {
+    for (const nf of tags(doc, 'numFmt')) {
       custom[Number(nf.getAttribute('numFmtId'))] = nf.getAttribute('formatCode') || '';
     }
-    const cellXfs = doc.getElementsByTagName('cellXfs')[0];
+    const cellXfs = tags(doc, 'cellXfs')[0];
     if (cellXfs) {
-      for (const xf of cellXfs.getElementsByTagName('xf')) {
+      for (const xf of tags(cellXfs, 'xf')) {
         const id = +(xf.getAttribute('numFmtId') || 0);
         dateXf.push(custom[id] != null ? fmtIsDate(custom[id]) : BUILTIN_DATE_FMT.has(id));
       }
@@ -507,7 +514,7 @@ async function parseXLSX(buf: ArrayBuffer): Promise<Workbook> {
   }
   if (get('xl/workbook.xml')) {
     const doc = xmlDoc(get('xl/workbook.xml')!);
-    const pr = doc.getElementsByTagName('workbookPr')[0];
+    const pr = tags(doc, 'workbookPr')[0];
     if (pr && (pr.getAttribute('date1904') === '1' || pr.getAttribute('date1904') === 'true')) date1904 = true;
   }
 
@@ -515,12 +522,12 @@ async function parseXLSX(buf: ArrayBuffer): Promise<Workbook> {
   const wb = xmlDoc(get('xl/workbook.xml')!);
   const rels = xmlDoc(get('xl/_rels/workbook.xml.rels')!);
   const relMap: Record<string, string> = {};
-  for (const r of rels.getElementsByTagName('Relationship')) {
+  for (const r of tags(rels, 'Relationship')) {
     const relId = r.getAttribute('Id');
     if (relId) relMap[relId] = (r.getAttribute('Target') || '').replace(/^\/?xl\//, '').replace(/^\//, '');
   }
   const sheets: Array<{ name: string; rows: Array<Array<SpreadsheetCell | null>> }> = [];
-  for (const sh of wb.getElementsByTagName('sheet')) {
+  for (const sh of tags(wb, 'sheet')) {
     const rid = sh.getAttribute('r:id') || sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
     const target = rid ? relMap[rid] : undefined;
     const bytes = target ? get('xl/' + target) : undefined;
@@ -531,22 +538,22 @@ async function parseXLSX(buf: ArrayBuffer): Promise<Workbook> {
          parsed as NaN — which silently dropped every cell in the file. Position then
          comes from document order, exactly as the format intends. */
       let nextRow = 0;
-      for (const row of doc.getElementsByTagName('row')) {
+      for (const row of tags(doc, 'row')) {
         const declaredRow = Number.parseInt(row.getAttribute('r') ?? '', 10);
         const ri = Number.isFinite(declaredRow) && declaredRow > 0 ? declaredRow - 1 : nextRow;
         nextRow = ri + 1;
         let nextColumn = 0;
-        for (const c of row.getElementsByTagName('c')) {
+        for (const c of tags(row, 'c')) {
           const declaredColumn = colFromRef(c.getAttribute('r') ?? '');
           const ci = declaredColumn >= 0 ? declaredColumn : nextColumn;
           nextColumn = ci + 1;
           const t = c.getAttribute('t');
           const sIdx = +(c.getAttribute('s') || 0);
-          const isEl = c.getElementsByTagName('is')[0];
-          const vEl = c.getElementsByTagName('v')[0];
+          const isEl = tags(c, 'is')[0];
+          const vEl = tags(c, 'v')[0];
           let cell = null;
           if (t === 'inlineStr' && isEl) {
-            cell = { t: 's', v: [...isEl.getElementsByTagName('t')].map((x) => x.textContent ?? '').join('') };
+            cell = { t: 's', v: tags(isEl, 't').map((x) => x.textContent ?? '').join('') };
           } else if (!vEl) {
             cell = null;
           } else if (t === 's') {

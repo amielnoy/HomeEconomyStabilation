@@ -260,6 +260,31 @@ describe('import pipeline: bytes through the reader into the importer', () => {
     expect(first.card[0]!.id).toBe(second.card[0]!.id);
   });
 
+  /* An issuer export that defeated the reader and the importer in turn: every element
+     namespace-prefixed, so no sheet was found at all and the customer was told the file
+     could not be opened; then a date column headed "תאריך רכישה", which no pattern knew, so
+     the layout was refused. Both halves are exercised here together, because passing one
+     and failing the other still leaves the customer with nothing. */
+  it('imports a prefixed .xlsx whose date column is the purchase date', async () => {
+    const workbook = await readWorkbook(xlsxWorkbook([
+      [{ value: 'פירוט עסקאות' }],
+      [],
+      [{ value: 'תאריך רכישה' }, { value: 'שם בית עסק' }, { value: 'סכום עסקה' },
+        { value: 'מטבע עסקה' }, { value: 'סכום חיוב' }, { value: "מס' שובר" }],
+      [{ value: '26/08/2026' }, { value: 'שופרסל' }, { value: 431 },
+        { value: 'ILS' }, { value: 431 }, { value: '12345678' }],
+      [{ value: '27/08/2026' }, { value: 'נטפליקס' }, { value: 54.9 },
+        { value: 'ILS' }, { value: 54.9 }, { value: '87654321' }],
+    ], { prefixed: true, deflate: true, startRow: 1, sheetName: 'פירוט עסקאות' }), 'isracard.xlsx');
+
+    const rows = creditCardImporter.import(workbook, 'isracard.xlsx');
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ date: '2026-08-26', desc: 'שופרסל', out: 431, ref: '12345678' });
+    // The billed column, not the transaction currency beside it.
+    expect(rows.reduce((total, row) => total + row.out, 0)).toBeCloseTo(485.9, 2);
+  });
+
   /* Re-importing the same download is the most ordinary thing a customer does; the ids
      have to collide so the second import adds nothing. */
   it('produces identical ids when the same export is read twice', async () => {

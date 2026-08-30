@@ -41,8 +41,8 @@ type HeaderMap = Partial<Record<HeaderKey, number>>;
 /* An issuer's site exports in whatever language the customer was browsing in, so the
    same statement arrives with Hebrew or English column names. */
 const HEADER_PATTERNS: Record<HeaderKey, RegExp[]> = {
-  date: [/^תאריך$/, /תאריך\s*עסקה/, /מועד\s*עסקה/, /^date$/i, /(transaction|purchase|posting)\s*date/i, /date\s*of\s*transaction/i],
-  ref: [/אסמכתא/, /מספר\s*עסקה/, /מספר\s*כרטיס/, /reference/i, /^card\b/i, /voucher/i],
+  date: [/^תאריך$/, /תאריך\s*עסקה/, /תאריך\s*רכישה/, /מועד\s*עסקה/, /^date$/i, /(transaction|purchase|posting)\s*date/i, /date\s*of\s*transaction/i],
+  ref: [/אסמכתא/, /מספר\s*עסקה/, /מספר\s*כרטיס/, /שובר/, /reference/i, /^card\b/i, /voucher/i],
   desc: [/שם\s*בית\s*עסק/, /בית\s*עסק/, /שם\s*העסק/, /תיאור/, /פרטים/, /ספק/, /merchant/i, /business/i, /description/i, /details/i, /payee/i, /vendor/i, /narrative/i],
   amount: [/סכום\s*עסקה/, /סכום\s*לחיוב/, /^סכום$/, /^amount$/i, /(transaction|original|purchase)\s*amount/i],
   /* The billed column is the shekels that left the account, so it belongs with the other

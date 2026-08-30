@@ -186,6 +186,18 @@ describe('CreditCardImportStrategy', () => {
     expect(new Set(result.map((row) => row.id)).size).toBe(2);
   });
 
+  /* Isracard heads its date column "תאריך רכישה". Nothing matched it, so no row qualified as
+     a heading and the whole statement was refused as an unrecognised layout. */
+  it('reads a statement whose date column is headed with the purchase date', () => {
+    const result = strategy.import(workbook([
+      [cell('תאריך רכישה'), cell('שם בית עסק'), cell('סכום עסקה'), cell('סכום חיוב'), cell("מס' שובר")],
+      [cell('26/08/2026'), cell('שופרסל'), cell(431), cell(431), cell('12345678')],
+    ]), 'isracard.xlsx');
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ date: '2026-08-26', desc: 'שופרסל', out: 431, ref: '12345678' });
+  });
+
   it('ignores rows without a valid date or amount', () => {
     const result = strategy.import(workbook([
       [cell('תאריך עסקה'), cell('שם בית עסק'), cell('סכום עסקה')],

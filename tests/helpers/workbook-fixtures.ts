@@ -115,6 +115,10 @@ const escapeXml = (text: string): string => text
 /** A minimal but genuine .xlsx: content types, workbook, relationships, styles, an
     optional shared-string table and one worksheet. */
 export function xlsxWorkbook(rows: ReadonlyArray<ReadonlyArray<XlsxCell | null>>, options: XlsxOptions = {}): ArrayBuffer {
+  /* A prefixed document is valid OOXML and several issuers write one; a reader that looks
+     tags up by qualified name finds nothing in it. */
+  const p = options.prefixed ? 'x:' : '';
+  const ns = options.prefixed ? ' xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"' : '';
   const shared: string[] = [];
   const sharedIndex = (text: string): number => {
     const existing = shared.indexOf(text);
@@ -130,17 +134,19 @@ export function xlsxWorkbook(rows: ReadonlyArray<ReadonlyArray<XlsxCell | null>>
       if (!cell) return '';
       const reference = options.omitReferences ? '' : ` r="${COLUMN_NAME(columnIndex)}${rowIndex + 1}"`;
       if (typeof cell.value === 'number') {
-        return `<c${reference}${cell.date ? ' s="1"' : ''}><v>${cell.value}</v></c>`;
+        return `<${p}c${reference}${cell.date ? ' s="1"' : ''}><${p}v>${cell.value}</${p}v></${p}c>`;
       }
-      if (cell.shared) return `<c${reference} t="s"><v>${sharedIndex(cell.value)}</v></c>`;
-      return `<c${reference} t="inlineStr"><is><t>${escapeXml(cell.value)}</t></is></c>`;
+      if (cell.shared) return `<${p}c${reference} t="s"><${p}v>${sharedIndex(cell.value)}</${p}v></${p}c>`;
+      return `<${p}c${reference} t="inlineStr"><${p}is><${p}t>${escapeXml(cell.value)}</${p}t></${p}is></${p}c>`;
     }).join('');
-    return `<row${options.omitReferences ? '' : ` r="${rowIndex + 1}"`}>${written}</row>`;
+    return `<${p}row${options.omitReferences ? '' : ` r="${rowIndex + 1}"`}>${written}</${p}row>`;
   }).join('');
 
   const sheetXml = '<?xml version="1.0" encoding="UTF-8"?>'
-    + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-    + `<sheetData>${sheetRows}</sheetData></worksheet>`;
+    + (options.prefixed
+      ? `<x:worksheet${ns}><x:sheetData>${sheetRows}</x:sheetData></x:worksheet>`
+      : '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        + `<sheetData>${sheetRows}</sheetData></worksheet>`);
 
   /* cellXfs index 1 carries a built-in date format, which is the only signal a reader
      has that a number is really a date. */
@@ -159,9 +165,12 @@ export function xlsxWorkbook(rows: ReadonlyArray<ReadonlyArray<XlsxCell | null>>
       + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
       + '<Default Extension="xml" ContentType="application/xml"/></Types>',
     'xl/workbook.xml': '<?xml version="1.0" encoding="UTF-8"?>'
-      + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+      + (options.prefixed
+        ? `<x:workbook${ns} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`
+          + `<x:sheets><x:sheet name="${escapeXml(options.sheetName ?? 'Sheet1')}" sheetId="1" r:id="rId1"/></x:sheets></x:workbook>`
+        : '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
       + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-      + `<sheets><sheet name="${escapeXml(options.sheetName ?? 'Sheet1')}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+      + `<sheets><sheet name="${escapeXml(options.sheetName ?? 'Sheet1')}" sheetId="1" r:id="rId1"/></sheets></workbook>`),
     'xl/_rels/workbook.xml.rels': '<?xml version="1.0" encoding="UTF-8"?>'
       + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
       + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"'
