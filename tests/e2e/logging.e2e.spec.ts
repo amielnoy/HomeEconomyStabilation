@@ -75,12 +75,23 @@ test('keeps the statement out of the log it asks the customer to send', async ({
 
   const text = await logText(page);
 
-  // Merchants and amounts are in the report and rendered on the dashboard, never logged.
-  for (const value of ['שופרסל דיל', 'נטפליקס', 'AMAZON US', '431', '148.2']) {
+  // Merchants are in the report and rendered on the dashboard, never logged.
+  for (const value of ['שופרסל דיל', 'נטפליקס', 'AMAZON US']) {
     expect(text, `the log leaks "${value}"`).not.toContain(value);
   }
   // Customers name statements after the account they came from.
   expect(text).not.toContain('card-statement.csv');
+
+  /* Amounts cannot be grepped for as bare numbers: the log legitimately carries byte and
+     row counts, so a fixture whose size happened to contain those digits would read as a
+     leak. The durable property is that the context keys are a bounded set — a future field
+     carrying a description or an amount fails here rather than shipping quietly. */
+  const keys = new Set((await logRecords(page)).flatMap((record) => Object.keys(record.context ?? {})));
+  const allowed = new Set([
+    'source', 'files', 'cardKind', 'format', 'bytes', 'sheets', 'rows',
+    'added', 'duplicates', 'failed', 'reason', 'columns', 'error', 'control', 'via',
+  ]);
+  expect([...keys].filter((key) => !allowed.has(key)), 'an unapproved field reached the log').toEqual([]);
 });
 
 test('holds a bounded number of records however long the tab stays open', async ({ homePage, page }) => {
