@@ -79,14 +79,16 @@ test('keeps a corrected category after the page is reopened', async ({ homePage 
 test('recategorises matching transactions when a rule is added', async ({ homePage, page }) => {
   await homePage.upload.uploadBankReport(bankReport());
   const coffee = homePage.dashboard.transactionRows.filter({ hasText: 'קפה נמרוד' });
-  await expect(coffee.getByTestId('transaction-category-select')).toHaveValue('other');
+  // A default rule already reads a cafe as leisure; the customer's own rule must outrank it.
+  await expect(coffee.getByTestId('transaction-category-select')).toHaveValue('leisure');
 
   await homePage.settings.open();
   await page.getByTestId('settings-section-categories').locator('summary').click();
   await page.getByTestId('dr-addrule').click();
-  const lastRule = page.getByTestId('settings-rule-row').last();
-  await lastRule.getByTestId('rule-match-input').fill('קפה');
-  await lastRule.getByTestId('rule-category-select').selectOption('food');
+  // Added rules go to the front of the list, which is what lets them beat a default.
+  const newRule = page.getByTestId('settings-rule-row').first();
+  await newRule.getByTestId('rule-match-input').fill('קפה');
+  await newRule.getByTestId('rule-category-select').selectOption('food');
   await homePage.settings.close();
 
   await expect(coffee.getByTestId('transaction-category-select')).toHaveValue('food');
@@ -97,9 +99,10 @@ test('keeps a saved rule after the page is reopened', async ({ homePage, page })
   await homePage.settings.open();
   await page.getByTestId('settings-section-categories').locator('summary').click();
   await page.getByTestId('dr-addrule').click();
-  const lastRule = page.getByTestId('settings-rule-row').last();
-  await lastRule.getByTestId('rule-match-input').fill('קפה');
-  await lastRule.getByTestId('rule-category-select').selectOption('food');
+  // Added rules go to the front of the list, which is what lets them beat a default.
+  const newRule = page.getByTestId('settings-rule-row').first();
+  await newRule.getByTestId('rule-match-input').fill('קפה');
+  await newRule.getByTestId('rule-category-select').selectOption('food');
   await homePage.settings.close();
 
   await homePage.reload();

@@ -160,6 +160,10 @@ const DEFAULT_CATS: Category[] = [
   { id: 'health',   name: 'בריאות וביטוח',  kind: 'expense' },
   { id: 'savings',  name: 'חיסכון והעברות', kind: 'neutral' },
   { id: 'loans',    name: 'הלוואות',       kind: 'expense' },
+  /* After loans rather than among the household blocks: the first eight non-income
+     categories carry the chart's validated hues, and moving an existing one out of that
+     range would repaint a customer's chart for a category they did not change. */
+  { id: 'leisure',  name: 'פנאי ובידור',    kind: 'expense' },
   { id: 'fees',     name: 'עמלות וריבית',   kind: 'expense' },
   { id: 'other',    name: 'אחר',            kind: 'expense' },
   { id: 'income',   name: 'הכנסות',         kind: 'income'  },
@@ -185,6 +189,15 @@ const DEFAULT_RULES = [
   ['חניון', 'transit'], ['רכבת', 'transit'], ['אגד', 'transit'],
   ['מכבי', 'health'], ['כללית', 'health'], ['מאוחדת', 'health'], ['לאומית שר', 'health'],
   ['ביטוח', 'health'], ['הראל', 'health'], ['מגדל', 'health'], ['מנורה', 'health'], ['הפניקס', 'health'],
+  /* After the household block on purpose: הוט and בזק sell television alongside the line
+     the household actually pays for, and a bill is not an evening out. Before fees and
+     savings, which match on wording general enough to claim a cinema or a gym first. */
+  ['נטפליקס', 'leisure'], ['netflix', 'leisure'], ['ספוטיפיי', 'leisure'], ['spotify', 'leisure'],
+  ['דיסני', 'leisure'], ['disney', 'leisure'], ['קולנוע', 'leisure'], ['סינמה', 'leisure'],
+  ['יס פלאנט', 'leisure'], ['תיאטרון', 'leisure'], ['הופע', 'leisure'],
+  ['חדר כושר', 'leisure'], ['הולמס פלייס', 'leisure'], ['גולד ג', 'leisure'], ['אנרג\'י', 'leisure'],
+  ['מסעד', 'leisure'], ['בית קפה', 'leisure'], ['קפה', 'leisure'], ['פאב', 'leisure'],
+  ['סטימצקי', 'leisure'], ['צומת ספרים', 'leisure'],
   ['עמלה', 'fees'], ['עמלות', 'fees'], ['עמלת', 'fees'], ['דמי כרטיס', 'fees'], ['ריבית', 'fees'], ['דמי ניהול', 'fees'], ['דמי כרטיס', 'fees'],
   ['העברה', 'savings'], ['הפקדה', 'savings'], ['חיסכון', 'savings'], ['קרן השתלמות', 'savings'],
   ['גמל', 'savings'], ['פיקדון', 'savings'], ['ניירות ערך', 'savings'],

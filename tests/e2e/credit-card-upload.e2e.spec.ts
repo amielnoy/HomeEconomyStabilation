@@ -223,6 +223,44 @@ test('separates loan repayments from housing and from transfers', async ({ homeP
   await expect(homePage.dashboard.transactionCategories.nth(2)).toHaveValue('loans');
 });
 
+/* Leisure is discretionary spending, which is the part of a month a household can actually
+   decide about — so it has to be separable from the bills it arrives beside. The ordering
+   matters as much as the rules: הוט sells television next to the line the household pays
+   for its internet, and a bill is not an evening out. */
+test('separates leisure spending from the household bills it arrives beside', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'leisure.csv', mimeType: 'text/csv', buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,יתרה',
+      '03/08/2026,נטפליקס,54.9,5000',
+      '04/08/2026,מנוי חדר כושר הולמס פלייס,249,4751',
+      '05/08/2026,מסעדת השף,180,4571',
+      '06/08/2026,הוט - חבילת אינטרנט,129,4442',
+      '07/08/2026,סינמה סיטי,72,4370',
+    ].join('\n')),
+  });
+
+  await expect(homePage.dashboard.transactionCategories).toHaveCount(5);
+  const categoryOf = (merchant: string) => homePage.dashboard.transactionRows
+    .filter({ hasText: merchant }).getByTestId('transaction-category-select');
+
+  for (const merchant of ['נטפליקס', 'הולמס פלייס', 'מסעדת השף', 'סינמה סיטי']) {
+    await expect(categoryOf(merchant), `${merchant} is not leisure`).toHaveValue('leisure');
+  }
+  // The internet bill stays where the household budgets for it.
+  await expect(categoryOf('הוט')).toHaveValue('home');
+});
+
+test('offers leisure as a category in every language', async ({ homePage }) => {
+  await homePage.upload.uploadSampleBankReport();
+  const picker = homePage.dashboard.transactionCategories.first();
+
+  for (const [locale, name] of [['he', 'פנאי ובידור'], ['en', 'Leisure & entertainment'], ['fr', 'Loisirs et sorties']] as const) {
+    await homePage.language.choose(locale);
+    await expect(homePage.html).toHaveAttribute('lang', locale);
+    await expect(picker.locator('option[value="leisure"]')).toHaveText(name);
+  }
+});
+
 test('offers loans as a category in every language', async ({ homePage }) => {
   await homePage.upload.uploadSampleBankReport();
   const picker = homePage.dashboard.transactionCategories.first();

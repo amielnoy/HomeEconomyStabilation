@@ -61,7 +61,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/unit/categorization.unit.test.ts` | Transfer/alimony classification, unknown fallbacks, income and manual-override precedence |
 | `tests/unit/marketing.unit.test.ts` | Allowed attribution, first/last touch and bounded local event history |
 | `tests/unit/privacy.unit.test.ts` | Identifier redaction, allowlisted snapshots and removal/rejection of unknown sensitive properties |
-| `tests/unit/state-repository.unit.test.ts` | Runtime state validation, safe migration, default-rule merge, prototype-key refusal and persistence round-trip |
+| `tests/unit/state-repository.unit.test.ts` | Runtime state validation, safe migration, default-rule merge, newly added default categories returning at their own position, card-issuer round trip, prototype-key refusal and persistence round-trip |
 | `tests/unit/cloud-sync.unit.test.ts` | Privacy-safe schema-v2 validation, signed-out behavior, auth headers, failures, timeout and DELETE |
 | `tests/unit/cloud-metadata.unit.test.ts` | Authenticated Supabase profile/consent reads and writes, response validation, safe auth headers and withdrawal |
 | `tests/unit/consent.unit.test.ts` | Versioned consent, malformed records and withdrawal |
@@ -139,7 +139,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/e2e/cloud-consent.e2e.spec.ts` | Consent acceptance and withdrawal without upload |
 | `tests/e2e/cloud-metadata.sanity.api.e2e.spec.ts` | Anonymous profile/consent refusal, malformed metadata rejection, no-store responses and stable method contracts |
 | `tests/e2e/card-source.e2e.spec.ts` | The card-source chooser: asking before the file dialog, importing once a card is chosen, dismissal and Escape importing nothing and returning focus, card spending counted once under either issuer answer, the issuer recorded in the log and remembered across a reload, and a dismissal not replaying the previous answer |
-| `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import across CSV, SpreadsheetML, .xlsx with and without cell references, windows-1255 encoding and English column names, multi-file imports, localized unrecognised-layout reporting, duplicate re-imports, header labels after import, evidence-based transfer/alimony categorization, honest unknown fallback, upload availability and recommendations |
+| `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import across CSV, SpreadsheetML, .xlsx with and without cell references, windows-1255 encoding and English column names, multi-file imports, localized unrecognised-layout reporting, duplicate re-imports, header labels after import, evidence-based transfer/alimony categorization, leisure separated from the household bills it arrives beside and offered in every language, honest unknown fallback, upload availability and recommendations |
 | `tests/e2e/card-reconciliation.e2e.spec.ts` | A card settlement and its itemised card lines are counted once, not twice |
 | `tests/e2e/financial-agents.e2e.spec.ts` | Eight agents, saving evidence, safe-to-spend, explicit approvals and translation |
 | `tests/e2e/i18n-dynamic.e2e.spec.ts` | Generated English, French and Amharic copy without Hebrew leakage |
