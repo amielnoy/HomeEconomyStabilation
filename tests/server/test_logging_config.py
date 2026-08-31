@@ -198,3 +198,47 @@ def test_retention_also_prunes_the_numbered_copies(tmp_path, monkeypatch) -> Non
 
     backups = [path.name for path in tmp_path.iterdir() if path.name != "api.log"]
     assert len(backups) == 3
+
+
+def test_falls_back_to_the_stream_when_the_filesystem_is_read_only(tmp_path) -> None:
+    """A serverless deployment has no writable working directory.
+
+    This ran from the request middleware, so the OSError raised while creating the log
+    directory answered every API request with a 500 until logging gave way instead.
+    """
+    import os
+    import stat
+
+    read_only = tmp_path / "ro"
+    read_only.mkdir()
+    os.chmod(read_only, stat.S_IRUSR | stat.S_IXUSR)
+
+    try:
+        logger = configure_logging(level="info", path=str(read_only / "logs" / "api.log"))
+
+        assert isinstance(logger.handlers[0], logging.StreamHandler)
+        assert not isinstance(logger.handlers[0], DailyCappedHandler)
+        # And a request may still be logged without raising.
+        log_event("info", "http.request", route="health", status=200)
+    finally:
+        os.chmod(read_only, stat.S_IRWXU)
+
+
+def test_a_request_is_answered_even_when_logging_cannot_write(tmp_path, monkeypatch) -> None:
+    """The contract that matters: the API keeps working whatever logging can or cannot do."""
+    import os
+    import stat
+
+    read_only = tmp_path / "ro"
+    read_only.mkdir()
+    os.chmod(read_only, stat.S_IRUSR | stat.S_IXUSR)
+    monkeypatch.setenv("LOG_FILE", str(read_only / "logs" / "api.log"))
+
+    try:
+        logging.getLogger("home_economy").handlers.clear()
+        response = TestClient(app).get("/api/health")
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok", "service": "home-economy-api"}
+    finally:
+        os.chmod(read_only, stat.S_IRWXU)

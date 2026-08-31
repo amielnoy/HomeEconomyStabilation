@@ -157,15 +157,29 @@ def configure_logging(level: str | None = None, path: str | None = None) -> logg
         logger.removeHandler(handler)
         handler.close()
 
-    directory = dirname(resolved_path)
-    if directory:
-        makedirs(directory, exist_ok=True)
-
     retention = _positive_int(environ.get("LOG_RETENTION_DAYS"), _BACKUP_COUNT)
-    handler = DailyCappedHandler(resolved_path, backup_count=retention, max_bytes=_MAX_BYTES)
+    handler = _file_handler(resolved_path, retention) or logging.StreamHandler()
     handler.setFormatter(JsonLinesFormatter())
     logger.addHandler(handler)
     return logger
+
+
+def _file_handler(path: str, retention: int) -> logging.Handler | None:
+    """The rotating file, or nothing when the filesystem will not take it.
+
+    A serverless deployment has no writable working directory — Vercel gives the function a
+    read-only one and collects the process's own output instead. Creating the log directory
+    there raises, and because this runs from the request middleware it raised on *every*
+    request: the whole API answered 500 until this fell back to the stream the platform
+    already reads. Logging must never be the reason a request fails.
+    """
+    try:
+        directory = dirname(path)
+        if directory:
+            makedirs(directory, exist_ok=True)
+        return DailyCappedHandler(path, backup_count=retention, max_bytes=_MAX_BYTES)
+    except OSError:
+        return None
 
 
 def get_logger() -> logging.Logger:
