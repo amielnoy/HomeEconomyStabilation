@@ -111,6 +111,8 @@
   <div class="stage"><span class="k">4 · Derive</span><p>Pure aggregations and eight agent strategies produce totals, recurring patterns, typed findings, saving opportunities, budget proposals, payday runway with daily/weekly guides, and forecast points.</p></div><div class="arrow">→</div>
   <div class="stage"><span class="k">5 · Render</span><p>The application updates semantic HTML, tables and SVG charts using locale-aware date and ILS formatters.</p></div>
 </div>
+<div class="callout"><b>Sign-in boundary.</b> The page is served under <code>connect-src 'self'</code> and never receives a Supabase credential, so it cannot reach the provider and holds nothing to lose. Sign-in therefore runs through first-party routes: the browser is redirected out, the code exchange happens on the API, and a session returns in an <code>httpOnly</code> cookie that JavaScript cannot read. PKCE keeps the verifier server-side for the length of the round trip, and the landing address is checked against this deployment's own origins — an open redirect here would hand a real session to another page, which is the account rather than one request. Signing in establishes identity only; financial data still crosses to an account after the versioned consent and as the minimised snapshot.</div>
+
 <div class="callout"><b>Card settlement rule.</b> Every card in this market settles by debiting the account, whoever issued it — which is why the default rules categorize ישראכרט, כאל, מקס and the rest as <code>credit</code>. A settlement line therefore stands on the statement for a non-bank card exactly as for a bank one, and once card detail is imported that line is the same money itemized. It is neutralized in both cases: reconciliation depends on whether the settlement debit is on the imported statement, never on who issued the card. The chooser records provenance and is shown to the customer; it deliberately does not enter this calculation, because letting it do so left the settlement standing beside its own itemization and reported a 2,700 month as 5,000.</div>
 
 <div class="callout"><b>Ordering and consent rule.</b> A manual category assignment always wins. Automatic rules are ordered and first-match-wins. The learning agent may propose a rule and the budget agent may propose a ceiling, but neither mutates state before explicit approval. Neutral transfers remain visible but do not inflate household income or spending totals.</div>
@@ -133,6 +135,7 @@
   <tr><td><code>src/consent.ts</code></td><td>Versioned local consent acceptance and withdrawal.</td><td>Minimal storage port</td><td>Financial state or immunity claims</td></tr>
   <tr><td><code>server/</code> + <code>api/index.py</code></td><td>FastAPI boundary, Pydantic allowlist, profile/consent CRUD and consent-gated snapshot writes through RLS.</td><td>Supabase publishable key and user JWT</td><td>Database passwords or service-role keys</td></tr>
   <tr><td><code>openapi.json</code> + <code>src/*-docs.ts</code></td><td>One API contract rendered by self-hosted Swagger and Scalar through compiled TypeScript modules.</td><td>Documented first-party routes</td><td>Runtime credentials, inline JavaScript or duplicated schemas</td></tr>
+  <tr><td><code>server/auth_flow.py</code></td><td>Google sign-in primitives: PKCE challenge, authorize URL, redirect allow-list and session parsing.</td><td>Provider contract and this deployment's own origins</td><td>Browser credentials, cookies or financial state</td></tr>
   <tr><td><code>src/logging.ts</code></td><td>Bounded in-memory record ring with a dated daily copy, redacting every value it stores.</td><td>Its own record shape and a storage port</td><td>Financial values, file names or the network</td></tr>
   <tr><td><code>src/http-status.ts</code></td><td>Single static vocabulary for REST response codes.</td><td>HTTP semantics</td><td>Response bodies or routing</td></tr>
   <tr><td><code>docker-compose.yml</code></td><td>Isolate web, API, Scalar, tests and monitoring services on one local network.</td><td>Health checks and runtime environment</td><td>Production secrets</td></tr>
@@ -160,6 +163,7 @@
     └── consent.ts              versioned consent repository
 
 server/ + api/index.py         authenticated Python first-party boundary
+    └── auth_flow.py           Google sign-in: PKCE, redirect allow-list, session
 supabase/migrations/           profile, snapshot, consent + RLS
 docker compose                 web → API ← Prometheus → Grafana
 

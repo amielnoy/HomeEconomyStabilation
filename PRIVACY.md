@@ -21,6 +21,28 @@ Amounts, dates, merchant descriptions, balances, categories and approved rules r
 
 Older `mazan-habait/v1` browser state is sanitised and rewritten when loaded, removing previously persisted account labels, references and filenames.
 
+## Signing in
+
+Signing in with Google establishes a session and nothing else. The exchange happens on the
+API rather than in the page: the browser is served under `connect-src 'self'` and is never
+given a Supabase credential, so it cannot reach the provider directly and does not hold one
+to lose. The flow is PKCE, so the verifier stays server-side for the length of the round
+trip and an intercepted code is worthless; no token is written into a URL the browser keeps
+in its history.
+
+The session lives in an `httpOnly`, `Secure`, `SameSite=lax` cookie and is never readable by
+JavaScript. The page builds no markup from data and runs under a strict CSP, but a token
+readable by script is one mistake away from being an account rather than a request. Its
+lifetime is bounded whatever the provider claims. Signing out clears that cookie and nothing
+else — no data stored for the account is touched, and no data already on the device is
+removed.
+
+Signing in does not upload anything. Financial data still crosses to the account only after
+the versioned consent statement is accepted, exactly as it does today, and what crosses is
+still the minimised snapshot described above. An account owns its own budget: every table is
+keyed to `auth.users` with owner-only RLS, so one signed-in customer cannot read another's
+rows.
+
 ## Regulatory interpretation
 
 This is an engineering control, not a certification or legal opinion.

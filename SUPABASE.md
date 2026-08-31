@@ -58,6 +58,19 @@ npm run build
 
 לבדיקה ידנית פותחים את Swagger ב־`/api-docs.html` או את Scalar ב־`/scalar-docs.html`. ב־Scalar בוחרים פעולה ולוחצים **Test Request**; לפעולות המאומתות משתמשים במנגנון Authentication כדי להזין Bearer JWT של משתמש בדיקה. שני הממשקים נטענים מנכסים מקומיים ומכסים health, snapshot, profile ו־consent; Scalar מוגדר בלי telemetry ובלי שמירת authentication. לפני `PUT /api/snapshots` יש לקבל את ההצהרה באמצעות `PUT /api/consents/cloud-sync`. החוזה המשותף נמצא ב־`openapi.json`.
 
+## כניסה עם Google
+
+ה־API מממש את זרימת הכניסה (`/api/auth/google`,‏ `/api/auth/callback`,‏ `/api/auth/signout`) בזרימת PKCE, בלי שהדפדפן מקבל מפתח כלשהו. מה שנותר הוא הגדרה בקונסולות ולא קוד:
+
+1. ב־Google Cloud: יצירת OAuth 2.0 Client ID מסוג Web application, עם `https://<project>.supabase.co/auth/v1/callback` כ־Authorized redirect URI.
+2. ב־Supabase ‏→ Authentication ‏→ Providers ‏→ Google: הפעלה והדבקת ה־Client ID וה־Client Secret.
+3. ב־Supabase ‏→ Authentication ‏→ URL Configuration: הוספת `https://home-economy-stabilation.vercel.app/api/auth/callback` ל־Redirect URLs בלבד; אין להשאיר wildcard.
+4. במשתני הסביבה של הפריסה: `SUPABASE_URL`,‏ `SUPABASE_PUBLISHABLE_KEY` ו־`AUTH_ALLOWED_ORIGINS` (רשימת מקורות https מופרדת בפסיקים).
+
+עד שאלה מוגדרים `/api/auth/google` מחזיר `503 cloud_not_configured`, וזו התשובה הנכונה — פריסה בלי ספק זהות אמורה לומר זאת ולא להפנות לשומקום.
+
+הכתובת שאליה חוזרים נבדקת מול `AUTH_ALLOWED_ORIGINS`. open redirect בנקודה הזו היה מוסר session אמיתי לדף של מישהו אחר, כלומר את החשבון כולו ולא בקשה אחת.
+
 ## הפעלה עתידית
 
 לפני הפעלת הכפתור במוצר יש להשלים, לפי הסדר:

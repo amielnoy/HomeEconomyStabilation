@@ -14,7 +14,12 @@
 
 - [x] ליצור ולקשר פרויקט Supabase ייעודי.
 - [ ] לאמת שהאזור, הגיבויים ותקופות השמירה מתאימים למשתמשים ולדרישות הדין.
-- [ ] להפעיל ספק Auth נבחר ולהגדיר redirect URLs רק לדומיינים המורשים.
+- [ ] ליצור OAuth 2.0 Client ID ב־Google Cloud עם `https://<project>.supabase.co/auth/v1/callback` כ־redirect URI.
+- [ ] להפעיל את ספק Google ב־Supabase ולהדביק Client ID ו־Client Secret.
+- [ ] להגדיר ב־Supabase את `https://home-economy-stabilation.vercel.app/api/auth/callback` כ־Redirect URL, בלי wildcard.
+- [ ] להגדיר בפריסה `SUPABASE_URL`,‏ `SUPABASE_PUBLISHABLE_KEY` ו־`AUTH_ALLOWED_ORIGINS`; עד אז `/api/auth/google` מחזיר `503 cloud_not_configured`.
+- [ ] לבנות את ממשק הכניסה בדפדפן: מצב מחובר/מנותק, חיבור `accessToken()` ל־session, ושער ההסכמה לפני כל העלאה.
+- [ ] להחליט ולממש מה קורה לנתונים שכבר במכשיר בכניסה ראשונה — לשאול ולצרף לאחר הסכמה.
 - [x] להחיל לפי הסדר את שלוש המיגרציות ולוודא שהיסטוריית המיגרציות המקומית והמרוחקת זהה; הן יוצרות שלוש טבלאות, grants,‏ RLS,‏ triggers ו־constraint לגרסה 2.
 - [ ] להריץ בדיקת integration עם שני משתמשים ולוודא בפועל בידוד RLS, כתיבה, קריאה, מחיקה וטיפול מבוקר ברשומת v1.
 - [ ] להפעיל rate limiting מבוזר ב־Vercel Firewall; ההגבלה המקומית ב־function היא שכבת sanity ואינה תחליף להגנת edge/DDoS.

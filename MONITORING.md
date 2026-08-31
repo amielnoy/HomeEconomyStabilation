@@ -58,3 +58,14 @@ Grafana טוען גם את הדשבורד `Home Economy Database` בגרסה 2. 
 Vercel חושף בדיקת זמינות ציבורית ומינימלית ב־`https://home-economy-stabilation.vercel.app/api/health`. היא מחזירה סטטוס שירות בלבד, ללא Supabase, נתונים פיננסיים או פרטי משתמש. היא אינה תחליף ל־Prometheus או Grafana המקומיים ואינה מעידה ש־Supabase הוגדר בהצלחה.
 
 בדיקות החוזה של provisioning, מדדי הבריאות ופרסום Allure, יחד עם בדיקות השחרור הידניות, מתועדות ב־[TEST_PLAN.md](TEST_PLAN.md).
+
+## Where the API's own log records land
+
+The API writes JSON-lines records in the same shape the browser buffers, rotated daily under
+`logs/api.log` wherever a writable working directory exists — a local run or the container.
+A serverless deployment has none: Vercel gives the function a read-only filesystem and
+collects the process's own output instead, so the handler falls back to that stream and the
+records appear in the platform's logs rather than on disk. This is not only a fallback but
+the right destination there; it is also load-bearing, because the handler is built from the
+request middleware and a filesystem error at that point answered every request with a 500
+until logging gave way instead.
