@@ -73,10 +73,11 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/server/test_config.py` | Environment validation and strict bearer-token parsing |
 | `tests/server/test_models.py` | Pydantic allowlists, size bounds and financial-identifier rejection |
 | `tests/server/test_metrics.py` | Bounded route/method/operation labels and rejection of raw path or identity data in Prometheus output |
+| `tests/server/test_auth_flow.py` | Google sign-in primitives: the PKCE challenge as the hash of a verifier the browser never sees, unique verifiers and states per attempt, an authorize URL carrying the challenge but not the verifier, redirect targets limited to this deployment's origins, and a provider response accepted as a session only with both tokens and a bounded lifetime |
 | `tests/server/test_logging_config.py` | JSON-lines records in the shared shape, level names matching the browser, level filtering, handlers not stacking on reconfiguration, bounded route names, exceptions recorded by type without a traceback, every request logged with bounded metadata, a dated backup per day anchored to UTC, retention limits and their refusal of misconfiguration, the size cap surviving repeated same-day rollovers and pruning of the numbered copies |
 | `tests/server/test_request_guard.py` | Media type, body size and bounded rate limiting |
 | `tests/server/test_repositories.py` | Profile, snapshot and consent CRUD with owner filters and stable failures |
-| `tests/server/test_app.py` | FastAPI health, methods, profile/consent persistence, authentication boundary and consent-gated snapshot writes |
+| `tests/server/test_app.py` | FastAPI health, methods, profile/consent persistence, authentication boundary, consent-gated snapshot writes, and the Google sign-in routes: refusal without cloud configuration, a callback that rejects a round trip it did not start, an httpOnly verifier absent from the redirect, no open redirect through `next`, and sign-out clearing only this device |
 
 ## API suites
 

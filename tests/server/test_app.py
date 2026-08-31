@@ -137,3 +137,65 @@ def test_cloud_consent_is_persisted_and_required_before_snapshot_write(monkeypat
     assert refused_after_withdrawal.status_code == 403
     assert refused_after_withdrawal.json() == {"code": "cloud_consent_required"}
     assert len(snapshot_writes) == 1
+
+
+def test_sign_in_is_refused_cleanly_when_the_cloud_is_not_configured() -> None:
+    """A deployment without Supabase must say so rather than redirect nowhere."""
+    response = client.get("/api/auth/google", follow_redirects=False)
+
+    assert response.status_code == 503
+    assert response.json() == {"code": "cloud_not_configured"}
+
+
+def test_the_callback_refuses_a_round_trip_it_did_not_start(monkeypatch) -> None:
+    """Without the verifier and a matching state this is somebody else's sign-in."""
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+
+    response = client.get("/api/auth/callback?code=abc&state=zzz", follow_redirects=False)
+
+    assert response.status_code == 400
+    assert response.json() == {"code": "sign_in_state_mismatch"}
+
+
+def test_signing_in_sends_the_browser_to_google_and_keeps_the_verifier_private(monkeypatch) -> None:
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+
+    response = client.get("/api/auth/google", follow_redirects=False)
+
+    assert response.status_code == 302
+    location = response.headers["location"]
+    assert location.startswith("https://project.supabase.co/auth/v1/authorize?")
+    assert "provider=google" in location
+    assert "code_challenge_method=s256" in location
+
+    # The verifier is set for this browser only, and never appears in the redirect.
+    cookies = response.headers.get_list("set-cookie")
+    verifier_cookie = next(c for c in cookies if c.startswith("he_pkce="))
+    verifier = verifier_cookie.split("=", 1)[1].split(";", 1)[0]
+    assert verifier not in location
+    for attribute in ("HttpOnly", "Secure", "SameSite=lax"):
+        assert attribute in verifier_cookie
+
+
+def test_an_open_redirect_cannot_be_smuggled_through_the_next_parameter(monkeypatch) -> None:
+    """A crafted link must not be able to land a real session on somebody else's page."""
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    monkeypatch.setenv("AUTH_ALLOWED_ORIGINS", "https://home-economy-stabilation.vercel.app")
+
+    response = client.get("/api/auth/google?next=https://evil.example/steal", follow_redirects=False)
+
+    state_cookie = next(c for c in response.headers.get_list("set-cookie") if c.startswith("he_state="))
+    assert "evil.example" not in state_cookie
+    assert "mazan-habait.html" in state_cookie
+
+
+def test_signing_out_clears_only_this_devices_session() -> None:
+    response = client.post("/api/auth/signout")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "signed_out"}
+    cleared = next(c for c in response.headers.get_list("set-cookie") if c.startswith("he_session="))
+    assert 'he_session=""' in cleared or "he_session=;" in cleared

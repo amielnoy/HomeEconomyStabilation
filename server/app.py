@@ -3,13 +3,25 @@ from __future__ import annotations
 from dataclasses import asdict
 from hashlib import sha256
 from secrets import token_bytes
+from os import environ
 from time import monotonic
 
+import httpx
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from .auth_flow import (
+    STATE_COOKIE,
+    STATE_TTL_SECONDS,
+    VERIFIER_COOKIE,
+    allowed_origins,
+    authorize_url,
+    create_challenge,
+    is_allowed_redirect,
+    parse_session,
+)
 from .config import bearer_token, read_supabase_config
 from .logging_config import log_event, route_name
 from .metrics import record_response, render_metrics
@@ -108,6 +120,92 @@ async def response_contract(request: Request, call_next):
         status=response.status_code,
         duration_ms=round((monotonic() - started) * 1000, 1),
     )
+    return response
+
+
+SESSION_COOKIE = "he_session"
+_DEFAULT_LANDING = "/mazan-habait.html"
+
+
+def _cookie(response: Response, name: str, value: str, max_age: int) -> None:
+    """Session material never reaches JavaScript: httpOnly, same-site and https-only.
+
+    The page is served under a strict CSP and builds no markup from data, but an access
+    token readable by script is one mistake away from being an account rather than a
+    request.
+    """
+    response.set_cookie(
+        name, value, max_age=max_age, httponly=True, secure=True, samesite="lax", path="/",
+    )
+
+
+def _landing(request: Request) -> str:
+    requested = request.query_params.get("next") or _DEFAULT_LANDING
+    origins = allowed_origins(dict(environ))
+    return requested if is_allowed_redirect(requested, origins) else _DEFAULT_LANDING
+
+
+@app.get("/api/auth/google")
+async def start_google_sign_in(request: Request) -> Response:
+    config = read_supabase_config()
+    if config is None:
+        return _error(503, "cloud_not_configured")
+
+    challenge = create_challenge()
+    callback = f"{request.url.scheme}://{request.url.netloc}/api/auth/callback"
+    response = RedirectResponse(authorize_url(config, challenge, callback), status_code=302)
+    _cookie(response, VERIFIER_COOKIE, challenge.verifier, STATE_TTL_SECONDS)
+    _cookie(response, STATE_COOKIE, f"{challenge.state}|{_landing(request)}", STATE_TTL_SECONDS)
+    return response
+
+
+@app.get("/api/auth/callback")
+async def finish_google_sign_in(request: Request) -> Response:
+    config = read_supabase_config()
+    if config is None:
+        return _error(503, "cloud_not_configured")
+
+    verifier = request.cookies.get(VERIFIER_COOKIE)
+    stored = (request.cookies.get(STATE_COOKIE) or "").split("|", maxsplit=1)
+    code = request.query_params.get("code")
+    # The state must come back exactly as it went out, or this is somebody else's round trip.
+    if not verifier or not code or len(stored) != 2 or stored[0] != request.query_params.get("state"):
+        return _error(400, "sign_in_state_mismatch")
+
+    exchanged = await run_in_threadpool(_exchange_code, config, code, verifier)
+    if exchanged is None:
+        return _error(502, "sign_in_failed")
+
+    response = RedirectResponse(stored[1], status_code=302)
+    _cookie(response, SESSION_COOKIE, exchanged.access_token, exchanged.expires_in)
+    for spent in (VERIFIER_COOKIE, STATE_COOKIE):
+        response.delete_cookie(spent, path="/")
+    return response
+
+
+def _exchange_code(config, code: str, verifier: str):
+    try:
+        result = httpx.post(
+            f"{config.url}/auth/v1/token?grant_type=pkce",
+            headers={"apikey": config.publishable_key, "Content-Type": "application/json"},
+            json={"auth_code": code, "code_verifier": verifier},
+            timeout=8.0,
+        )
+    except httpx.HTTPError:
+        return None
+    if result.status_code != 200:
+        return None
+    try:
+        return parse_session(result.json())
+    except ValueError:
+        return None
+
+
+@app.post("/api/auth/signout")
+async def sign_out() -> Response:
+    """Only this device's session ends. Nothing stored for the account is touched."""
+    response = JSONResponse({"status": "signed_out"})
+    response.delete_cookie(SESSION_COOKIE, path="/")
     return response
 
 
