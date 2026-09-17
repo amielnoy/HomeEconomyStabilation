@@ -69,6 +69,10 @@ class CategoryRule(BaseModel):
     id: str = Field(max_length=100)
     match: str = Field(max_length=200)
     cat: str = Field(max_length=100)
+    # Which direction the rule reads, for wording that means opposite things on the two
+    # sides of a statement: an allowance arriving under the same name a contribution
+    # leaves under. Absent on every rule that reads both ways, which is nearly all of them.
+    when: Literal["in", "out"] | None = None
 
 
 class Category(BaseModel):

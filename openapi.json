@@ -228,7 +228,8 @@
         "properties": {
           "id": { "type": "string", "maxLength": 100 },
           "match": { "type": "string", "maxLength": 200 },
-          "cat": { "type": "string", "maxLength": 100 }
+          "cat": { "type": "string", "maxLength": 100 },
+          "when": { "type": "string", "enum": ["in", "out"], "description": "Direction the rule reads, for wording that means opposite things on each side of a statement." }
         }
       },
       "Category": {

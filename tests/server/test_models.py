@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from server.models import SnapshotInput, Transaction
+from server.models import CategoryRule, SnapshotInput, Transaction
 
 
 def valid_snapshot() -> dict[str, object]:
@@ -55,25 +55,33 @@ def test_transaction_rejects_an_unknown_card_issuer() -> None:
         Transaction.model_validate(payload)
 
 
-def test_transaction_accepts_the_card_brand_the_customer_named() -> None:
-    """No issuer export names itself, so the brand is the customer's answer travelling
-    with the row. This model forbids extra keys: unknown here costs the whole snapshot.
+
+def test_rule_accepts_the_direction_it_reads() -> None:
+    """The browser stores a direction on rules whose wording means opposite things on the
+    two sides of a statement. This model forbids extra keys, so a field it does not know
+    does not lose the field — it rejects the whole snapshot and the customer syncs nothing.
     """
-    payload = {
-        "date": "2026-08-03", "vdate": "2026-08-03", "ref": "", "desc": "shop",
-        "out": 431.0, "in": 0.0, "bal": None, "pending": False,
-        "source": "card", "cardKind": "external", "cardBrand": "isracard", "src": "card-report",
-    }
+    rule = {"id": "r1", "match": "ביטוח לאומי", "cat": "income", "when": "in"}
 
-    assert Transaction.model_validate(payload).cardBrand == "isracard"
+    assert CategoryRule.model_validate(rule).when == "in"
 
 
-def test_transaction_rejects_a_card_brand_outside_the_offered_list() -> None:
-    payload = {
-        "date": "2026-08-03", "vdate": "2026-08-03", "ref": "", "desc": "shop",
-        "out": 431.0, "in": 0.0, "bal": None, "pending": False,
-        "source": "card", "cardBrand": "mastercard", "src": "card-report",
-    }
+def test_rule_without_a_direction_still_validates() -> None:
+    """Nearly every rule reads both ways and carries no direction at all."""
+    assert CategoryRule.model_validate({"id": "r2", "match": "שופרסל", "cat": "food"}).when is None
 
+
+def test_rule_rejects_a_direction_that_is_not_a_side_of_a_statement() -> None:
     with pytest.raises(ValidationError):
-        Transaction.model_validate(payload)
+        CategoryRule.model_validate({"id": "r3", "match": "x", "cat": "food", "when": "sideways"})
+
+
+def test_snapshot_carries_a_directional_rule_end_to_end() -> None:
+    """The default rules ship with one, so this is the ordinary path, not an edge case."""
+    candidate = valid_snapshot()
+    candidate["payload"]["rules"] = [  # type: ignore[index]
+        {"id": "r1", "match": "ביטוח לאומי", "cat": "income", "when": "in"},
+    ]
+
+    assert SnapshotInput.model_validate(candidate).payload.persistence_dict()["rules"][0]["when"] == "in"
+
