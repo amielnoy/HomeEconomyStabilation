@@ -1244,7 +1244,11 @@ function renderCategories() {
         el('span', { class: 'dot', style: `background:${catColor(S.cats, cid)}` }),
         el('span', { class: 'nm', text: catById(cid).name }),
         el('span', { class: 'pct num', text: Math.round((v / total) * 100) + '%' }),
-        el('span', { class: 'amt num', text: money(v) }),
+        /* Written as the charge it is: signed and in the spending colour, like every
+           other figure on the page. A breakdown of where the money went is a list of
+           money that left, and reading it as plain black numbers beside a salary that
+           carries its plus made the two look like the same kind of figure. */
+        el('span', { class: 'amt num neg', text: money2S(-v), 'data-testid': 'category-amount' }),
       ]),
       el('div', { class: 'track' }, [
         el('div', { class: 'fill', style: `width:${(v / max) * 100}%;background:${catColor(S.cats, cid)}` }),
@@ -1261,7 +1265,7 @@ function renderCategories() {
   for (const [cid, v] of rows) {
     tb.append(el('tr', { 'data-testid': 'category-table-row' }, [
       el('td', { text: catById(cid).name }),
-      el('td', { class: 'n', text: money2(v) }),
+      el('td', { class: 'n neg', text: money2S(-v), 'data-testid': 'category-table-amount' }),
       el('td', { class: 'n', text: Math.round((v / total) * 100) + '%' }),
       el('td', { class: 'n', text: list.filter((x) => x.cat === cid && x.out > 0).length }),
     ]));

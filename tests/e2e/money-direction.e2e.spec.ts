@@ -65,3 +65,24 @@ test('colours the recurring charges by direction too', async ({ homePage }) => {
   await expect(rowFor('שופרסל דיל')).toHaveCSS('color', spent);
   await expect(rowFor('משכורת')).toHaveCSS('color', received);
 });
+
+/* "לאן הכסף הולך" lists nothing but money that left, and listed it as plain black numbers
+   with no sign — so a household scanning the page saw its spending written in the same
+   ink and the same shape as the salary that carries a plus. Every figure in the breakdown
+   and in its table is a charge, and is written as one. */
+test('writes every figure in the spending breakdown as a red charge', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport(statement());
+  const spent = await homePage.dashboard.resolvedColour('--crit-text');
+
+  await expect(homePage.dashboard.categoryAmounts.first()).toHaveText(/^\D*-400\.00/);
+  for (const amount of await homePage.dashboard.categoryAmounts.all()) {
+    await expect(amount).toHaveCSS('color', spent);
+    await expect(amount).toHaveText(/-/);
+  }
+
+  await homePage.dashboard.categoryTableToggle.click();
+  for (const amount of await homePage.dashboard.categoryTableAmounts.all()) {
+    await expect(amount).toHaveCSS('color', spent);
+    await expect(amount).toHaveText(/-/);
+  }
+});

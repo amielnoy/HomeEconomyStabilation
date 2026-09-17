@@ -28,6 +28,8 @@ export class DashboardComponent {
   readonly spendingGuideRetained = this.page.getByTestId('spending-guide-retained');
   readonly spendingGuideAsOf = this.page.getByTestId('spending-guide-asof');
   readonly spendingGuideDate = this.page.getByTestId('spending-guide-date');
+  readonly categoryAmounts = this.page.getByTestId('category-amount');
+  readonly categoryTableAmounts = this.page.getByTestId('category-table-amount');
   readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
   readonly recurringRows = this.page.getByTestId('recurring-row');
   readonly recurringAmounts = this.page.getByTestId('recurring-amount');
