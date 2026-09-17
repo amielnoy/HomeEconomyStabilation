@@ -8,6 +8,12 @@ export class DashboardComponent {
   readonly transactionBalances = this.page.getByTestId('transaction-balance');
   readonly transactionCategories = this.page.getByTestId('transaction-category-select');
   readonly transactionSources = this.page.getByTestId('transaction-source');
+  readonly transactionCount = this.page.getByTestId('tx-count');
+  readonly transactionView = this.page.getByTestId('f-view');
+  readonly cardGroupRows = this.page.getByTestId('card-group-row');
+  readonly cardGroupToggles = this.page.getByTestId('card-group-toggle');
+  readonly cardGroupSources = this.page.getByTestId('card-group-source');
+  readonly cardGroupAmounts = this.page.getByTestId('card-group-amount');
   readonly accountSummary = this.page.getByTestId('acct');
   readonly balance = this.page.getByTestId('t-bal');
   readonly spendingGuide = this.page.getByTestId('spending-guide');
@@ -69,6 +75,24 @@ export class DashboardComponent {
       if (box.left >= -0.5 && box.right <= window.innerWidth + 0.5) return [];
       return [{ text: (cell.textContent || '').trim(), left: Math.round(box.left), right: Math.round(box.right) }];
     }));
+  }
+
+  /** Open every card folded into a summary line, so the charges behind the sums can be
+      read as ordinary transaction rows. */
+  @step('Open the card summary lines in the transactions table')
+  async openCardSummaries(): Promise<void> {
+    /* Resolved by index rather than held, because opening one card rebuilds the table
+       and every handle taken before the click points at a row that no longer exists. */
+    const cards = await this.cardGroupToggles.count();
+    for (let index = 0; index < cards; index += 1) {
+      const toggle = this.cardGroupToggles.nth(index);
+      if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
+    }
+  }
+
+  @step('Switch the transactions table to every charge')
+  async showEveryCharge(): Promise<void> {
+    await this.transactionView.selectOption('every-charge');
   }
 
   @step('Load a complete financial-agent example')

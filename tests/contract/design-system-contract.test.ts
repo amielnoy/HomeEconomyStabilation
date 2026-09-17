@@ -22,6 +22,15 @@ describe('design system contract', () => {
       expect(css).toMatch(new RegExp(`\\.${className}(?:[\\s:{.,]|$)`));
     });
 
+  /* The card summary line is the one row in the transactions table that is itself a
+     control, and it is the household's only way through to what the card's sum was made
+     of. A row that cannot be reached by keyboard or hit with a finger hides the detail
+     rather than folding it. */
+  it('gives the card summary line a focus ring and a touch-sized target', () => {
+    expect(page).toMatch(/\.cardgroup-toggle:focus-visible\s*\{/);
+    expect(page).toMatch(/@media \(pointer: coarse\)\{[\s\S]*?\.cardgroup-toggle,[\s\S]*?min-height:48px/);
+  });
+
   it('provides visible focus and reduced-motion behavior', () => {
     expect(css).toContain(':focus-visible');
     expect(css).toContain('@media (prefers-reduced-motion: reduce)');

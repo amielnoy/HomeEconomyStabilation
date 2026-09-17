@@ -68,6 +68,16 @@ Each transaction row uses the native `.ds-field`-compatible category select iden
 - Category meaning is conveyed by translated text as well as the colored dot. Color never replaces the selected label.
 - Existing persisted rule sets are merged with new safe defaults by match/category identity, preserving user rules and manual overrides.
 
+## Card summary line
+
+The transactions table opens on the account as the bank describes it: statement rows, and one `card-group-row` per issuer carrying the full sum that card was charged. The `f-view` select offers the itemised list beside it, so nothing is hidden behind a default.
+
+- The summary line is a control (`cardgroup-toggle`): it opens the charges in place as ordinary transaction rows, keeps `aria-expanded` honest, shows a focus ring, and is touch-sized on coarse pointers. A card's sum with no way through to its charges would hide the detail rather than fold it.
+- An opened charge is marked by an accent border on its inline-start edge in both the wide table and the stacked mobile layout — the relationship is drawn, never implied by order alone.
+- The category cell names the single category where the charges share one and reads the translated "mixed" label otherwise; it never shows a category the charges do not all have.
+- Folding changes how a month reads, never what it came to: the totals line counts the charges themselves in both views.
+- Charges are folded only where a statement row stands beside them. A card-only import stays itemised, because there is no settlement line for the summary to be read against.
+
 ## Consent pattern
 
 `.consent-card` presents optional cloud-sync disclosure inside settings. It is informative infrastructure, not a precondition for local use.

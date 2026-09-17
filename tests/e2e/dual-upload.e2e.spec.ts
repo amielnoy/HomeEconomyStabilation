@@ -35,6 +35,9 @@ test('shows the transactions from both reports together', async ({ homePage }) =
 
   await homePage.upload.uploadCreditCardReport(cardReport());
 
+  /* The card folds to one line beside the statement by default, so the charges are
+     opened here: what this test is about is that both imports landed. */
+  await homePage.dashboard.openCardSummaries();
   await expect(homePage.dashboard.transactionRows).toHaveCount(5);
   await expect(homePage.dashboard.transactionRows.filter({ hasText: 'ארנונה עיריית חיפה' })).toHaveCount(1);
   await expect(homePage.dashboard.transactionRows.filter({ hasText: 'שופרסל דיל' })).toHaveCount(1);
@@ -48,6 +51,7 @@ test('reaches the same result whichever report is loaded first', async ({ homePa
 
   await homePage.upload.uploadBankReport(bankReport());
 
+  await homePage.dashboard.openCardSummaries();
   await expect(homePage.dashboard.transactionRows).toHaveCount(5);
   await expect(homePage.dashboard.transactionRows.filter({ hasText: 'משכורת חודשית' })).toHaveCount(1);
   await expect(homePage.dashboard.transactionRows.filter({ hasText: 'נטפליקס' })).toHaveCount(1);
@@ -58,6 +62,7 @@ test('reaches the same result whichever report is loaded first', async ({ homePa
 test('adds nothing when both reports are loaded a second time', async ({ homePage }) => {
   await homePage.upload.uploadBankReport(bankReport());
   await homePage.upload.uploadCreditCardReport(cardReport());
+  await homePage.dashboard.openCardSummaries();
   await expect(homePage.dashboard.transactionRows).toHaveCount(5);
 
   await homePage.upload.uploadBankReport(bankReport());
@@ -65,6 +70,7 @@ test('adds nothing when both reports are loaded a second time', async ({ homePag
   await homePage.upload.uploadCreditCardReport(cardReport());
   await expect(homePage.toast).toContainText('2 תנועות כבר היו קיימות');
 
+  await homePage.dashboard.openCardSummaries();
   await expect(homePage.dashboard.transactionRows).toHaveCount(5);
 });
 
@@ -84,6 +90,7 @@ test('keeps the bank account on screen after a card report is loaded', async ({ 
 test('keeps both imports when an unreadable file follows them', async ({ homePage }) => {
   await homePage.upload.uploadBankReport(bankReport());
   await homePage.upload.uploadCreditCardReport(cardReport());
+  await homePage.dashboard.openCardSummaries();
   await expect(homePage.dashboard.transactionRows).toHaveCount(5);
 
   await homePage.upload.creditCardInput.setInputFiles({

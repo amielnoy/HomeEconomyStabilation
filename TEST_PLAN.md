@@ -62,6 +62,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/unit/marketing.unit.test.ts` | Allowed attribution, first/last touch and bounded local event history |
 | `tests/unit/privacy.unit.test.ts` | Identifier redaction, allowlisted snapshots and removal/rejection of unknown sensitive properties |
 | `tests/unit/state-repository.unit.test.ts` | Runtime state validation, safe migration, default-rule merge, newly added default categories returning at their own position, card-issuer round trip, a saved rule keeping the direction it was written with, prototype-key refusal and persistence round-trip |
+| `tests/unit/transaction-view.unit.test.ts` | Folding card charges into one line per issuer beside statement rows, each issuer kept apart, an unnamed card folded without joining a named one, refunds carried into the card they arrived on, the summary dated by its newest charge, statement order preserved, and charges itemised where no statement row stands beside them |
 | `tests/unit/cloud-sync.unit.test.ts` | Privacy-safe schema-v2 validation, signed-out behavior, auth headers, failures, timeout and DELETE |
 | `tests/unit/cloud-metadata.unit.test.ts` | Authenticated Supabase profile/consent reads and writes, response validation, safe auth headers and withdrawal |
 | `tests/unit/consent.unit.test.ts` | Versioned consent, malformed records and withdrawal |
@@ -100,7 +101,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 
 | File | Coverage |
 | --- | --- |
-| `tests/contract/design-system-contract.test.ts` | Semantic tokens, recipe ownership, variants, disabled/focus states, contrast preferences, touch targets, typography and directional drawers |
+| `tests/contract/design-system-contract.test.ts` | Semantic tokens, recipe ownership, variants, disabled/focus states, contrast preferences, touch targets, the card summary line's focus ring and touch target, typography and directional drawers |
 | `tests/contract/discovery.contract.test.ts` | Assistant-crawler allowlist, canonical URL and duplicate suppression, sitemap and llms.txt link resolution, structured-data graph integrity, IndexNow key ownership, variable-font face declarations and deployment of every discovery file |
 | `tests/contract/documentation-contract.test.ts` | README, architecture, design system, privacy, Supabase, TODO, monitoring and this test plan stay synchronized |
 | `tests/contract/default-rules.contract.test.ts` | No default rule left unreachable behind an earlier rule of another category, no exact duplicates, and the national-insurance allowance filed as income rather than as an insurance expense |
@@ -144,6 +145,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 
 | `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import across CSV, SpreadsheetML, .xlsx with and without cell references, windows-1255 encoding and English column names, multi-file imports, localized unrecognised-layout reporting, duplicate re-imports, header labels after import, evidence-based transfer/alimony categorization, leisure separated from the household bills it arrives beside and offered in every language, studies and clothing separated from the salary and shops they arrive beside and offered in every language, tax payments separated from the transfers, bills and restaurants they are worded like and offered in every language, honest unknown fallback, upload availability and recommendations |
 | `tests/e2e/transaction-source.e2e.spec.ts` | Every row naming where its figure came from: the bank on statement rows, the issuer the customer chose on card rows, a card whose issuer was not named saying only that, the answer surviving a reload, an issuer not carrying over to a later import, and the column offered in every language |
+| `tests/e2e/card-summary-view.e2e.spec.ts` | The transactions table opening on statement rows with each card folded to the sum it charged, opening a card onto the charges behind it, itemising every charge on request, a card report without a statement staying itemised, and the count and totals reading the same in both views |
 | `tests/e2e/report-reader.e2e.spec.ts` | A card report chosen through the statement control being read by its columns and filed as spending rather than as income, the message naming which reader read it, and a statement staying with the statement reader |
 | `tests/e2e/card-reconciliation.e2e.spec.ts` | A card settlement and its itemised card lines are counted once, not twice |
 | `tests/e2e/financial-agents.e2e.spec.ts` | Eight agents, saving evidence, safe-to-spend, explicit approvals and translation |
