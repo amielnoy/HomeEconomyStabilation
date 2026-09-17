@@ -108,16 +108,17 @@ describe('application state boundary', () => {
         { id: 'judaism', name: 'יהדות', kind: 'expense' as const },
         { id: 'donations', name: 'תרומות', kind: 'expense' as const },
         { id: 'computing', name: 'מחשוב', kind: 'expense' as const },
+        { id: 'alimony', name: 'מזונות', kind: 'expense' as const },
         { id: 'fees', name: 'עמלות וריבית', kind: 'expense' as const },
       ],
     };
-    const saved = [withAdditions.cats[0], withAdditions.cats[8]];
+    const saved = [withAdditions.cats[0], withAdditions.cats[9]];
 
     const restored = new AppStateCodec(withAdditions)
       .decode({ tx: [transaction], overrides: {}, rules: [], cats: saved, budgets: {} });
 
     expect(restored?.cats.map((category) => category.id))
-      .toEqual(['loans', 'leisure', 'education', 'clothing', 'tax', 'judaism', 'donations', 'computing', 'fees']);
+      .toEqual(['loans', 'leisure', 'education', 'clothing', 'tax', 'judaism', 'donations', 'computing', 'alimony', 'fees']);
   });
 
   /* The brand is provenance the customer typed once, and the key check is strict: a value

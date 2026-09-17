@@ -198,8 +198,37 @@ test('classifies evidenced transfers and alimony while leaving unexplained debit
 
   await expect(homePage.dashboard.transactionCategories).toHaveCount(3);
   await expect(homePage.dashboard.transactionCategories.nth(0)).toHaveValue('other');
-  await expect(homePage.dashboard.transactionCategories.nth(1)).toHaveValue('home');
+  await expect(homePage.dashboard.transactionCategories.nth(1)).toHaveValue('alimony');
   await expect(homePage.dashboard.transactionCategories.nth(2)).toHaveValue('savings');
+});
+
+/* Maintenance was filed as housing, where it sat inside the figure a household budgets
+   rent and bills against and made both unreadable. It is a court-ordered obligation to
+   another household, not a cost of running this one, and it is the payment people most
+   often want to see on its own. The rule is last and scoped to money leaving: the savings
+   block above owns העברה and משיכה, and maintenance arriving is the receiving household's
+   income, not an expense subtracted from its month. */
+test('separates maintenance from the housing and the transfers it arrives beside', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'maintenance.csv', mimeType: 'text/csv', buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,זכות,יתרה',
+      '02/08/2026,עבור: מזונות,3000,,9000',
+      '03/08/2026,ארנונה עיריית חיפה,612,,8388',
+      '04/08/2026,העברה לחשבון,500,,7888',
+      '05/08/2026,עבור: מזונות,,2500,10388',
+    ].join('\n')),
+  });
+
+  const categoryOf = (row: number) => homePage.dashboard.transactionRows.nth(row)
+    .getByTestId('transaction-category-select');
+  const valueOf = (description: string) => homePage.dashboard.transactionRows
+    .filter({ hasText: description }).first().getByTestId('transaction-category-select');
+
+  await expect(valueOf('ארנונה')).toHaveValue('home');
+  await expect(valueOf('העברה לחשבון')).toHaveValue('savings');
+  // Newest first: the maintenance that arrived is the household's income, the one paid is its own category.
+  await expect(categoryOf(0)).toHaveValue('income');
+  await expect(categoryOf(3)).toHaveValue('alimony');
 });
 
 /* A loan repayment is usually worded as a transfer or a standing order, so before
@@ -404,6 +433,7 @@ test('offers every added category in every language', async ({ homePage }) => {
     judaism:   { he: 'יהדות', en: 'Judaism', fr: 'Judaïsme' },
     donations: { he: 'תרומות', en: 'Donations', fr: 'Dons' },
     computing: { he: 'מחשוב', en: 'Computing & software', fr: 'Informatique' },
+    alimony:   { he: 'מזונות', en: 'Child support & alimony', fr: 'Pension alimentaire' },
   } as const;
 
   for (const locale of ['he', 'en', 'fr'] as const) {

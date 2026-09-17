@@ -8,7 +8,7 @@ const transaction = (desc: string, incoming = 0): BankTransaction => ({
 });
 const rules: Rule[] = [
   { id: 'transfer', match: 'משיכה לחשבון הבנק', cat: 'savings' },
-  { id: 'alimony', match: 'מזונות', cat: 'home' },
+  { id: 'alimony', match: 'מזונות', cat: 'alimony', when: 'out' },
 ];
 
 describe('rule-based transaction categorization', () => {
@@ -16,7 +16,7 @@ describe('rule-based transaction categorization', () => {
 
   it.each([
     ['המבצע: עמיאל פלד עבור: משיכה לחשבון הבנק', 'savings'],
-    ['לטובת: אסתר אושרית פלד עבור: מזונות', 'home'],
+    ['לטובת: אסתר אושרית פלד עבור: מזונות', 'alimony'],
   ])('classifies %s as %s from descriptive evidence', (description, expected) => {
     expect(categorizer.categorize(transaction(description), {}, rules)).toBe(expected);
   });
@@ -24,6 +24,13 @@ describe('rule-based transaction categorization', () => {
   it('keeps an unexplained debit as other and recognizes an incoming transaction', () => {
     expect(categorizer.categorize(transaction(''), {}, rules)).toBe('other');
     expect(categorizer.categorize(transaction('הפקדה לא מזוהה', 350), {}, rules)).toBe('income');
+  });
+
+  /* Maintenance arriving is the receiving household's income. Filed into the expense
+     category that the paying household's rule names, it would be subtracted from the
+     month it was meant to cover. */
+  it('leaves maintenance arriving as income rather than as the expense it is for the payer', () => {
+    expect(categorizer.categorize(transaction('מזונות', 3000), {}, rules)).toBe('income');
   });
 
   it('gives an explicit user override precedence over learned/default rules', () => {
