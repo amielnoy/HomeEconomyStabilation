@@ -53,3 +53,27 @@ def test_transaction_rejects_an_unknown_card_issuer() -> None:
 
     with pytest.raises(ValidationError):
         Transaction.model_validate(payload)
+
+
+def test_transaction_accepts_the_card_brand_the_customer_named() -> None:
+    """No issuer export names itself, so the brand is the customer's answer travelling
+    with the row. This model forbids extra keys: unknown here costs the whole snapshot.
+    """
+    payload = {
+        "date": "2026-08-03", "vdate": "2026-08-03", "ref": "", "desc": "shop",
+        "out": 431.0, "in": 0.0, "bal": None, "pending": False,
+        "source": "card", "cardKind": "external", "cardBrand": "isracard", "src": "card-report",
+    }
+
+    assert Transaction.model_validate(payload).cardBrand == "isracard"
+
+
+def test_transaction_rejects_a_card_brand_outside_the_offered_list() -> None:
+    payload = {
+        "date": "2026-08-03", "vdate": "2026-08-03", "ref": "", "desc": "shop",
+        "out": 431.0, "in": 0.0, "bal": None, "pending": False,
+        "source": "card", "cardBrand": "mastercard", "src": "card-report",
+    }
+
+    with pytest.raises(ValidationError):
+        Transaction.model_validate(payload)

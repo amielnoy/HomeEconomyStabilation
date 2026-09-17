@@ -13,7 +13,11 @@ Before browser storage, manual backup or optional cloud snapshot, the privacy bo
 - rejects account collections and unsanitised transactions at the cloud API boundary.
 - rejects unknown transaction properties, including future fields that have not been explicitly approved for persistence.
 
-One field has been approved since: `cardKind`, which records whether a card was issued by the bank or outside it. It is a two-value enum chosen by the user rather than read from the file, it names no issuer, card or account, and it is stored as provenance so the question is not asked again after a reload. It does not enter the reconciliation calculation. Approving it meant naming it in the browser allowlist, the state codec, the Pydantic model and the OpenAPI schema; a field added to only some of those is rejected at the first boundary that does not know it — and because the codec rejects a whole transaction that carries a key it does not recognise, that rejection costs the row, not the field.
+Two fields have been approved since.
+
+`cardKind` records whether a card was issued by the bank or outside it. It is a two-value enum chosen by the user rather than read from the file, it names no issuer, card or account, and it is stored as provenance so the question is not asked again after a reload. It does not enter the reconciliation calculation. Approving it meant naming it in the browser allowlist, the state codec, the Pydantic model and the OpenAPI schema; a field added to only some of those is rejected at the first boundary that does not know it — and because the codec rejects a whole transaction that carries a key it does not recognise, that rejection costs the row, not the field.
+
+`cardBrand` records which company issued a card, from a fixed list of eight the customer picks at import — no issuer export names itself, so the file cannot say. It is provenance shown in the row's source column, it names no card number, account or holder, and declining to answer stores nothing at all rather than recording a non-answer as a brand. It decides nothing about categorisation or reconciliation, and it reached the same four boundaries: browser allowlist, state codec, Pydantic model and OpenAPI schema.
 
 The Python API repeats this boundary with Pydantic models that forbid unknown fields, bound collection and payload sizes, reject account/card/CVV-like identifiers, and use the authenticated user's JWT plus owner-only RLS. Neither the API, Prometheus nor Grafana receives a PostgreSQL password or service-role key.
 

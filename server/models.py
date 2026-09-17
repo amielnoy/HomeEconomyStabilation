@@ -46,6 +46,11 @@ class Transaction(BaseModel):
     # Who issues the card, which is what decides whether its detail cancels the statement's
     # aggregate charge. Absent on rows imported before the distinction existed.
     cardKind: Literal["bank", "external"] | None = None
+    # Which company issued the card, as the customer answered it at import. Provenance
+    # shown on the row; it decides nothing about categorisation or reconciliation.
+    cardBrand: Literal[
+        "visa", "cal", "isracard", "diners", "amex", "max", "leumi", "other"
+    ] | None = None
     src: SnapshotSource
     id: str | None = Field(default=None, max_length=200)
     cat: str | None = Field(default=None, max_length=100)

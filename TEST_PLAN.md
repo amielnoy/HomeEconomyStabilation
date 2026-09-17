@@ -71,7 +71,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | File | Coverage |
 | --- | --- |
 | `tests/server/test_config.py` | Environment validation and strict bearer-token parsing |
-| `tests/server/test_models.py` | Pydantic allowlists, size bounds and financial-identifier rejection |
+| `tests/server/test_models.py` | Pydantic allowlists, size bounds, financial-identifier rejection, and the card issuer and card brand travelling with a row |
 | `tests/server/test_metrics.py` | Bounded route/method/operation labels and rejection of raw path or identity data in Prometheus output |
 | `tests/server/test_auth_flow.py` | Google sign-in primitives: the PKCE challenge as the hash of a verifier the browser never sees, unique verifiers and states per attempt, an authorize URL carrying the challenge but not the verifier, redirect targets limited to this deployment's origins, and a provider response accepted as a session only with both tokens and a bounded lifetime |
 | `tests/server/test_logging_config.py` | JSON-lines records in the shared shape, level names matching the browser, level filtering, handlers not stacking on reconfiguration, bounded route names, exceptions recorded by type without a traceback, every request logged with bounded metadata, a dated backup per day anchored to UTC, retention limits and their refusal of misconfiguration, the size cap surviving repeated same-day rollovers and pruning of the numbered copies |
