@@ -66,6 +66,7 @@ Each transaction row uses the native `.ds-field`-compatible category select iden
 - Alimony descriptions use the household/home category. A blank or ambiguous outgoing description remains `other`; the interface must not imply confidence that the available evidence does not support.
 - Changing the select is an explicit user action and may feed the learning agent. A proposed reusable rule still requires separate approval.
 - Category meaning is conveyed by translated text as well as the colored dot. Color never replaces the selected label.
+- On a row that carries money — a transaction, a card summary line, a recurring charge — the amount is written with its sign and coloured `--crit-text` when it leaves and `--good-text` when it arrives, and the dot beside the category carries the same direction: `--crit` for spending, `--good` for money arriving, the neutral for a transfer between the household's own accounts. The categorical slot hues stay in the charts and category lists, where telling one category from another is the job. Beside an amount they misread: the third slot is a green close to the income green, and every category past the eighth shares the grey that also stands for `other`.
 - Existing persisted rule sets are merged with new safe defaults by match/category identity, preserving user rules and manual overrides.
 
 ## Card summary line

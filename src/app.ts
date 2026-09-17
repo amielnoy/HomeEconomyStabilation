@@ -6,7 +6,7 @@ import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js
 import { runFinancialAgents, type FinancialAgentResults } from './financial-agents.js';
 import { LocalConsentRepository } from './consent.js';
 import { Logger, resolveLevel } from './logging.js';
-import type { AppState, BankTransaction, CardBrand, CardIssuer, Category, Rule } from './domain-model.js';
+import type { AppState, BankTransaction, CardBrand, CardIssuer, Category, CategoryKind, Rule } from './domain-model.js';
 import { AppStateCodec, LocalStorageStateRepository } from './state-repository.js';
 import { bankImporter, cleanTransactionText as clean, readsAsCardReport, transactionId as txId } from './bank-importer.js';
 import { RuleBasedTransactionCategorizer } from './categorization.js';
@@ -150,6 +150,18 @@ const catColor = (cats: readonly Category[], id: string | undefined) => {
   if (id === 'income') return 'var(--good)';
   const i = cats.filter((c) => c.id !== 'income').findIndex((c) => c.id === id);
   return i >= 0 && i < 8 ? SLOT[i] : 'var(--s0)';
+};
+
+/* On a row that carries money the dot says which way the money went, not which slot the
+   category holds. The categorical hues belong to the charts, where telling one category
+   from another is the whole job; beside an amount they misread. The third slot is a green
+   close enough to the income green that a supermarket charge read as money arriving, and
+   every category past the eighth shares the neutral grey that also stands for "other" —
+   so both the spending the household does most and the spending it added last were the
+   two that looked least like spending. */
+const flowColor = (row: { in: number; kind?: CategoryKind }) => {
+  if (row.kind === 'neutral') return 'var(--s0)';
+  return row.in > 0 ? 'var(--good)' : 'var(--crit)';
 };
 
 const DEFAULT_CATS: Category[] = [
@@ -1274,8 +1286,11 @@ function renderRecurring() {
   for (const r of rec.slice(0, 14)) {
     tb.append(el('tr', { 'data-testid': 'recurring-row' }, [
       el('td', { class: 'desc', text: r.label }),
-      el('td', {}, [el('span', { class: 'dot', style: `background:${catColor(S.cats, r.cat)}` }), catById(r.cat).name]),
-      el('td', { class: 'n', text: money2S(r.dir === 'in' ? r.amount : -r.amount) }),
+      el('td', {}, [el('span', { class: 'dot', style: `background:${flowColor({ in: r.dir === 'in' ? r.amount : 0, kind: catById(r.cat).kind })}` }), catById(r.cat).name]),
+      /* Coloured like the amounts in the transactions table: a recurring charge read in
+         the same ink as the day of the month it falls on gave a household no way to see,
+         at a glance, which of its fixed commitments take money and which bring it. */
+      el('td', { class: 'n ' + (r.dir === 'in' ? 'pos' : 'neg'), text: money2S(r.dir === 'in' ? r.amount : -r.amount), 'data-testid': 'recurring-amount' }),
       el('td', { class: 'n', text: r.day }),
       el('td', { class: 'n', text: t('occurrenceSummary', { count: r.count, months: r.months }) }),
       el('td', {}, el('span', { class: 'badge ' + (r.steady ? 'ok' : 'warn'), text: t(r.steady ? 'steady' : 'variable') })),
@@ -1307,7 +1322,7 @@ function transactionRow(transaction: BankTransaction, nested: boolean): DomEleme
   return el('tr', { class: nested ? 'cardcharge' : null, 'data-testid': 'transaction-row' }, [
     el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(transaction.date)) }),
     el('td', { class: 'desc', 'data-label': t('description'), text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
-    el('td', { class: 'catcell', 'data-label': t('category') }, [el('span', { class: 'dot', style: `background:${catColor(S.cats, transaction.cat)}` }), sel]),
+    el('td', { class: 'catcell', 'data-label': t('category') }, [el('span', { class: 'dot', style: `background:${flowColor(transaction)}`, 'data-testid': 'transaction-flow-dot' }), sel]),
     el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: sourceLabel(transaction), 'data-testid': 'transaction-source' }),
     el('td', { class: 'amountcell n ' + (transaction.in > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: amt, 'data-testid': 'transaction-amount' }),
     el('td', { class: 'n', 'data-label': t('balance'), text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
@@ -1345,7 +1360,7 @@ function cardGroupRow(group: CardChargeGroup): DomElement {
     el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(group.date)) }),
     el('td', { class: 'desc', 'data-label': t('description') }, toggle),
     el('td', { class: 'catcell', 'data-label': t('category') }, only
-      ? [el('span', { class: 'dot', style: `background:${catColor(S.cats, only)}` }), el('span', { text: catById(only).name })]
+      ? [el('span', { class: 'dot', style: `background:${flowColor({ in: group.in > group.out ? group.in : 0, kind: catById(only).kind })}` }), el('span', { text: catById(only).name })]
       : [el('span', { class: 'muted-cell', text: t('mixedCategories') })]),
     el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: brand, 'data-testid': 'card-group-source' }),
     el('td', { class: 'amountcell n ' + (net > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: money2S(net), 'data-testid': 'card-group-amount' }),
