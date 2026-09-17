@@ -169,6 +169,7 @@ const DEFAULT_CATS: Category[] = [
   { id: 'tax',      name: 'מיסים',          kind: 'expense' },
   { id: 'judaism',  name: 'יהדות',          kind: 'expense' },
   { id: 'donations', name: 'תרומות',        kind: 'expense' },
+  { id: 'computing', name: 'מחשוב',          kind: 'expense' },
   { id: 'fees',     name: 'עמלות וריבית',   kind: 'expense' },
   { id: 'other',    name: 'אחר',            kind: 'expense' },
   { id: 'income',   name: 'הכנסות',         kind: 'income'  },
@@ -178,7 +179,7 @@ const DEFAULT_RULES = [
   ['משיכה מבנקט', 'cash'], ['משיכת מזומן', 'cash'], ['בנקט', 'cash'], ['כספומט', 'cash'],
   ['ישראכרט', 'credit'], ['כאל', 'credit'], ['כ.א.ל', 'credit'], ['ויזה', 'credit'],
   ['מקס איט', 'credit'], ['לאומי קארד', 'credit'], ['אמריקן אקספרס', 'credit'], ['דיינרס', 'credit'],
-  ['חשמל', 'home'], ['מקורות', 'home'], ['תאגיד מים', 'home'], ['ארנונה', 'home'], ['עיריי', 'home'],
+  ['חשמל', 'home'], ['מקורות', 'home'], ['תאגיד מים', 'home'], ['ארנונה', 'home'], ['עיריי', 'home'], ['עירית', 'home'],
   ['בזק', 'home'], ['הוט', 'home'], ['סלקום', 'home'], ['פרטנר', 'home'], ['פלאפון', 'home'],
   ['ועד בית', 'home'], ['שכירות', 'home'], ['משכנתא', 'home'], ['פזגז', 'home'], ['סופרגז', 'home'],
   ['אמישראגז', 'home'],
@@ -189,15 +190,17 @@ const DEFAULT_RULES = [
   ['הלווא', 'loans'], ['הלוא', 'loans'],
   ['שופרסל', 'food'], ['רמי לוי', 'food'], ['ויקטורי', 'food'], ['יינות ביתן', 'food'],
   ['אושר עד', 'food'], ['טיב טעם', 'food'], ['יוחננוף', 'food'], ['מגה בעיר', 'food'],
+  ['פלאפל', 'food'], ['בית מאפה', 'food'], ['פירות וירקות', 'food'], ['מאפיית', 'food'],
   ['פז ', 'transit'], ['דלק ', 'transit'], ['סונול', 'transit'], ['דור אלון', 'transit'],
   ['רב קו', 'transit'], ['רב-קו', 'transit'], ['פנגו', 'transit'], ['סלופארק', 'transit'],
   ['חניון', 'transit'], ['רכבת', 'transit'], ['אגד', 'transit'],
+  ['דן חברה לתחבורה', 'transit'], ['מ.תחבורה', 'transit'], ['מנהרות הכרמל', 'transit'],
   ['מכבי', 'health'], ['כללית', 'health'], ['מאוחדת', 'health'], ['לאומית שר', 'health'],
   /* Ahead of 'ביטוח', which reads the whole name and would otherwise file an allowance as
      an insurance expense. Only the arriving side is claimed: the same wording leaves the
      account when someone self-employed pays the contribution, and that is not income. */
   ['ביטוח לאומי', 'income', 'in'],
-  ['ביטוח', 'health'], ['הראל', 'health'], ['מגדל', 'health'], ['מנורה', 'health'], ['הפניקס', 'health'],
+  ['אופטיק', 'health'], ['ביטוח', 'health'], ['הראל', 'health'], ['מגדל', 'health'], ['מנורה', 'health'], ['הפניקס', 'health'],
   /* After the household block on purpose: הוט and בזק sell television alongside the line
      the household actually pays for, and a bill is not an evening out. Before fees and
      savings, which match on wording general enough to claim a cinema or a gym first. */
@@ -220,7 +223,7 @@ const DEFAULT_RULES = [
   ['זארה', 'clothing'], ['zara', 'clothing'], ['h&m', 'clothing'], ['פול אנד בר', 'clothing'],
   ['דלתא', 'clothing'], ['שילב', 'clothing'], ['אדידס', 'clothing'], ['adidas', 'clothing'],
   ['נייקי', 'clothing'], ['nike', 'clothing'], ['נעלי', 'clothing'], ['הנעלה', 'clothing'],
-  ['ביגוד', 'clothing'], ['אופנה', 'clothing'],
+  ['ביגוד', 'clothing'], ['אופנה', 'clothing'], ['בגדי', 'clothing'], ['shein', 'clothing'],
   /* After the household and health blocks and before fees, savings and income. Each of
      those five claims wording a tax line uses too: 'העברה' for a standing order to the
      authority, 'שכר' for מס שכר, and 'ריבית' for the interest a late assessment adds.
@@ -253,11 +256,31 @@ const DEFAULT_RULES = [
   ['ידידים', 'donations'], ['עזר מציון', 'donations'], ['יד שרה', 'donations'],
   ['זיכרון מנחם', 'donations'], ['פתחון לב', 'donations'], ['לקט ישראל', 'donations'],
   ['חסדי נעמי', 'donations'], ['זק"א', 'donations'], ['איחוד הצלה', 'donations'],
+  ['ארגון הצלה', 'donations'], ['פעמונים', 'donations'], ['לב נותן', 'donations'],
+  /* After the household and leisure blocks, both of which own wording this one would
+     otherwise take: בזק, הוט, סלקום and פרטנר sell internet as a household bill, and
+     נטפליקס and ספוטיפיי are an evening in, not a software licence. Before fees and
+     savings, which claim a standing order for a subscription first.
+
+     Names are spelled out rather than stemmed. 'אפל' is the opening of אפליקציה, and
+     'aws' sits inside "draws", so both are named the long way or not at all. */
+  ['מחשבים', 'computing'], ['תוכנה', 'computing'], ['תוכנות', 'computing'],
+  ['ksp', 'computing'], ['קיי אס פי', 'computing'], ['אייבורי', 'computing'], ['ivory', 'computing'],
+  ['replit', 'computing'],
+  ['מיקרוסופט', 'computing'], ['microsoft', 'computing'], ['אופיס 365', 'computing'], ['office 365', 'computing'],
+  ['גוגל', 'computing'], ['google', 'computing'], ['apple.com', 'computing'], ['app store', 'computing'],
+  ['itunes', 'computing'], ['אדובי', 'computing'], ['adobe', 'computing'],
+  ['openai', 'computing'], ['chatgpt', 'computing'], ['anthropic', 'computing'], ['claude.ai', 'computing'],
+  ['github', 'computing'], ['jetbrains', 'computing'], ['figma', 'computing'], ['canva', 'computing'],
+  ['dropbox', 'computing'], ['icloud', 'computing'], ['onedrive', 'computing'],
+  ['amazon web', 'computing'], ['digitalocean', 'computing'], ['cloudflare', 'computing'],
+  ['godaddy', 'computing'], ['wix', 'computing'], ['וויקס', 'computing'], ['דומיין', 'computing'],
   ['עמלה', 'fees'], ['עמלות', 'fees'], ['עמלת', 'fees'], ['דמי כרטיס', 'fees'], ['ריבית', 'fees'], ['דמי ניהול', 'fees'],
   ['העברה', 'savings'], ['הפקדה', 'savings'], ['חיסכון', 'savings'], ['קרן השתלמות', 'savings'],
   ['גמל', 'savings'], ['פיקדון', 'savings'], ['ניירות ערך', 'savings'],
   ['משכורת', 'income'], ['שכר', 'income'], ['קצבה', 'income'],
   ['משיכה לחשבון הבנק', 'savings'], ['העברה לחשבון', 'savings'], ['העברה בנקאית', 'savings'],
+  ['paybox', 'savings'],
   ['מזונות', 'home'],
 ].map(([match, cat, when], i): Rule =>
   ({ id: 'r' + i, match: match!, cat: cat!, ...(when ? { when: when as 'in' | 'out' } : {}) }));

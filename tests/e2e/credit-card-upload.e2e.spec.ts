@@ -366,6 +366,31 @@ test('separates giving from the transfers and the synagogue it arrives beside', 
 /* Every category the defaults gained after launch, in one pass. Each used to carry its own
    near-identical copy of this test, so a new category was covered only if whoever added it
    remembered to clone one more — and the clone read the same three locales all over again. */
+/* Connectivity is the household's bill and streaming is an evening in; neither becomes
+   computing because a technology company sent the charge. */
+test('separates computing from the connectivity and streaming it arrives beside', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'computing.csv', mimeType: 'text/csv', buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,יתרה',
+      '03/09/2026,KSP מחשבים ותקשורת,4200,9000',
+      '04/09/2026,ADOBE CREATIVE CLOUD,180,8820',
+      '05/09/2026,GOOGLE STORAGE,45,8775',
+      '06/09/2026,בזק בינלאומי אינטרנט,120,8655',
+      '07/09/2026,נטפליקס,55,8600',
+    ].join('\n')),
+  });
+
+  await expect(homePage.dashboard.transactionCategories).toHaveCount(5);
+  const categoryOf = (merchant: string) => homePage.dashboard.transactionRows
+    .filter({ hasText: merchant }).getByTestId('transaction-category-select');
+
+  for (const merchant of ['KSP', 'ADOBE', 'GOOGLE']) {
+    await expect(categoryOf(merchant), `${merchant} is not computing`).toHaveValue('computing');
+  }
+  await expect(categoryOf('בזק')).toHaveValue('home');
+  await expect(categoryOf('נטפליקס')).toHaveValue('leisure');
+});
+
 test('offers every added category in every language', async ({ homePage }) => {
   await homePage.upload.uploadSampleBankReport();
   const picker = homePage.dashboard.transactionCategories.first();
@@ -378,6 +403,7 @@ test('offers every added category in every language', async ({ homePage }) => {
     tax:       { he: 'מיסים', en: 'Taxes', fr: 'Impôts' },
     judaism:   { he: 'יהדות', en: 'Judaism', fr: 'Judaïsme' },
     donations: { he: 'תרומות', en: 'Donations', fr: 'Dons' },
+    computing: { he: 'מחשוב', en: 'Computing & software', fr: 'Informatique' },
   } as const;
 
   for (const locale of ['he', 'en', 'fr'] as const) {
