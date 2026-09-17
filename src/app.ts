@@ -183,6 +183,7 @@ const DEFAULT_CATS: Category[] = [
   { id: 'judaism',  name: 'יהדות',          kind: 'expense' },
   { id: 'donations', name: 'תרומות',        kind: 'expense' },
   { id: 'computing', name: 'מחשוב',          kind: 'expense' },
+  { id: 'alimony',  name: 'מזונות',        kind: 'expense' },
   { id: 'fees',     name: 'עמלות וריבית',   kind: 'expense' },
   { id: 'other',    name: 'אחר',            kind: 'expense' },
   { id: 'income',   name: 'הכנסות',         kind: 'income'  },
@@ -294,7 +295,13 @@ const DEFAULT_RULES = [
   ['משכורת', 'income'], ['שכר', 'income'], ['קצבה', 'income'],
   ['משיכה לחשבון הבנק', 'savings'], ['העברה לחשבון', 'savings'], ['העברה בנקאית', 'savings'],
   ['paybox', 'savings'],
-  ['מזונות', 'home'],
+  /* Last, and deliberately: a maintenance payment is worded as a transfer to a person,
+     and the savings block above owns העברה and משיכה. Whatever wording the statement used
+     to move the money, if nothing earlier claimed it the payment itself is maintenance.
+     Scoped to money leaving — maintenance arriving is a household's income, not an
+     expense filed against it, and an expense category holding money that came in would
+     subtract it from the month. */
+  ['מזונות', 'alimony', 'out'],
 ].map(([match, cat, when], i): Rule =>
   ({ id: 'r' + i, match: match!, cat: cat!, ...(when ? { when: when as 'in' | 'out' } : {}) }));
 
