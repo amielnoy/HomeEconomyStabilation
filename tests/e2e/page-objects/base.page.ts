@@ -83,6 +83,13 @@ export abstract class BasePage {
     }, { minimum: minimumSize, skip: [...exceptions] });
   }
 
+  /**
+   * Measured inside the page, one evaluation per locator, rather than element by element
+   * over the wire. The settings drawer alone lists a control per default rule, and four
+   * round trips each — visible, box, label, text — ran the drawer's journey past the
+   * test timeout on WebKit: a scan that cannot finish reports nothing, which reads as a
+   * page with no undersized target on it.
+   */
   @step('Check that visible touch targets are large enough')
   async touchTargetsBelow(locator: Locator | readonly Locator[], minimumSize = 44): Promise<Array<{
     label: string;
@@ -90,21 +97,18 @@ export abstract class BasePage {
     height: number;
   }>> {
     const locators = Array.isArray(locator) ? locator : [locator];
-    const targets = (await Promise.all(locators.map((item) => item.all()))).flat();
-    const undersized = [];
-    for (const target of targets) {
-      if (!await target.isVisible()) continue;
-      const box = await target.boundingBox();
-      if (!box || (box.width >= minimumSize && box.height >= minimumSize)) continue;
-      undersized.push({
-        label: (await target.getAttribute('aria-label'))
-          || (await target.innerText()).trim().slice(0, 80)
-          || '<unlabelled>',
-        width: Math.round(box.width),
-        height: Math.round(box.height),
-      });
-    }
-    return undersized;
+    const measured = await Promise.all(locators.map((item) => item.evaluateAll((nodes, minimum) => nodes
+      .flatMap((node) => {
+        const box = node.getBoundingClientRect();
+        if (box.width === 0 || box.height === 0 || getComputedStyle(node).visibility === 'hidden') return [];
+        if (box.width >= minimum && box.height >= minimum) return [];
+        return [{
+          label: (node.getAttribute('aria-label') || node.textContent || '').trim().slice(0, 80) || '<unlabelled>',
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+        }];
+      }), minimumSize)));
+    return measured.flat();
   }
 
 }
