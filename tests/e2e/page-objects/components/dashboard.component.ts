@@ -30,6 +30,7 @@ export class DashboardComponent {
   readonly spendingGuideDate = this.page.getByTestId('spending-guide-date');
   readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
   readonly recurringRows = this.page.getByTestId('recurring-row');
+  readonly recurringAmounts = this.page.getByTestId('recurring-amount');
   readonly transactionAmounts = this.page.getByTestId('transaction-amount');
   readonly recommendationButton = this.page.getByTestId('btn-recommendations');
   readonly recommendations = this.page.getByTestId('recommendations');

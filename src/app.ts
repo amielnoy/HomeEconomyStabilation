@@ -1264,7 +1264,10 @@ function renderRecurring() {
     tb.append(el('tr', { 'data-testid': 'recurring-row' }, [
       el('td', { class: 'desc', text: r.label }),
       el('td', {}, [el('span', { class: 'dot', style: `background:${flowColor({ in: r.dir === 'in' ? r.amount : 0, kind: catById(r.cat).kind })}` }), catById(r.cat).name]),
-      el('td', { class: 'n', text: money2S(r.dir === 'in' ? r.amount : -r.amount) }),
+      /* Coloured like the amounts in the transactions table: a recurring charge read in
+         the same ink as the day of the month it falls on gave a household no way to see,
+         at a glance, which of its fixed commitments take money and which bring it. */
+      el('td', { class: 'n ' + (r.dir === 'in' ? 'pos' : 'neg'), text: money2S(r.dir === 'in' ? r.amount : -r.amount), 'data-testid': 'recurring-amount' }),
       el('td', { class: 'n', text: r.day }),
       el('td', { class: 'n', text: t('occurrenceSummary', { count: r.count, months: r.months }) }),
       el('td', {}, el('span', { class: 'badge ' + (r.steady ? 'ok' : 'warn'), text: t(r.steady ? 'steady' : 'variable') })),
