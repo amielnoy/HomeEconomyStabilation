@@ -29,6 +29,17 @@ export class DashboardComponent {
   readonly spendingGuideAsOf = this.page.getByTestId('spending-guide-asof');
   readonly spendingGuideDate = this.page.getByTestId('spending-guide-date');
   readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
+  readonly plan = this.page.getByTestId('plan');
+  readonly planIncome = this.page.getByTestId('plan-section-income');
+  readonly planFixed = this.page.getByTestId('plan-section-fixed');
+  readonly planVariable = this.page.getByTestId('plan-section-variable');
+  readonly planSavings = this.page.getByTestId('plan-section-savings');
+  readonly planSectionTotals = this.page.getByTestId('plan-section-total');
+  readonly planLines = this.page.getByTestId('plan-line');
+  readonly planSurplus = this.page.getByTestId('plan-surplus');
+  readonly planBottom = this.page.getByTestId('plan-bottom');
+  readonly planBar = this.page.getByTestId('plan-bar');
+  readonly planNote = this.page.getByTestId('plan-note');
   readonly recurringRows = this.page.getByTestId('recurring-row');
   readonly recurringAmounts = this.page.getByTestId('recurring-amount');
   readonly transactionAmounts = this.page.getByTestId('transaction-amount');
