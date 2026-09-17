@@ -481,6 +481,8 @@
   "cardIssuerLabel": "Which company issued the card?",
   "sourceBank": "Bank",
   "sourceCardUnknown": "Credit card",
+  "fileReadAsCardReport": "{file} was read as a card report: its columns are a card statement’s rather than an account’s, so the charges were recorded as spending.",
+  "filesReadAsCardReports": "{count} files were read as card reports, going by their columns.",
   "sourceManualEntry": "Manual entry",
   "cardBrand.visa": "Visa",
   "cardBrand.cal": "Cal",

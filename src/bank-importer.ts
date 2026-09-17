@@ -69,6 +69,29 @@ const findHeader = (rows: ReadonlyArray<ReadonlyArray<SpreadsheetCell | null>>) 
   return null;
 };
 
+/* The columns a card report brings and a statement never does. A statement is an account:
+   it carries a running balance, or a debit and a credit column. A card report is a list of
+   charges at named businesses, and nothing else. */
+const MERCHANT_DESC = [/שם\s*בית\s*עסק/, /בית\s*עסק/, /שם\s*העסק/, /merchant/i, /business/i];
+
+/* Which reader a file needs is a property of the file, not of the button it arrived
+   through. Loaded as a statement, a card report's single amount column reads as money
+   arriving, and a household's whole month of spending is filed as income — which is what
+   this answers. Deliberately narrow: a balance column or a credit column means an account,
+   whatever else the sheet says. */
+export function readsAsCardReport(workbook: Workbook): boolean {
+  let cardShaped = false;
+  for (const sheet of workbook.sheets) {
+    const rows = sheet.rows ?? [];
+    const header = findHeader(rows);
+    if (!header) continue;
+    if (header.map.bal !== undefined || header.map.in !== undefined) return false;
+    const heading = cleanTransactionText((rows[header.row] ?? [])[header.map.desc ?? -1]?.v);
+    if (headerMatches(MERCHANT_DESC, heading)) cardShaped = true;
+  }
+  return cardShaped;
+}
+
 export function transactionId(transaction: Pick<BankTransaction, 'date' | 'ref' | 'out' | 'in' | 'desc'>): string {
   const raw = [transaction.date, transaction.ref, transaction.out.toFixed(2), transaction.in.toFixed(2), transaction.desc].join('|');
   let hash = 5381;

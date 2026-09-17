@@ -398,6 +398,8 @@
   "cardIssuerLabel": "מי הנפיק את הכרטיס?",
   "sourceBank": "בנק",
   "sourceCardUnknown": "כרטיס אשראי",
+  "fileReadAsCardReport": "{file} נקרא כדוח אשראי: העמודות שלו הן של דוח כרטיס ולא של דף חשבון, והחיובים נרשמו כהוצאה.",
+  "filesReadAsCardReports": "{count} קבצים נקראו כדוחות אשראי לפי העמודות שלהם.",
   "sourceManualEntry": "הזנה ידנית",
   "cardBrand.visa": "ויזה",
   "cardBrand.cal": "כאל",

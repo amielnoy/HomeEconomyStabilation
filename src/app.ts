@@ -8,7 +8,7 @@ import { LocalConsentRepository } from './consent.js';
 import { Logger, resolveLevel } from './logging.js';
 import type { AppState, BankTransaction, CardBrand, CardIssuer, Category, Rule } from './domain-model.js';
 import { AppStateCodec, LocalStorageStateRepository } from './state-repository.js';
-import { bankImporter, cleanTransactionText as clean, transactionId as txId } from './bank-importer.js';
+import { bankImporter, cleanTransactionText as clean, readsAsCardReport, transactionId as txId } from './bank-importer.js';
 import { RuleBasedTransactionCategorizer } from './categorization.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
@@ -1621,6 +1621,9 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
   /* A count of unreadable files leaves the customer with nothing to act on and support
      with nothing to diagnose. Each failure carries its own reason instead. */
   const failures: string[] = [];
+  /* Said out loud rather than quietly corrected: the customer chose one control and the
+     rows arrived through the other reader. */
+  const reclassified: string[] = [];
   const have = new Set(S.tx.map((t) => t.id));
   for (const file of files) {
     try {
@@ -1636,7 +1639,16 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
         sheets: wb.sheets.length,
         rows: wb.sheets.reduce((total, sheet) => total + sheet.rows.length, 0),
       });
-      const { rows, account } = source === 'card'
+      /* A card report chosen through the statement control is still a card report. Read
+         as a statement its single amount column means money arriving, and a household's
+         whole month of spending is filed as income — so the file decides the reader, and
+         the message says which one read it rather than letting it pass silently. */
+      const asCardReport = source === 'bank' && readsAsCardReport(wb);
+      if (asCardReport) {
+        log.info('report.read.reclassified', { source, readAs: 'card' });
+        reclassified.push(t('fileReadAsCardReport', { file: isolate(file.name) }));
+      }
+      const { rows, account } = source === 'card' || asCardReport
         ? importCardWorkbook(wb, file.name)
         : bankImporter.import(wb, file.name, source);
       if (!rows.length) {
@@ -1673,6 +1685,7 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
   const parts = [];
   if (added) parts.push(t('transactionsAdded', { count: added }));
   if (dup) parts.push(t('transactionsDuplicated', { count: dup }));
+  if (reclassified.length) parts.push(reclassified.length > 2 ? t('filesReadAsCardReports', { count: reclassified.length }) : reclassified.join(' · '));
   /* One or two failures are worth spelling out; a batch of them would fill the screen. */
   if (failures.length) parts.push(failures.length > 2 ? t('filesUnreadable', { count: failures.length }) : failures.join(' · '));
   toast(parts.join(' · ') || t('noTransactionsInFile'));

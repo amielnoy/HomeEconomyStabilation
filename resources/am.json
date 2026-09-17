@@ -481,6 +481,8 @@
   "cardIssuerLabel": "ካርዱን ያወጣው የትኛው ኩባንያ ነው?",
   "sourceBank": "ባንክ",
   "sourceCardUnknown": "የክሬዲት ካርድ",
+  "fileReadAsCardReport": "{file} እንደ የካርድ ሪፖርት ተነበበ፦ ዓምዶቹ የካርድ እንጂ የሒሳብ መግለጫ አይደሉም፣ ስለዚህ ክፍያዎቹ እንደ ወጪ ተመዝግበዋል።",
+  "filesReadAsCardReports": "{count} ፋይሎች በዓምዶቻቸው መሠረት እንደ የካርድ ሪፖርቶች ተነበቡ።",
   "sourceManualEntry": "በእጅ የገባ",
   "cardBrand.visa": "ቪዛ",
   "cardBrand.cal": "ካል",
