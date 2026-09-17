@@ -8,6 +8,7 @@ export class DashboardComponent {
   readonly transactionBalances = this.page.getByTestId('transaction-balance');
   readonly transactionCategories = this.page.getByTestId('transaction-category-select');
   readonly transactionSources = this.page.getByTestId('transaction-source');
+  readonly transactionFlowDots = this.page.getByTestId('transaction-flow-dot');
   readonly transactionCount = this.page.getByTestId('tx-count');
   readonly transactionView = this.page.getByTestId('f-view');
   readonly cardGroupRows = this.page.getByTestId('card-group-row');
@@ -75,6 +76,21 @@ export class DashboardComponent {
       if (box.left >= -0.5 && box.right <= window.innerWidth + 0.5) return [];
       return [{ text: (cell.textContent || '').trim(), left: Math.round(box.left), right: Math.round(box.right) }];
     }));
+  }
+
+  /** A colour token as the browser resolves it, so a test can say "the colour money
+      leaving is drawn in" instead of pinning an rgb triple that the theme is entitled
+      to change. */
+  @step('Resolve a design-system colour token')
+  async resolvedColour(token: string): Promise<string> {
+    return this.root.evaluate((host, name) => {
+      const probe = document.createElement('span');
+      probe.style.color = `var(${name})`;
+      host.append(probe);
+      const value = getComputedStyle(probe).color;
+      probe.remove();
+      return value;
+    }, token);
   }
 
   /** Open every card folded into a summary line, so the charges behind the sums can be

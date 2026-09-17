@@ -88,3 +88,21 @@ test('reports the same count and totals in both views', async ({ homePage }) => 
 
   await expect(homePage.dashboard.transactionCount).toHaveText(folded);
 });
+
+/* The dot beside the category used to carry the category's slot colour, and the slots
+   are a chart palette: the third is a green close enough to the income green that a
+   supermarket charge read as money arriving, and everything past the eighth shared the
+   grey that also means "other". Beside an amount the dot has one job — which way the
+   money went. */
+test('draws the dot in the colour of the money, not of the category slot', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport(statement());
+
+  const dotOf = (merchant: string) => homePage.dashboard.transactionRows
+    .filter({ hasText: merchant }).getByTestId('transaction-flow-dot');
+  const leaving = await homePage.dashboard.resolvedColour('--crit');
+  const arriving = await homePage.dashboard.resolvedColour('--good');
+
+  await expect(dotOf('שופרסל דיל')).toHaveCSS('background-color', leaving);
+  await expect(dotOf('משכורת')).toHaveCSS('background-color', arriving);
+  expect(leaving).not.toBe(arriving);
+});
