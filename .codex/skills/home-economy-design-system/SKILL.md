@@ -9,7 +9,7 @@ Treat `design-system.css` as the source of truth for tokens and reusable visual 
 
 Preserve the public `.btn` and `.card` migration aliases until their callers are deliberately migrated. New reusable actions and fields should use `.ds-button` and `.ds-field`; use semantic variants and tones instead of inline colors. Keep light, dark, increased-contrast, forced-colors, reduced-motion, RTL/LTR, French and Amharic behavior aligned.
 
-Do not rename or remove `data-testid` values as a styling cleanup. Maintain at least 48px touch targets on mobile, visible keyboard focus, text-based meaning in addition to color, and logical CSS properties for directional layout.
+Never add a field that could collect a credential for a third-party service; where another party must authenticate the customer, the design sends them there and says so. Do not rename or remove `data-testid` values as a styling cleanup. Maintain at least 48px touch targets on mobile, visible keyboard focus, text-based meaning in addition to color, and logical CSS properties for directional layout.
 
 After material changes:
 
