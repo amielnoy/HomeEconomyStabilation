@@ -57,11 +57,12 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/unit/logging.unit.test.ts` | Shared record shape, level filtering, bounded ring buffer, redaction of financial identifiers, refusal of structured values, console mirroring, JSON-lines output, runtime level resolution, dated daily copies, the midnight roll, retention pruning, archive ordering and storage exhaustion yielding the log rather than the state |
 | `tests/unit/localization.unit.test.ts` | Supported locale validation, RTL/LTR, UTC formatting and named parameters |
 | `tests/unit/credit-card-importer.unit.test.ts` | Charges, refunds, headings with the definite article, billed versus transaction amounts, metadata rows above the heading, multi-sheet cards, pending sheets and invalid workbook rows |
-| `tests/unit/bank-importer.unit.test.ts` | Hebrew and English bank headers, account extraction, card-source signed amounts, transaction normalization and stable IDs |
+| `tests/unit/bank-importer.unit.test.ts` | Hebrew and English bank headers, account extraction, card-source signed amounts, recognising a card report by its columns rather than by the control it arrived through, transaction normalization and stable IDs |
 | `tests/unit/categorization.unit.test.ts` | Transfer/alimony classification, unknown fallbacks, income and manual-override precedence, and a direction-scoped rule claiming only the side it names |
 | `tests/unit/marketing.unit.test.ts` | Allowed attribution, first/last touch and bounded local event history |
 | `tests/unit/privacy.unit.test.ts` | Identifier redaction, allowlisted snapshots and removal/rejection of unknown sensitive properties |
 | `tests/unit/state-repository.unit.test.ts` | Runtime state validation, safe migration, default-rule merge, newly added default categories returning at their own position, card-issuer round trip, a saved rule keeping the direction it was written with, prototype-key refusal and persistence round-trip |
+| `tests/unit/transaction-view.unit.test.ts` | Folding card charges into one line per issuer beside statement rows, each issuer kept apart, an unnamed card folded without joining a named one, refunds carried into the card they arrived on, the summary dated by its newest charge, statement order preserved, and charges itemised where no statement row stands beside them |
 | `tests/unit/cloud-sync.unit.test.ts` | Privacy-safe schema-v2 validation, signed-out behavior, auth headers, failures, timeout and DELETE |
 | `tests/unit/cloud-metadata.unit.test.ts` | Authenticated Supabase profile/consent reads and writes, response validation, safe auth headers and withdrawal |
 | `tests/unit/consent.unit.test.ts` | Versioned consent, malformed records and withdrawal |
@@ -101,7 +102,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 
 | File | Coverage |
 | --- | --- |
-| `tests/contract/design-system-contract.test.ts` | Semantic tokens, recipe ownership, variants, disabled/focus states, contrast preferences, touch targets, typography and directional drawers |
+| `tests/contract/design-system-contract.test.ts` | Semantic tokens, recipe ownership, variants, disabled/focus states, contrast preferences, touch targets, the card summary line's focus ring and touch target, typography and directional drawers |
 | `tests/contract/discovery.contract.test.ts` | Assistant-crawler allowlist, canonical URL and duplicate suppression, sitemap and llms.txt link resolution, structured-data graph integrity, IndexNow key ownership, variable-font face declarations and deployment of every discovery file |
 | `tests/contract/documentation-contract.test.ts` | README, architecture, design system, privacy, Supabase, TODO, monitoring and this test plan stay synchronized |
 | `tests/contract/default-rules.contract.test.ts` | No default rule left unreachable behind an earlier rule of another category, no exact duplicates, and the national-insurance allowance filed as income rather than as an insurance expense |
@@ -146,6 +147,8 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/e2e/credit-card-upload.e2e.spec.ts` | Real workbook import across CSV, SpreadsheetML, .xlsx with and without cell references, windows-1255 encoding and English column names, multi-file imports, localized unrecognised-layout reporting, duplicate re-imports, header labels after import, evidence-based transfer/alimony categorization, leisure, studies, clothing, taxes, Jewish life, giving and computing each separated from the bills, salary, shops, transfers, restaurants and streaming they arrive beside, every added category offered in every language, honest unknown fallback, upload availability and recommendations |
 | `tests/e2e/statement-categorisation.e2e.spec.ts` | Merchant names from a real statement that the defaults filed as other or filed wrongly: both spellings of a municipality, a computer chain named in Hebrew, clothing, a charity, an optician, a city bus operator, a falafel stand and a payment app |
 | `tests/e2e/transaction-source.e2e.spec.ts` | Every row naming where its figure came from: the bank on statement rows, the issuer the customer chose on card rows, a card whose issuer was not named saying only that, the answer surviving a reload, an issuer not carrying over to a later import, and the column offered in every language |
+| `tests/e2e/card-summary-view.e2e.spec.ts` | The transactions table opening on statement rows with each card folded to the sum it charged, opening a card onto the charges behind it, itemising every charge on request, a card report without a statement staying itemised, and the count and totals reading the same in both views |
+| `tests/e2e/report-reader.e2e.spec.ts` | A card report chosen through the statement control being read by its columns and filed as spending rather than as income, the message naming which reader read it, and a statement staying with the statement reader |
 | `tests/e2e/card-reconciliation.e2e.spec.ts` | A card settlement and its itemised card lines are counted once, not twice |
 | `tests/e2e/financial-agents.e2e.spec.ts` | Eight agents, saving evidence, safe-to-spend, explicit approvals and translation |
 | `tests/e2e/i18n-dynamic.e2e.spec.ts` | Generated English, French and Amharic copy without Hebrew leakage |

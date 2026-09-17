@@ -474,6 +474,20 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
 .rulerow input, .budrow input, .rulerow select{ font-family:var(--ds-font-body); min-height:40px; }
 .filters input[type=search]{ flex:1 1 200px; }
 .empty-row{ text-align:center; color:var(--muted); padding:26px 0; font-size:14px; }
+/* A card folded to the sum it was charged, and the charges opened underneath it. The
+   summary sits on its own tone so it reads as a heading for the lines below rather than
+   as one more line beside them. */
+tr.cardgroup > td{ background:var(--surface-2); }
+.cardgroup-toggle{
+  display:inline-flex; align-items:center; gap:7px; min-height:24px;
+  background:none; border:0; padding:2px 0; font:inherit; font-weight:600;
+  color:var(--ink); cursor:pointer; text-align:start;
+}
+.cardgroup-caret{ color:var(--muted); font-size:11px; }
+.cardgroup-toggle:focus-visible{ outline:2px solid var(--ds-action); outline-offset:3px; border-radius:6px; }
+tr.cardcharge > td:first-child{ border-inline-start:3px solid var(--ds-action-border, var(--line-2)); }
+tr.cardcharge > td.desc{ padding-inline-start:20px; }
+.muted-cell{ color:var(--muted); font-size:12.5px; }
 
 /* =========================================================== drawer ====== */
 .scrim{
@@ -594,6 +608,7 @@ body.drawer-open{ overflow:hidden; }
   .rulerow input,.budrow input,.rulerow select,
   summary,
   .catsel,
+  .cardgroup-toggle,
   input,select,textarea{
     min-height:48px;
   }
@@ -624,6 +639,10 @@ body.drawer-open{ overflow:hidden; }
     font-weight:500; flex:0 0 auto;
   }
   #tx td:empty{ display:none; }
+  #tx tr.cardcharge{ margin-inline-start:16px; border-inline-start:3px solid var(--ds-action-border, var(--line-2)); }
+  #tx tr.cardcharge > td:first-child{ border-inline-start:0; }
+  #tx tr.cardcharge > td.desc{ padding-inline-start:0; }
+  #tx tr.cardgroup > td{ background:transparent; }
   #tx td.desc{ font-weight:600; }
   #tx td.amountcell{ font-size:17px; font-weight:700; }
   #tx td.catcell{ flex-wrap:wrap; }
@@ -1127,6 +1146,10 @@ body.drawer-open{ overflow:hidden; }
         <select id="f-scope" aria-label="טווח" data-i18n-aria-label="range" data-testid="f-scope">
           <option value="month" data-i18n="selectedMonth">החודש הנבחר</option>
           <option value="all" data-i18n="allHistory">כל ההיסטוריה</option>
+        </select>
+        <select id="f-view" aria-label="תצוגת התנועות" data-i18n-aria-label="transactionView" data-testid="f-view">
+          <option value="bank-with-card-totals" data-i18n="viewBankWithCardTotals">בנק וסיכום כרטיסים</option>
+          <option value="every-charge" data-i18n="viewEveryCharge">כל החיובים</option>
         </select>
       </div>
       <p class="table-scroll-hint" id="tx-scroll-hint" data-i18n="transactionTableScrollHint" data-testid="tx-scroll-hint">החליקו לצדדים כדי לראות את כל העמודות.</p>

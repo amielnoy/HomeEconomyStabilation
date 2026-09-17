@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BankImportStrategy } from '../../src/bank-importer';
+import { BankImportStrategy, readsAsCardReport } from '../../src/bank-importer';
 import type { Workbook } from '../../src/credit-card-importer';
 
 describe('bank import strategy', () => {
@@ -47,5 +47,57 @@ describe('bank import strategy', () => {
 
     expect(result.rows[0]).toMatchObject({ out: 431, in: 0, source: 'card' });
     expect(result.rows[1]).toMatchObject({ out: 0, in: 60 });
+  });
+});
+
+/* A household loads the file it has through whichever control it happened to click, and
+   a card report read as a statement turns a month of spending into a month of income:
+   its one amount column means money arriving on the statement path. What the file is
+   therefore has to be read from the file. */
+describe('recognising a card report by its columns', () => {
+  const sheet = (rows: Array<Array<{ t: 's' | 'n'; v: string | number } | null>>): Workbook =>
+    ({ sheets: [{ name: 'Sheet1', rows }] });
+  const header = (...labels: string[]) => labels.map((v) => ({ t: 's' as const, v }));
+
+  it('reads a merchant list with a single amount column as a card report', () => {
+    expect(readsAsCardReport(sheet([
+      header('תאריך העסקה', 'שם בית העסק', 'סכום'),
+      [{ t: 's', v: '03/09/2026' }, { t: 's', v: 'פלאפל הקריה' }, { t: 'n', v: 33 }],
+    ]))).toBe(true);
+  });
+
+  /* A running balance means an account, whatever the other columns are called. */
+  it('leaves a statement carrying a balance to the statement reader', () => {
+    expect(readsAsCardReport(sheet([
+      header('תאריך', 'תיאור פעולה', 'סכום', 'יתרה'),
+      [{ t: 's', v: '03/09/2026' }, { t: 's', v: 'משכורת' }, { t: 'n', v: 29000 }, { t: 'n', v: 24000 }],
+    ]))).toBe(false);
+  });
+
+  it('leaves a statement with a debit and a credit column to the statement reader', () => {
+    expect(readsAsCardReport(sheet([
+      header('תאריך', 'תיאור פעולה', 'חובה', 'זכות'),
+      [{ t: 's', v: '03/09/2026' }, { t: 's', v: 'שופרסל דיל' }, { t: 'n', v: 400 }, null],
+    ]))).toBe(false);
+  });
+
+  /* A statement's own description column says nothing about a business, and a file with
+     no recognisable heading at all is not evidence of anything. */
+  it('does not reclassify a statement whose description column is its own', () => {
+    expect(readsAsCardReport(sheet([
+      header('תאריך', 'פרטים', 'סכום'),
+      [{ t: 's', v: '03/09/2026' }, { t: 's', v: 'העברה' }, { t: 'n', v: 500 }],
+    ]))).toBe(false);
+    expect(readsAsCardReport(sheet([[{ t: 's', v: 'עמודה א' }, { t: 's', v: 'עמודה ב' }]]))).toBe(false);
+  });
+
+  it('files the same charge as spending once the file is read as a card report', () => {
+    const workbook = sheet([
+      header('תאריך העסקה', 'שם בית העסק', 'סכום'),
+      [{ t: 's', v: '03/09/2026' }, { t: 's', v: 'פלאפל הקריה' }, { t: 'n', v: 33 }],
+    ]);
+
+    expect(new BankImportStrategy().import(workbook, 'f.csv', 'bank').rows[0]).toMatchObject({ out: 0, in: 33 });
+    expect(new BankImportStrategy().import(workbook, 'f.csv', 'card').rows[0]).toMatchObject({ out: 33, in: 0 });
   });
 });

@@ -40,6 +40,9 @@ test('names the bank as the source of every statement row', async ({ homePage })
 test('names the issuer the customer chose on the rows a card report brought in', async ({ homePage }) => {
   await homePage.upload.uploadBankReport(statement());
   await homePage.upload.uploadCreditCardReport(cardReport(), 'external', 'isracard');
+  /* The card folds to one summary line beside a statement; the issuer on the charge rows
+     themselves is what this test is about, so they are opened. */
+  await homePage.dashboard.openCardSummaries();
 
   const sourceOf = (merchant: string) => homePage.dashboard.transactionRows
     .filter({ hasText: merchant }).getByTestId('transaction-source');

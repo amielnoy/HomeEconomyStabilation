@@ -8,8 +8,9 @@ import { LocalConsentRepository } from './consent.js';
 import { Logger, resolveLevel } from './logging.js';
 import type { AppState, BankTransaction, CardBrand, CardIssuer, Category, Rule } from './domain-model.js';
 import { AppStateCodec, LocalStorageStateRepository } from './state-repository.js';
-import { bankImporter, cleanTransactionText as clean, transactionId as txId } from './bank-importer.js';
+import { bankImporter, cleanTransactionText as clean, readsAsCardReport, transactionId as txId } from './bank-importer.js';
 import { RuleBasedTransactionCategorizer } from './categorization.js';
+import { transactionViewRows, type CardChargeGroup, type TransactionViewMode } from './transaction-view.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
 interface DomElement extends HTMLElement { value: string; files: FileList | null; reset(): void; }
@@ -1285,9 +1286,78 @@ function renderRecurring() {
 }
 
 /* -------------------------------------------------------- transactions -- */
+/* Which cards the reader has opened in the summary view. Held in memory rather than
+   saved: it is where someone is looking right now, not a fact about their household. */
+const openCardGroups = new Set<string>();
+
+/* `nested` marks a charge shown underneath the card it belongs to, so the indent says
+   what the row is part of. The row is otherwise the same row — the category can still be
+   corrected from inside an opened card. */
+function transactionRow(transaction: BankTransaction, nested: boolean): DomElement {
+  const sel = el('select', { class: 'catsel', 'aria-label': t('categoryForTransaction', { description: transaction.desc }), 'data-testid': 'transaction-category-select' });
+  for (const c of S.cats) sel.append(el('option', { value: c.id, text: catById(c.id).name, selected: c.id === transaction.cat }));
+  sel.addEventListener('change', () => {
+    if (transaction.id) S.overrides[transaction.id] = sel.value;
+    save(); render();
+    toast(t('categoryUpdatedToast'));
+  });
+  const amt = money2S(transaction.in > 0 ? transaction.in : -transaction.out);
+  /* data-label carries the column heading into the stacked mobile layout, where
+     there is no header row to read the cell against. */
+  return el('tr', { class: nested ? 'cardcharge' : null, 'data-testid': 'transaction-row' }, [
+    el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(transaction.date)) }),
+    el('td', { class: 'desc', 'data-label': t('description'), text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
+    el('td', { class: 'catcell', 'data-label': t('category') }, [el('span', { class: 'dot', style: `background:${catColor(S.cats, transaction.cat)}` }), sel]),
+    el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: sourceLabel(transaction), 'data-testid': 'transaction-source' }),
+    el('td', { class: 'amountcell n ' + (transaction.in > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: amt, 'data-testid': 'transaction-amount' }),
+    el('td', { class: 'n', 'data-label': t('balance'), text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
+    el('td', { class: 'refcell n', 'data-label': t('reference'), text: transaction.ref }),
+  ]);
+}
+
+/* One line for a card, carrying the sum it was charged — what the statement's own
+   settlement line says. The charges behind it are one click away rather than gone,
+   because a household that wants to know what the sum was made of has nowhere else
+   to look. */
+function cardGroupRow(group: CardChargeGroup): DomElement {
+  const open = openCardGroups.has(group.key);
+  /* Built before the call, as in sourceLabel: a key spliced inside t() reads as a literal
+     to the contract test that checks every requested key exists. */
+  const brandKey = 'cardBrand.' + group.brand;
+  const brand = group.brand ? t(brandKey) : t('sourceCardUnknown');
+  const toggle = el('button', {
+    type: 'button', class: 'cardgroup-toggle', 'aria-expanded': String(open),
+    'data-testid': 'card-group-toggle',
+  }, [
+    el('span', { class: 'cardgroup-caret', 'aria-hidden': 'true', text: open ? '▾' : '▸' }),
+    el('span', { text: group.count === 1
+      ? t('cardChargeSummaryOne', { source: brand })
+      : t('cardChargeSummary', { source: brand, count: group.count }) }),
+  ]);
+  toggle.addEventListener('click', () => {
+    if (open) openCardGroups.delete(group.key); else openCardGroups.add(group.key);
+    renderTx();
+  });
+  const cats = new Set(group.charges.map((charge) => charge.cat));
+  const only = cats.size === 1 ? [...cats][0] : undefined;
+  const net = group.in - group.out;
+  return el('tr', { class: 'cardgroup', 'data-testid': 'card-group-row' }, [
+    el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(group.date)) }),
+    el('td', { class: 'desc', 'data-label': t('description') }, toggle),
+    el('td', { class: 'catcell', 'data-label': t('category') }, only
+      ? [el('span', { class: 'dot', style: `background:${catColor(S.cats, only)}` }), el('span', { text: catById(only).name })]
+      : [el('span', { class: 'muted-cell', text: t('mixedCategories') })]),
+    el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: brand, 'data-testid': 'card-group-source' }),
+    el('td', { class: 'amountcell n ' + (net > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: money2S(net), 'data-testid': 'card-group-amount' }),
+    el('td', { class: 'n' }),
+    el('td', { class: 'refcell n' }),
+  ]);
+}
+
 function renderTx() {
   const q = clean($('#q').value).toLowerCase();
   const fc = $('#f-cat').value, fd = $('#f-dir').value, fs = $('#f-scope').value;
+  const view = $('#f-view').value as TransactionViewMode;
   let list = fs === 'all' ? S.tx : txOfMonth(S.month);
   if (fc) list = list.filter((t) => t.cat === fc);
   if (fd === 'out') list = list.filter((t) => t.out > 0);
@@ -1296,6 +1366,8 @@ function renderTx() {
 
   const body = $('#tx-body');
   body.textContent = '';
+  /* Counted and summed over the charges themselves, whichever view is showing: folding
+     a card into one line changes how the month reads, never what it came to. */
   $('#tx-count').textContent = t('transactionTotals', {
     count: list.length,
     out: money(list.reduce((a, transaction) => a + transaction.out, 0)),
@@ -1306,29 +1378,16 @@ function renderTx() {
     body.append(el('tr', {}, el('td', { colspan: 7, class: 'empty-row', text: t('noMatchingTransactions') })));
     return;
   }
-  for (const transaction of list.slice(0, 400)) {
-    const sel = el('select', { class: 'catsel', 'aria-label': t('categoryForTransaction', { description: transaction.desc }), 'data-testid': 'transaction-category-select' });
-    for (const c of S.cats) sel.append(el('option', { value: c.id, text: catById(c.id).name, selected: c.id === transaction.cat }));
-    sel.addEventListener('change', () => {
-      if (transaction.id) S.overrides[transaction.id] = sel.value;
-      save(); render();
-      toast(t('categoryUpdatedToast'));
-    });
-    const amt = money2S(transaction.in > 0 ? transaction.in : -transaction.out);
-    /* data-label carries the column heading into the stacked mobile layout, where
-       there is no header row to read the cell against. */
-    body.append(el('tr', { 'data-testid': 'transaction-row' }, [
-      el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(transaction.date)) }),
-      el('td', { class: 'desc', 'data-label': t('description'), text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
-      el('td', { class: 'catcell', 'data-label': t('category') }, [el('span', { class: 'dot', style: `background:${catColor(S.cats, transaction.cat)}` }), sel]),
-      el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: sourceLabel(transaction), 'data-testid': 'transaction-source' }),
-      el('td', { class: 'amountcell n ' + (transaction.in > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: amt, 'data-testid': 'transaction-amount' }),
-      el('td', { class: 'n', 'data-label': t('balance'), text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
-      el('td', { class: 'refcell n', 'data-label': t('reference'), text: transaction.ref }),
-    ]));
+  const rows = transactionViewRows(list, view);
+  for (const row of rows.slice(0, 400)) {
+    if (row.kind === 'transaction') { body.append(transactionRow(row.transaction, false)); continue; }
+    body.append(cardGroupRow(row));
+    if (openCardGroups.has(row.key)) {
+      for (const charge of row.charges.slice(0, 400)) body.append(transactionRow(charge, true));
+    }
   }
-  if (list.length > 400) {
-    body.append(el('tr', {}, el('td', { colspan: 7, class: 'empty-row', text: t('showingFirstTransactions', { shown: 400, total: list.length }) })));
+  if (rows.length > 400) {
+    body.append(el('tr', {}, el('td', { colspan: 7, class: 'empty-row', text: t('showingFirstTransactions', { shown: 400, total: rows.length }) })));
   }
 }
 
@@ -1644,6 +1703,9 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
   /* A count of unreadable files leaves the customer with nothing to act on and support
      with nothing to diagnose. Each failure carries its own reason instead. */
   const failures: string[] = [];
+  /* Said out loud rather than quietly corrected: the customer chose one control and the
+     rows arrived through the other reader. */
+  const reclassified: string[] = [];
   const have = new Set(S.tx.map((t) => t.id));
   for (const file of files) {
     try {
@@ -1659,7 +1721,16 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
         sheets: wb.sheets.length,
         rows: wb.sheets.reduce((total, sheet) => total + sheet.rows.length, 0),
       });
-      const { rows, account } = source === 'card'
+      /* A card report chosen through the statement control is still a card report. Read
+         as a statement its single amount column means money arriving, and a household's
+         whole month of spending is filed as income — so the file decides the reader, and
+         the message says which one read it rather than letting it pass silently. */
+      const asCardReport = source === 'bank' && readsAsCardReport(wb);
+      if (asCardReport) {
+        log.info('report.read.reclassified', { source, readAs: 'card' });
+        reclassified.push(t('fileReadAsCardReport', { file: isolate(file.name) }));
+      }
+      const { rows, account } = source === 'card' || asCardReport
         ? importCardWorkbook(wb, file.name)
         : bankImporter.import(wb, file.name, source);
       if (!rows.length) {
@@ -1696,6 +1767,7 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
   const parts = [];
   if (added) parts.push(t('transactionsAdded', { count: added }));
   if (dup) parts.push(t('transactionsDuplicated', { count: dup }));
+  if (reclassified.length) parts.push(reclassified.length > 2 ? t('filesReadAsCardReports', { count: reclassified.length }) : reclassified.join(' · '));
   /* One or two failures are worth spelling out; a batch of them would fill the screen. */
   if (failures.length) parts.push(failures.length > 2 ? t('filesUnreadable', { count: failures.length }) : failures.join(' · '));
   toast(parts.join(' · ') || t('noTransactionsInFile'));
@@ -1838,7 +1910,7 @@ function wire() {
   });
 
   $('#fc-horizon').addEventListener('change', renderForecast);
-  ['#q', '#f-cat', '#f-dir', '#f-scope'].forEach((sel) =>
+  ['#q', '#f-cat', '#f-dir', '#f-scope', '#f-view'].forEach((sel) =>
     $(sel).addEventListener('input', renderTx));
   $('#btn-cattbl').addEventListener('click', () => {
     const btn = $('#btn-cattbl');
