@@ -1,4 +1,4 @@
-import type { AppState, BankTransaction, Category, CategoryKind, Rule } from './domain-model.js';
+import type { AppState, BankTransaction, CardBrand, Category, CategoryKind, Rule } from './domain-model.js';
 import { createPrivacySafeSnapshot, sanitizeTransaction } from './privacy.js';
 
 const MAX_TRANSACTIONS = 50_000;
@@ -19,8 +19,10 @@ const isFiniteAmount = (value: unknown): value is number =>
 const hasOnlyKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean =>
   Object.keys(value).every((key) => keys.includes(key));
 
+const CARD_BRANDS = new Set<CardBrand>(['visa', 'cal', 'isracard', 'diners', 'amex', 'max', 'leumi', 'other']);
+
 const transactionKeys = [
-  'date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind',
+  'date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind', 'cardBrand',
 ] as const;
 
 function parseTransaction(value: unknown): BankTransaction | null {
@@ -35,6 +37,7 @@ function parseTransaction(value: unknown): BankTransaction | null {
   if (value.cat !== undefined && !isBoundedString(value.cat, 100)) return null;
   if (value.kind !== undefined && !CATEGORY_KINDS.has(value.kind as CategoryKind)) return null;
   if (value.cardKind !== undefined && value.cardKind !== 'bank' && value.cardKind !== 'external') return null;
+  if (value.cardBrand !== undefined && !CARD_BRANDS.has(value.cardBrand as CardBrand)) return null;
   return sanitizeTransaction(value as unknown as BankTransaction);
 }
 

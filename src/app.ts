@@ -6,7 +6,7 @@ import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js
 import { runFinancialAgents, type FinancialAgentResults } from './financial-agents.js';
 import { LocalConsentRepository } from './consent.js';
 import { Logger, resolveLevel } from './logging.js';
-import type { AppState, BankTransaction, CardIssuer, Category, Rule } from './domain-model.js';
+import type { AppState, BankTransaction, CardBrand, CardIssuer, Category, Rule } from './domain-model.js';
 import { AppStateCodec, LocalStorageStateRepository } from './state-repository.js';
 import { bankImporter, cleanTransactionText as clean, transactionId as txId } from './bank-importer.js';
 import { RuleBasedTransactionCategorizer } from './categorization.js';
@@ -167,6 +167,9 @@ const DEFAULT_CATS: Category[] = [
   { id: 'education', name: 'לימודים וחינוך', kind: 'expense' },
   { id: 'clothing', name: 'ביגוד והנעלה',   kind: 'expense' },
   { id: 'tax',      name: 'מיסים',          kind: 'expense' },
+  { id: 'judaism',  name: 'יהדות',          kind: 'expense' },
+  { id: 'donations', name: 'תרומות',        kind: 'expense' },
+  { id: 'computing', name: 'מחשוב',          kind: 'expense' },
   { id: 'fees',     name: 'עמלות וריבית',   kind: 'expense' },
   { id: 'other',    name: 'אחר',            kind: 'expense' },
   { id: 'income',   name: 'הכנסות',         kind: 'income'  },
@@ -176,7 +179,7 @@ const DEFAULT_RULES = [
   ['משיכה מבנקט', 'cash'], ['משיכת מזומן', 'cash'], ['בנקט', 'cash'], ['כספומט', 'cash'],
   ['ישראכרט', 'credit'], ['כאל', 'credit'], ['כ.א.ל', 'credit'], ['ויזה', 'credit'],
   ['מקס איט', 'credit'], ['לאומי קארד', 'credit'], ['אמריקן אקספרס', 'credit'], ['דיינרס', 'credit'],
-  ['חשמל', 'home'], ['מקורות', 'home'], ['תאגיד מים', 'home'], ['ארנונה', 'home'], ['עיריי', 'home'],
+  ['חשמל', 'home'], ['מקורות', 'home'], ['תאגיד מים', 'home'], ['ארנונה', 'home'], ['עיריי', 'home'], ['עירית', 'home'],
   ['בזק', 'home'], ['הוט', 'home'], ['סלקום', 'home'], ['פרטנר', 'home'], ['פלאפון', 'home'],
   ['ועד בית', 'home'], ['שכירות', 'home'], ['משכנתא', 'home'], ['פזגז', 'home'], ['סופרגז', 'home'],
   ['אמישראגז', 'home'],
@@ -187,15 +190,17 @@ const DEFAULT_RULES = [
   ['הלווא', 'loans'], ['הלוא', 'loans'],
   ['שופרסל', 'food'], ['רמי לוי', 'food'], ['ויקטורי', 'food'], ['יינות ביתן', 'food'],
   ['אושר עד', 'food'], ['טיב טעם', 'food'], ['יוחננוף', 'food'], ['מגה בעיר', 'food'],
+  ['פלאפל', 'food'], ['בית מאפה', 'food'], ['פירות וירקות', 'food'], ['מאפיית', 'food'],
   ['פז ', 'transit'], ['דלק ', 'transit'], ['סונול', 'transit'], ['דור אלון', 'transit'],
   ['רב קו', 'transit'], ['רב-קו', 'transit'], ['פנגו', 'transit'], ['סלופארק', 'transit'],
   ['חניון', 'transit'], ['רכבת', 'transit'], ['אגד', 'transit'],
+  ['דן חברה לתחבורה', 'transit'], ['מ.תחבורה', 'transit'], ['מנהרות הכרמל', 'transit'],
   ['מכבי', 'health'], ['כללית', 'health'], ['מאוחדת', 'health'], ['לאומית שר', 'health'],
   /* Ahead of 'ביטוח', which reads the whole name and would otherwise file an allowance as
      an insurance expense. Only the arriving side is claimed: the same wording leaves the
      account when someone self-employed pays the contribution, and that is not income. */
   ['ביטוח לאומי', 'income', 'in'],
-  ['ביטוח', 'health'], ['הראל', 'health'], ['מגדל', 'health'], ['מנורה', 'health'], ['הפניקס', 'health'],
+  ['אופטיק', 'health'], ['ביטוח', 'health'], ['הראל', 'health'], ['מגדל', 'health'], ['מנורה', 'health'], ['הפניקס', 'health'],
   /* After the household block on purpose: הוט and בזק sell television alongside the line
      the household actually pays for, and a bill is not an evening out. Before fees and
      savings, which match on wording general enough to claim a cinema or a gym first. */
@@ -218,7 +223,7 @@ const DEFAULT_RULES = [
   ['זארה', 'clothing'], ['zara', 'clothing'], ['h&m', 'clothing'], ['פול אנד בר', 'clothing'],
   ['דלתא', 'clothing'], ['שילב', 'clothing'], ['אדידס', 'clothing'], ['adidas', 'clothing'],
   ['נייקי', 'clothing'], ['nike', 'clothing'], ['נעלי', 'clothing'], ['הנעלה', 'clothing'],
-  ['ביגוד', 'clothing'], ['אופנה', 'clothing'],
+  ['ביגוד', 'clothing'], ['אופנה', 'clothing'], ['בגדי', 'clothing'], ['shein', 'clothing'],
   /* After the household and health blocks and before fees, savings and income. Each of
      those five claims wording a tax line uses too: 'העברה' for a standing order to the
      authority, 'שכר' for מס שכר, and 'ריבית' for the interest a late assessment adds.
@@ -230,14 +235,73 @@ const DEFAULT_RULES = [
   ['מס ערך מוסף', 'tax'], ['מע"מ', 'tax'], ['מע\u05f4מ', 'tax'],
   ['מס שבח', 'tax'], ['מס רכישה', 'tax'], ['מס רכוש', 'tax'], ['מיסוי מקרקעין', 'tax'],
   ['מס שכר', 'tax'],
+  /* After education, which keeps a yeshiva's tuition where a household budgets for
+     studies, and after the household block, which keeps a municipal charge as arnona.
+     No rule matches a bare 'כולל': a statement writes it for "including", as in
+     כולל מע"מ, and it would claim half the file. */
+  ['בית כנסת', 'judaism'], ['בית הכנסת', 'judaism'], ['בית מדרש', 'judaism'],
+  ['מקווה', 'judaism'], ['מקוה', 'judaism'], ['רבנות', 'judaism'], ['כשרות', 'judaism'], ['בד"ץ', 'judaism'],
+  ['תשמישי קדושה', 'judaism'], ['ספרי קודש', 'judaism'], ['תפילין', 'judaism'],
+  ['מזוזה', 'judaism'], ['מזוזות', 'judaism'], ['טלית', 'judaism'], ['ציצית', 'judaism'],
+  ['לולב', 'judaism'], ['אתרוג', 'judaism'], ['ארבעת המינים', 'judaism'],
+  ['ישיבת', 'judaism'], ['כולל אברכים', 'judaism'], ['מדרשה', 'judaism'], ['חב"ד', 'judaism'],
+  /* Before savings and income, which claim the wording a standing order to a charity
+     uses: 'העברה' for the order itself. Tzedakah and maaser sit here rather than with
+     Jewish life — a household decides what it gives as one line, whoever it gives to.
+     No rule matches a bare 'קרן': 'קרן השתלמות' is savings, and 'לתת' is skipped for
+     being three letters that are also an ordinary verb. */
+  ['תרומה', 'donations'], ['תרומות', 'donations'], ['תרומת', 'donations'],
+  ['צדקה', 'donations'], ['מעשר', 'donations'], ['גמ"ח', 'donations'],
+  ['עמותה', 'donations'], ['עמותת', 'donations'],
+  ['ידידים', 'donations'], ['עזר מציון', 'donations'], ['יד שרה', 'donations'],
+  ['זיכרון מנחם', 'donations'], ['פתחון לב', 'donations'], ['לקט ישראל', 'donations'],
+  ['חסדי נעמי', 'donations'], ['זק"א', 'donations'], ['איחוד הצלה', 'donations'],
+  ['ארגון הצלה', 'donations'], ['פעמונים', 'donations'], ['לב נותן', 'donations'],
+  /* After the household and leisure blocks, both of which own wording this one would
+     otherwise take: בזק, הוט, סלקום and פרטנר sell internet as a household bill, and
+     נטפליקס and ספוטיפיי are an evening in, not a software licence. Before fees and
+     savings, which claim a standing order for a subscription first.
+
+     Names are spelled out rather than stemmed. 'אפל' is the opening of אפליקציה, and
+     'aws' sits inside "draws", so both are named the long way or not at all. */
+  ['מחשבים', 'computing'], ['תוכנה', 'computing'], ['תוכנות', 'computing'],
+  ['ksp', 'computing'], ['קיי אס פי', 'computing'], ['אייבורי', 'computing'], ['ivory', 'computing'],
+  ['replit', 'computing'],
+  ['מיקרוסופט', 'computing'], ['microsoft', 'computing'], ['אופיס 365', 'computing'], ['office 365', 'computing'],
+  ['גוגל', 'computing'], ['google', 'computing'], ['apple.com', 'computing'], ['app store', 'computing'],
+  ['itunes', 'computing'], ['אדובי', 'computing'], ['adobe', 'computing'],
+  ['openai', 'computing'], ['chatgpt', 'computing'], ['anthropic', 'computing'], ['claude.ai', 'computing'],
+  ['github', 'computing'], ['jetbrains', 'computing'], ['figma', 'computing'], ['canva', 'computing'],
+  ['dropbox', 'computing'], ['icloud', 'computing'], ['onedrive', 'computing'],
+  ['amazon web', 'computing'], ['digitalocean', 'computing'], ['cloudflare', 'computing'],
+  ['godaddy', 'computing'], ['wix', 'computing'], ['וויקס', 'computing'], ['דומיין', 'computing'],
   ['עמלה', 'fees'], ['עמלות', 'fees'], ['עמלת', 'fees'], ['דמי כרטיס', 'fees'], ['ריבית', 'fees'], ['דמי ניהול', 'fees'],
   ['העברה', 'savings'], ['הפקדה', 'savings'], ['חיסכון', 'savings'], ['קרן השתלמות', 'savings'],
   ['גמל', 'savings'], ['פיקדון', 'savings'], ['ניירות ערך', 'savings'],
   ['משכורת', 'income'], ['שכר', 'income'], ['קצבה', 'income'],
   ['משיכה לחשבון הבנק', 'savings'], ['העברה לחשבון', 'savings'], ['העברה בנקאית', 'savings'],
+  ['paybox', 'savings'],
   ['מזונות', 'home'],
 ].map(([match, cat, when], i): Rule =>
   ({ id: 'r' + i, match: match!, cat: cat!, ...(when ? { when: when as 'in' | 'out' } : {}) }));
+
+/* Where a row came from, for the provenance column. A card row names the issuer the
+   customer chose at import; one imported before the question existed, or whose customer
+   declined to answer, says only that it is a card. Anything typed by hand says so — it
+   is not the bank's word, and calling it one would put a figure the bank never sent
+   under the bank's name. */
+function sourceLabel(transaction: BankTransaction): string {
+  if (transaction.source === 'card') {
+    if (!transaction.cardBrand) return t('sourceCardUnknown');
+    /* Built before the call rather than inside it: a key spliced into t() reads as a
+       literal to the contract test that checks every requested key exists. The brand
+       keys are still covered there — the issuer picker names each one in the page. */
+    const brandKey = 'cardBrand.' + transaction.cardBrand;
+    return t(brandKey);
+  }
+  return transaction.src === 'הזנה ידנית' || transaction.src === 'manual-entry'
+    ? t('sourceManualEntry') : t('sourceBank');
+}
 
 /* --------------------------------------------------------------- state -- */
 const KEY = 'mazan-habait/v1';
@@ -1239,7 +1303,7 @@ function renderTx() {
   });
 
   if (!list.length) {
-    body.append(el('tr', {}, el('td', { colspan: 6, class: 'empty-row', text: t('noMatchingTransactions') })));
+    body.append(el('tr', {}, el('td', { colspan: 7, class: 'empty-row', text: t('noMatchingTransactions') })));
     return;
   }
   for (const transaction of list.slice(0, 400)) {
@@ -1257,13 +1321,14 @@ function renderTx() {
       el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(transaction.date)) }),
       el('td', { class: 'desc', 'data-label': t('description'), text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
       el('td', { class: 'catcell', 'data-label': t('category') }, [el('span', { class: 'dot', style: `background:${catColor(S.cats, transaction.cat)}` }), sel]),
+      el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: sourceLabel(transaction), 'data-testid': 'transaction-source' }),
       el('td', { class: 'amountcell n ' + (transaction.in > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: amt, 'data-testid': 'transaction-amount' }),
       el('td', { class: 'n', 'data-label': t('balance'), text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
       el('td', { class: 'refcell n', 'data-label': t('reference'), text: transaction.ref }),
     ]));
   }
   if (list.length > 400) {
-    body.append(el('tr', {}, el('td', { colspan: 6, class: 'empty-row', text: t('showingFirstTransactions', { shown: 400, total: list.length }) })));
+    body.append(el('tr', {}, el('td', { colspan: 7, class: 'empty-row', text: t('showingFirstTransactions', { shown: 400, total: list.length }) })));
   }
 }
 
@@ -1524,6 +1589,7 @@ function logCommand(event: Event): void {
    the card, and no export states it — so the customer is asked once, before the file
    dialog, and the answer travels with the rows that import. */
 let pendingCardKind: CardIssuer | null = null;
+let pendingCardBrand: CardBrand = 'other';
 
 /* querySelector rather than the $ helper: its DomElement is a convenience shape for the
    controls this file mostly touches, and a dialog's own API is not in it. */
@@ -1532,6 +1598,10 @@ const cardSourceDialog = (): HTMLDialogElement => document.querySelector<HTMLDia
 function openCardSource(): void {
   const dialog = cardSourceDialog();
   pendingCardKind = null;
+  pendingCardBrand = 'other';
+  /* The select keeps its value between visits like returnValue does, and a brand left
+     over from the previous import would be recorded against a card nobody named. */
+  document.querySelector<HTMLSelectElement>('#card-source-issuer')!.value = 'other';
   /* A dialog keeps the value it closed with. Left over from the previous visit, a
      dismissal would read as whatever was chosen last time and open the file dialog the
      customer just declined. */
@@ -1553,15 +1623,23 @@ function onCardSourceClosed(): void {
     return;
   }
   pendingCardKind = chosen;
-  log.info('ui.card-source.chosen', { cardKind: chosen });
+  pendingCardBrand = readCardBrand();
+  log.info('ui.card-source.chosen', { cardKind: chosen, cardBrand: pendingCardBrand });
   document.querySelector<HTMLInputElement>('#card-file')!.click();
 }
 
+const CARD_BRANDS: readonly CardBrand[] = ['visa', 'cal', 'isracard', 'diners', 'amex', 'max', 'leumi', 'other'];
+
+function readCardBrand(): CardBrand {
+  const value = document.querySelector<HTMLSelectElement>('#card-source-issuer')?.value ?? '';
+  return (CARD_BRANDS as readonly string[]).includes(value) ? value as CardBrand : 'other';
+}
+
 /* ---------------------------------------------------------- file load -- */
-async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank', cardKind?: CardIssuer) {
+async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank', cardKind?: CardIssuer, cardBrand?: CardBrand) {
   const files = [...fileList];
   if (!files.length) return;
-  log.info('report.import.started', { source, files: files.length, ...(cardKind ? { cardKind } : {}) });
+  log.info('report.import.started', { source, files: files.length, ...(cardKind ? { cardKind } : {}), ...(cardBrand ? { cardBrand } : {}) });
   let added = 0, dup = 0;
   /* A count of unreadable files leaves the customer with nothing to act on and support
      with nothing to diagnose. Each failure carries its own reason instead. */
@@ -1600,6 +1678,9 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
         /* Which card this came from is the customer's answer, not the file's — no issuer
            export says whether the bank settles it. */
         if (cardKind) t.cardKind = cardKind;
+        /* 'other' is the customer declining to name the issuer, and storing it would
+           dress a non-answer as one. The row keeps no brand and the column says so. */
+        if (cardBrand && cardBrand !== 'other') t.cardBrand = cardBrand;
         have.add(t.id); S.tx.push(t); added++;
       }
     } catch (e) {
@@ -1637,9 +1718,10 @@ function wire() {
   $('#card-source').addEventListener('close', onCardSourceClosed);
   $('#card-file').addEventListener('change', (e) => {
     const input = e.currentTarget as HTMLInputElement;
-    if (input.files) handleFiles(input.files, 'card', pendingCardKind ?? undefined);
+    if (input.files) handleFiles(input.files, 'card', pendingCardKind ?? undefined, pendingCardBrand);
     input.value = '';
     pendingCardKind = null;
+    pendingCardBrand = 'other';
   });
   const drop = $('#drop');
   const stop = (e: Event) => { e.preventDefault(); e.stopPropagation(); };

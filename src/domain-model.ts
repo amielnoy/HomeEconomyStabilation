@@ -7,6 +7,14 @@ export type TransactionSource = 'bank' | 'card';
    same money described twice in both cases. Absent on rows imported before the question
    was asked. */
 export type CardIssuer = 'bank' | 'external';
+
+/* Which company issued the card, as the customer answered it — an issuer's export names
+   the merchant, never itself, so the file cannot say. Separate from CardIssuer because the
+   two answer different questions: a Visa is issued both by a bank and by a credit company,
+   so the brand does not decide who settles it. 'other' is the customer declining to say;
+   absent means the row was imported before the question was asked. Provenance only — it
+   decides nothing about categorisation or reconciliation. */
+export type CardBrand = 'visa' | 'cal' | 'isracard' | 'diners' | 'amex' | 'max' | 'leumi' | 'other';
 export type CategoryKind = 'expense' | 'income' | 'neutral';
 
 export interface BankTransaction {
@@ -20,6 +28,7 @@ export interface BankTransaction {
   pending: boolean;
   source?: TransactionSource;
   cardKind?: CardIssuer;
+  cardBrand?: CardBrand;
   src: string;
   id?: string;
   cat?: string;

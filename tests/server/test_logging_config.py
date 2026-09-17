@@ -200,45 +200,40 @@ def test_retention_also_prunes_the_numbered_copies(tmp_path, monkeypatch) -> Non
     assert len(backups) == 3
 
 
-def test_falls_back_to_the_stream_when_the_filesystem_is_read_only(tmp_path) -> None:
+def _unusable_log_path(tmp_path) -> str:
+    """A log path whose directory cannot be created, for any user.
+
+    Permissions are the obvious way to express this and the wrong one: the test suite runs
+    as root inside the container, and root ignores a read-only mode bit, so a chmodded
+    directory is created anyway and the fallback is never reached. A regular file standing
+    where a parent directory must be refuses everyone equally — makedirs raises
+    NotADirectoryError, the same OSError family a read-only deployment raises.
+    """
+    blocked = tmp_path / "ro"
+    blocked.write_text("not a directory", encoding="utf-8")
+    return str(blocked / "logs" / "api.log")
+
+
+def test_falls_back_to_the_stream_when_the_log_directory_cannot_be_created(tmp_path) -> None:
     """A serverless deployment has no writable working directory.
 
     This ran from the request middleware, so the OSError raised while creating the log
     directory answered every API request with a 500 until logging gave way instead.
     """
-    import os
-    import stat
+    logger = configure_logging(level="info", path=_unusable_log_path(tmp_path))
 
-    read_only = tmp_path / "ro"
-    read_only.mkdir()
-    os.chmod(read_only, stat.S_IRUSR | stat.S_IXUSR)
-
-    try:
-        logger = configure_logging(level="info", path=str(read_only / "logs" / "api.log"))
-
-        assert isinstance(logger.handlers[0], logging.StreamHandler)
-        assert not isinstance(logger.handlers[0], DailyCappedHandler)
-        # And a request may still be logged without raising.
-        log_event("info", "http.request", route="health", status=200)
-    finally:
-        os.chmod(read_only, stat.S_IRWXU)
+    assert isinstance(logger.handlers[0], logging.StreamHandler)
+    assert not isinstance(logger.handlers[0], DailyCappedHandler)
+    # And a request may still be logged without raising.
+    log_event("info", "http.request", route="health", status=200)
 
 
 def test_a_request_is_answered_even_when_logging_cannot_write(tmp_path, monkeypatch) -> None:
     """The contract that matters: the API keeps working whatever logging can or cannot do."""
-    import os
-    import stat
+    monkeypatch.setenv("LOG_FILE", _unusable_log_path(tmp_path))
+    logging.getLogger("home_economy").handlers.clear()
 
-    read_only = tmp_path / "ro"
-    read_only.mkdir()
-    os.chmod(read_only, stat.S_IRUSR | stat.S_IXUSR)
-    monkeypatch.setenv("LOG_FILE", str(read_only / "logs" / "api.log"))
+    response = TestClient(app).get("/api/health")
 
-    try:
-        logging.getLogger("home_economy").handlers.clear()
-        response = TestClient(app).get("/api/health")
-
-        assert response.status_code == 200
-        assert response.json() == {"status": "ok", "service": "home-economy-api"}
-    finally:
-        os.chmod(read_only, stat.S_IRWXU)
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "service": "home-economy-api"}

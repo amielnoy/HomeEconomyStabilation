@@ -1,4 +1,4 @@
-import type { BankTransaction, Category, Rule } from './domain-model.js';
+import type { BankTransaction, CardBrand, Category, Rule } from './domain-model.js';
 
 export interface PersistableTransaction {
   date?: string;
@@ -15,6 +15,7 @@ export interface PersistableTransaction {
   cat?: string;
   kind?: 'expense' | 'income' | 'neutral';
   cardKind?: 'bank' | 'external';
+  cardBrand?: CardBrand;
 }
 
 export interface PersistedTransaction extends BankTransaction {
@@ -72,6 +73,7 @@ export function sanitizeTransaction(transaction: PersistableTransaction): Persis
     ...(transaction.cat ? { cat: String(transaction.cat) } : {}),
     ...(transaction.kind ? { kind: transaction.kind } : {}),
     ...(transaction.cardKind ? { cardKind: transaction.cardKind } : {}),
+    ...(transaction.cardBrand ? { cardBrand: transaction.cardBrand } : {}),
   };
 }
 
@@ -89,7 +91,7 @@ export function createPrivacySafeSnapshot<T extends PersistableTransaction>(stat
 export function isPrivacySafeTransaction(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const transaction = value as Record<string, unknown>;
-  const allowed = new Set(['date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind']);
+  const allowed = new Set(['date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind', 'cardBrand']);
   return Object.keys(transaction).every((key) => allowed.has(key))
     && transaction.ref === ''
     && typeof transaction.src === 'string' && SAFE_SOURCES.has(transaction.src)
@@ -103,7 +105,9 @@ export function isPrivacySafeTransaction(value: unknown): boolean {
     && (transaction.id === undefined || isShortString(transaction.id, 200))
     && (transaction.cat === undefined || isShortString(transaction.cat, 100))
     && (transaction.kind === undefined || ['expense', 'income', 'neutral'].includes(String(transaction.kind)))
-    && (transaction.cardKind === undefined || transaction.cardKind === 'bank' || transaction.cardKind === 'external');
+    && (transaction.cardKind === undefined || transaction.cardKind === 'bank' || transaction.cardKind === 'external')
+    && (transaction.cardBrand === undefined
+      || ['visa', 'cal', 'isracard', 'diners', 'amex', 'max', 'leumi', 'other'].includes(String(transaction.cardBrand)));
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

@@ -280,24 +280,6 @@ test('separates studies and clothing from the salary and the shops they arrive b
   await expect(categoryOf('שופרסל')).toHaveValue('food');
 });
 
-test('offers studies and clothing as categories in every language', async ({ homePage }) => {
-  await homePage.upload.uploadSampleBankReport();
-  const picker = homePage.dashboard.transactionCategories.first();
-
-  const names = [
-    ['he', 'לימודים וחינוך', 'ביגוד והנעלה'],
-    ['en', 'Education & schooling', 'Clothing & footwear'],
-    ['fr', 'Études et scolarité', 'Vêtements et chaussures'],
-  ] as const;
-
-  for (const [locale, education, clothing] of names) {
-    await homePage.language.choose(locale);
-    await expect(homePage.html).toHaveAttribute('lang', locale);
-    await expect(picker.locator('option[value="education"]')).toHaveText(education);
-    await expect(picker.locator('option[value="clothing"]')).toHaveText(clothing);
-  }
-});
-
 /* The tax lines a household actually meets, each sitting next to a rule that would have
    claimed it: the authority is paid by transfer, מס שכר carries the salary wording, and a
    late assessment adds interest. Arnona is the deliberate exception that stays housing. */
@@ -327,38 +309,109 @@ test('separates tax payments from the transfers and bills they are worded like',
   await expect(categoryOf('מסעדת')).toHaveValue('leisure');
 });
 
-test('offers taxes as a category in every language', async ({ homePage }) => {
-  await homePage.upload.uploadSampleBankReport();
-  const picker = homePage.dashboard.transactionCategories.first();
+/* A yeshiva's tuition is studies before it is religion, and a municipal charge is arnona
+   before either, so both blocks stay above this one. */
+test('separates Jewish life from the studies and bills it is worded like', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'judaism.csv', mimeType: 'text/csv', buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,יתרה',
+      '03/09/2026,בית כנסת אהל יעקב דמי חבר,180,9000',
+      '04/09/2026,תשמישי קדושה בני ברק,260,8740',
+      '05/09/2026,תרומה צדקה קמחא דפסחא,300,8440',
+      '06/09/2026,מקווה נשים,45,8395',
+      '07/09/2026,אוניברסיטת תל אביב שכר לימוד,3200,5195',
+      '08/09/2026,ארנונה עיריית חיפה,780,4415',
+    ].join('\n')),
+  });
 
-  const names = [['he', 'מיסים'], ['en', 'Taxes'], ['fr', 'Impôts']] as const;
+  await expect(homePage.dashboard.transactionCategories).toHaveCount(6);
+  const categoryOf = (merchant: string) => homePage.dashboard.transactionRows
+    .filter({ hasText: merchant }).getByTestId('transaction-category-select');
 
-  for (const [locale, tax] of names) {
-    await homePage.language.choose(locale);
-    await expect(homePage.html).toHaveAttribute('lang', locale);
-    await expect(picker.locator('option[value="tax"]')).toHaveText(tax);
+  for (const merchant of ['בית כנסת', 'תשמישי קדושה', 'מקווה']) {
+    await expect(categoryOf(merchant), `${merchant} is not judaism`).toHaveValue('judaism');
   }
+  // Giving is its own line whoever it is given to, so tzedakah is not filed here.
+  await expect(categoryOf('קמחא דפסחא')).toHaveValue('donations');
+  await expect(categoryOf('אוניברסיטת')).toHaveValue('education');
+  await expect(categoryOf('ארנונה')).toHaveValue('home');
 });
 
-test('offers leisure as a category in every language', async ({ homePage }) => {
-  await homePage.upload.uploadSampleBankReport();
-  const picker = homePage.dashboard.transactionCategories.first();
+/* Giving is one line in a household budget whoever it is given to, so tzedakah sits here
+   and not with Jewish life, and a standing order to a charity must not read as a transfer. */
+test('separates giving from the transfers and the synagogue it arrives beside', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'donations.csv', mimeType: 'text/csv', buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,יתרה',
+      '03/09/2026,הוראת קבע עמותת ידידים,120,9000',
+      '04/09/2026,תרומה עזר מציון,200,8800',
+      '05/09/2026,צדקה מעשר כספים,350,8450',
+      '06/09/2026,בית כנסת אהל יעקב דמי חבר,180,8270',
+      '07/09/2026,העברה לחשבון חיסכון,1000,7270',
+    ].join('\n')),
+  });
 
-  for (const [locale, name] of [['he', 'פנאי ובידור'], ['en', 'Leisure & entertainment'], ['fr', 'Loisirs et sorties']] as const) {
-    await homePage.language.choose(locale);
-    await expect(homePage.html).toHaveAttribute('lang', locale);
-    await expect(picker.locator('option[value="leisure"]')).toHaveText(name);
+  await expect(homePage.dashboard.transactionCategories).toHaveCount(5);
+  const categoryOf = (merchant: string) => homePage.dashboard.transactionRows
+    .filter({ hasText: merchant }).getByTestId('transaction-category-select');
+
+  for (const merchant of ['ידידים', 'עזר מציון', 'צדקה']) {
+    await expect(categoryOf(merchant), `${merchant} is not donations`).toHaveValue('donations');
   }
+  // Synagogue dues stay Jewish life; an ordinary transfer stays savings.
+  await expect(categoryOf('בית כנסת')).toHaveValue('judaism');
+  await expect(categoryOf('העברה לחשבון')).toHaveValue('savings');
 });
 
-test('offers loans as a category in every language', async ({ homePage }) => {
+/* Every category the defaults gained after launch, in one pass. Each used to carry its own
+   near-identical copy of this test, so a new category was covered only if whoever added it
+   remembered to clone one more — and the clone read the same three locales all over again. */
+/* Connectivity is the household's bill and streaming is an evening in; neither becomes
+   computing because a technology company sent the charge. */
+test('separates computing from the connectivity and streaming it arrives beside', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'computing.csv', mimeType: 'text/csv', buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,יתרה',
+      '03/09/2026,KSP מחשבים ותקשורת,4200,9000',
+      '04/09/2026,ADOBE CREATIVE CLOUD,180,8820',
+      '05/09/2026,GOOGLE STORAGE,45,8775',
+      '06/09/2026,בזק בינלאומי אינטרנט,120,8655',
+      '07/09/2026,נטפליקס,55,8600',
+    ].join('\n')),
+  });
+
+  await expect(homePage.dashboard.transactionCategories).toHaveCount(5);
+  const categoryOf = (merchant: string) => homePage.dashboard.transactionRows
+    .filter({ hasText: merchant }).getByTestId('transaction-category-select');
+
+  for (const merchant of ['KSP', 'ADOBE', 'GOOGLE']) {
+    await expect(categoryOf(merchant), `${merchant} is not computing`).toHaveValue('computing');
+  }
+  await expect(categoryOf('בזק')).toHaveValue('home');
+  await expect(categoryOf('נטפליקס')).toHaveValue('leisure');
+});
+
+test('offers every added category in every language', async ({ homePage }) => {
   await homePage.upload.uploadSampleBankReport();
   const picker = homePage.dashboard.transactionCategories.first();
 
-  for (const [locale, name] of [['he', 'הלוואות'], ['en', 'Loans'], ['fr', 'Prêts']] as const) {
+  const names = {
+    loans:     { he: 'הלוואות', en: 'Loans', fr: 'Prêts' },
+    leisure:   { he: 'פנאי ובידור', en: 'Leisure & entertainment', fr: 'Loisirs et sorties' },
+    education: { he: 'לימודים וחינוך', en: 'Education & schooling', fr: 'Études et scolarité' },
+    clothing:  { he: 'ביגוד והנעלה', en: 'Clothing & footwear', fr: 'Vêtements et chaussures' },
+    tax:       { he: 'מיסים', en: 'Taxes', fr: 'Impôts' },
+    judaism:   { he: 'יהדות', en: 'Judaism', fr: 'Judaïsme' },
+    donations: { he: 'תרומות', en: 'Donations', fr: 'Dons' },
+    computing: { he: 'מחשוב', en: 'Computing & software', fr: 'Informatique' },
+  } as const;
+
+  for (const locale of ['he', 'en', 'fr'] as const) {
     await homePage.language.choose(locale);
     await expect(homePage.html).toHaveAttribute('lang', locale);
-    await expect(picker.locator('option[value="loans"]')).toHaveText(name);
+    for (const [id, byLocale] of Object.entries(names)) {
+      await expect(picker.locator(`option[value="${id}"]`), `${id} in ${locale}`).toHaveText(byLocale[locale]);
+    }
   }
 });
 

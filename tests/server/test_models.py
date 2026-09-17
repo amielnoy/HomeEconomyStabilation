@@ -55,6 +55,7 @@ def test_transaction_rejects_an_unknown_card_issuer() -> None:
         Transaction.model_validate(payload)
 
 
+
 def test_rule_accepts_the_direction_it_reads() -> None:
     """The browser stores a direction on rules whose wording means opposite things on the
     two sides of a statement. This model forbids extra keys, so a field it does not know
@@ -83,3 +84,4 @@ def test_snapshot_carries_a_directional_rule_end_to_end() -> None:
     ]
 
     assert SnapshotInput.model_validate(candidate).payload.persistence_dict()["rules"][0]["when"] == "in"
+

@@ -7,6 +7,7 @@ export class DashboardComponent {
   readonly transactionRows = this.page.getByTestId('transaction-row');
   readonly transactionBalances = this.page.getByTestId('transaction-balance');
   readonly transactionCategories = this.page.getByTestId('transaction-category-select');
+  readonly transactionSources = this.page.getByTestId('transaction-source');
   readonly accountSummary = this.page.getByTestId('acct');
   readonly balance = this.page.getByTestId('t-bal');
   readonly spendingGuide = this.page.getByTestId('spending-guide');

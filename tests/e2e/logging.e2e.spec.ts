@@ -88,7 +88,9 @@ test('keeps the statement out of the log it asks the customer to send', async ({
      carrying a description or an amount fails here rather than shipping quietly. */
   const keys = new Set((await logRecords(page)).flatMap((record) => Object.keys(record.context ?? {})));
   const allowed = new Set([
-    'source', 'files', 'cardKind', 'format', 'bytes', 'sheets', 'rows',
+    /* cardBrand joins cardKind: both are the customer's answer from a fixed list of
+       eight, and neither carries an account, a card number or a merchant. */
+    'source', 'files', 'cardKind', 'cardBrand', 'format', 'bytes', 'sheets', 'rows',
     'added', 'duplicates', 'failed', 'reason', 'columns', 'error', 'control', 'via',
   ]);
   expect([...keys].filter((key) => !allowed.has(key)), 'an unapproved field reached the log').toEqual([]);

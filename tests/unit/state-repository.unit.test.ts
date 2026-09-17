@@ -93,9 +93,9 @@ describe('application state boundary', () => {
      row, and the dashboard comes back empty after a reload. */
   /* The same guarantee the loans category needed: a category added to the defaults has to
      reach customers who saved before it existed, and at its own position, or their chart
-     repaints for a category they never touched. Leisure, studies, clothing and taxes
-     were each added after customers had already saved, and consecutively — so the run of
-     them has to come back in order, not appended wherever the merge noticed them. */
+     repaints for a category they never touched. Leisure, studies, clothing, taxes, Jewish
+     life and giving were each added after customers had saved, and consecutively — so the run
+     of them has to come back in order, not appended wherever the merge noticed them. */
   it('returns categories added after a save at their own positions', () => {
     const withAdditions = {
       rules: defaults.rules,
@@ -105,16 +105,32 @@ describe('application state boundary', () => {
         { id: 'education', name: 'לימודים וחינוך', kind: 'expense' as const },
         { id: 'clothing', name: 'ביגוד והנעלה', kind: 'expense' as const },
         { id: 'tax', name: 'מיסים', kind: 'expense' as const },
+        { id: 'judaism', name: 'יהדות', kind: 'expense' as const },
+        { id: 'donations', name: 'תרומות', kind: 'expense' as const },
+        { id: 'computing', name: 'מחשוב', kind: 'expense' as const },
         { id: 'fees', name: 'עמלות וריבית', kind: 'expense' as const },
       ],
     };
-    const saved = [withAdditions.cats[0], withAdditions.cats[5]];
+    const saved = [withAdditions.cats[0], withAdditions.cats[8]];
 
     const restored = new AppStateCodec(withAdditions)
       .decode({ tx: [transaction], overrides: {}, rules: [], cats: saved, budgets: {} });
 
     expect(restored?.cats.map((category) => category.id))
-      .toEqual(['loans', 'leisure', 'education', 'clothing', 'tax', 'fees']);
+      .toEqual(['loans', 'leisure', 'education', 'clothing', 'tax', 'judaism', 'donations', 'computing', 'fees']);
+  });
+
+  /* The brand is provenance the customer typed once, and the key check is strict: a value
+     it does not allow does not drop the brand, it returns null and empties the dashboard. */
+  it('keeps the card brand a row was imported with, and rejects one it does not know', () => {
+    const codec = new AppStateCodec(defaults);
+    const card = { ...transaction, source: 'card' as const, cardKind: 'external' as const, cardBrand: 'isracard' as const };
+    const state = { overrides: {}, rules: [], cats: defaults.cats, budgets: {} };
+
+    expect(codec.decode({ ...state, tx: [card] })?.tx[0]).toMatchObject({ cardBrand: 'isracard' });
+    // A row imported before the question existed keeps no brand rather than gaining one.
+    expect(codec.decode({ ...state, tx: [transaction] })?.tx[0]).not.toHaveProperty('cardBrand');
+    expect(codec.decode({ ...state, tx: [{ ...card, cardBrand: 'mastercard' }] })).toBeNull();
   });
 
   it('keeps a transaction that names its card issuer', () => {

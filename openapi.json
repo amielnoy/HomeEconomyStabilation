@@ -214,6 +214,7 @@
           "pending": { "type": "boolean" },
           "source": { "type": "string", "enum": ["bank", "card"] },
           "cardKind": { "type": "string", "enum": ["bank", "external"], "description": "Who issues the card. Decides whether its detail cancels the statement settlement." },
+          "cardBrand": { "type": "string", "enum": ["visa", "cal", "isracard", "diners", "amex", "max", "leumi", "other"], "description": "Which company issued the card, as the customer answered at import. Provenance only." },
           "id": { "type": "string", "maxLength": 200 },
           "cat": { "type": "string", "maxLength": 100 },
           "kind": { "type": "string", "enum": ["expense", "income", "neutral"] }

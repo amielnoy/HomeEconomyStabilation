@@ -7,6 +7,7 @@ export class UploadComponent {
   readonly creditCardInput = this.page.getByTestId('card-file');
   readonly cardTrigger = this.page.getByTestId('card-upload-trigger');
   readonly cardSourceDialog = this.page.getByTestId('card-source-dialog');
+  readonly cardIssuer = this.page.getByTestId('card-source-issuer');
 
   constructor(private readonly page: Page) {}
 
@@ -26,15 +27,18 @@ export class UploadComponent {
      only the answer opens the file dialog. Driving the chooser rather than setting the
      input directly keeps the test honest about the step in between. */
   @step('Upload a credit-card report')
-  async uploadCreditCardReport(file: FilePayload, issuer: 'bank' | 'external' = 'bank'): Promise<void> {
-    await this.chooseCardSource(file, issuer);
+  async uploadCreditCardReport(file: FilePayload, issuer: 'bank' | 'external' = 'bank', brand?: string): Promise<void> {
+    await this.chooseCardSource(file, issuer, brand);
     await this.page.getByTestId('main').waitFor({ state: 'visible' });
   }
 
   @step('Choose a card source and hand over the report')
-  async chooseCardSource(file: FilePayload, issuer: 'bank' | 'external' = 'bank'): Promise<void> {
+  async chooseCardSource(file: FilePayload, issuer: 'bank' | 'external' = 'bank', brand?: string): Promise<void> {
     await this.cardTrigger.click();
     await this.cardSourceDialog.waitFor({ state: 'visible' });
+    /* The issuer is a second, independent answer: a Visa is issued both by a bank and by
+       a credit company, so naming the brand does not answer who settles it. */
+    if (brand) await this.cardIssuer.selectOption(brand);
     const chooser = this.page.waitForEvent('filechooser');
     await this.page.getByTestId(`card-source-${issuer}`).click();
     await (await chooser).setFiles(file);

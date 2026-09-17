@@ -1132,7 +1132,7 @@ body.drawer-open{ overflow:hidden; }
       <p class="table-scroll-hint" id="tx-scroll-hint" data-i18n="transactionTableScrollHint" data-testid="tx-scroll-hint">החליקו לצדדים כדי לראות את כל העמודות.</p>
       <div class="tblwrap" role="region" aria-label="טבלת תנועות" data-i18n-aria-label="transactionTableRegionLabel" aria-describedby="tx-scroll-hint" tabindex="0" data-testid="tx-table-scroll"><table id="tx" data-testid="tx"><thead><tr>
         <th data-i18n="date">תאריך</th><th data-i18n="description">תיאור פעולה</th><th data-i18n="category">קטגוריה</th>
-        <th data-i18n="amount">סכום</th><th data-i18n="balance">יתרה</th><th data-i18n="reference">אסמכתא</th>
+        <th data-i18n="transactionSource">מקור</th><th data-i18n="amount">סכום</th><th data-i18n="balance">יתרה</th><th data-i18n="reference">אסמכתא</th>
       </tr></thead><tbody id="tx-body" data-testid="tx-body"></tbody></table></div>
     </section>
 
@@ -1153,6 +1153,19 @@ body.drawer-open{ overflow:hidden; }
   <form method="dialog" class="picker-body" data-testid="card-source-form">
     <h2 id="card-source-title" data-i18n="cardSourceTitle" data-testid="card-source-title">איזה כרטיס לטעון?</h2>
     <p class="picker-note" data-i18n="cardSourceFormats" data-testid="card-source-formats">נתמכים קובצי Excel ו־CSV שהורדתם מאתר המנפיק.</p>
+    <label class="picker-field" for="card-source-issuer">
+      <span data-i18n="cardIssuerLabel">מי הנפיק את הכרטיס?</span>
+      <select id="card-source-issuer" data-testid="card-source-issuer">
+        <option value="visa" data-i18n="cardBrand.visa">ויזה</option>
+        <option value="cal" data-i18n="cardBrand.cal">כאל</option>
+        <option value="isracard" data-i18n="cardBrand.isracard">ישראכרט</option>
+        <option value="max" data-i18n="cardBrand.max">מקס</option>
+        <option value="leumi" data-i18n="cardBrand.leumi">לאומי קארד</option>
+        <option value="diners" data-i18n="cardBrand.diners">דיינרס</option>
+        <option value="amex" data-i18n="cardBrand.amex">אמריקן אקספרס</option>
+        <option value="other" selected data-i18n="cardBrand.other">אחר / לא ידוע</option>
+      </select>
+    </label>
     <button class="picker-option" type="submit" value="bank" id="card-source-bank" data-testid="card-source-bank">
       <span class="picker-option-title" data-i18n="cardSourceBank">כרטיס אשראי בנקאי</span>
       <span class="picker-option-hint" data-i18n="cardSourceBankHint">מונפק על ידי הבנק ומחויב בחיוב חודשי מרוכז בדוח הבנק.</span>
@@ -1241,5 +1254,11 @@ body.drawer-open{ overflow:hidden; }
 <div class="toast" id="toast" role="status" aria-live="polite" data-testid="toast"></div>
 
 <script type="module" src="dist/app.js"></script>
+<!-- Vercel Speed Insights. Served and beaconed from this site's own origin, so the
+     script-src 'self' and connect-src 'self' policy in vercel.json covers it without
+     an exception, and no third-party host is contacted. Real-user performance only:
+     it never sees a transaction, an amount or a category, all of which stay in the
+     browser. Inert unless Speed Insights is enabled for the project. -->
+<script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 </html>
