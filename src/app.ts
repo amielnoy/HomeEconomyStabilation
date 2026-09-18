@@ -13,7 +13,7 @@ import { RuleBasedTransactionCategorizer } from './categorization.js';
 import { transactionViewRows, type CardChargeGroup, type TransactionViewMode } from './transaction-view.js';
 import { buildFinancialPlan, type PlanSection } from './financial-plan.js';
 import { goalProgress, orderGoals } from './savings-goals.js';
-import { asOutgoing, findMisreadRows } from './misread-rows.js';
+import { asIncoming, asOutgoing, findMisreadRows } from './misread-rows.js';
 import { cardStatements, type CardStatement } from './card-statements.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
@@ -1668,6 +1668,29 @@ function transactionRow(transaction: BankTransaction, nested: boolean): DomEleme
     toast(t('categoryUpdatedToast'));
   });
   const amt = money2S(transaction.in > 0 ? transaction.in : -transaction.out);
+  /* Which side the money is on is the reader's guess about a file, and it is wrong often
+     enough — a card report read as a statement, an issuer that books a premium as a credit
+     — that the customer needs a way to say so about one row. Every other correction here
+     rewrites rows in bulk on evidence; this one rewrites the row the customer is pointing
+     at, which needs no evidence at all. */
+  const incoming = transaction.in > 0;
+  const flip = el('button', {
+    type: 'button', class: 'flipdir', text: '⇄',
+    'aria-label': incoming ? t('markAsExpense', { description: transaction.desc }) : t('markAsIncome', { description: transaction.desc }),
+    title: incoming ? t('markAsExpenseShort') : t('markAsIncomeShort'),
+    'data-testid': 'transaction-flip',
+  });
+  flip.addEventListener('click', () => {
+    const corrected = incoming ? asOutgoing(transaction) : asIncoming(transaction);
+    corrected.id = txId(corrected);
+    if (transaction.id && S.overrides[transaction.id]) {
+      S.overrides[corrected.id] = S.overrides[transaction.id]!;
+      delete S.overrides[transaction.id];
+    }
+    S.tx = S.tx.map((item) => (item.id === transaction.id ? corrected : item));
+    save(); render();
+    toast(incoming ? t('markedAsExpense') : t('markedAsIncome'));
+  });
   /* data-label carries the column heading into the stacked mobile layout, where
      there is no header row to read the cell against. */
   /* The whole row, not only the figure: a household scanning a month reads the line, and
@@ -1679,7 +1702,10 @@ function transactionRow(transaction: BankTransaction, nested: boolean): DomEleme
     el('td', { class: 'desc', 'data-label': t('description'), text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
     el('td', { class: 'catcell', 'data-label': t('category') }, [el('span', { class: 'dot', style: `background:${flowColor(transaction)}`, 'data-testid': 'transaction-flow-dot' }), sel]),
     el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: sourceLabel(transaction), 'data-testid': 'transaction-source' }),
-    el('td', { class: 'amountcell n ' + (transaction.in > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: amt, 'data-testid': 'transaction-amount' }),
+    el('td', { class: 'amountcell n ' + (transaction.in > 0 ? 'pos' : 'neg'), 'data-label': t('amount') }, [
+      el('span', { text: amt, 'data-testid': 'transaction-amount' }),
+      flip,
+    ]),
     el('td', { class: 'n', 'data-label': t('balance'), text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
     el('td', { class: 'refcell n', 'data-label': t('reference'), text: transaction.ref }),
   ]);

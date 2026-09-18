@@ -507,6 +507,20 @@ tr.outgoing > td.srccell,
 tr.outgoing .catsel{ color:var(--crit-text); }
 tr.outgoing > td.amountcell{ font-weight:600; }
 
+/* Saying "this row is spending" about one row. It sits with the amount because that is the
+   figure it changes, and stays quiet until the row is hovered or the button is focused —
+   a control on every row of a long table would read as part of the data. */
+td.amountcell{ display:flex; align-items:center; gap:6px; justify-content:space-between; }
+.flipdir{
+  border:1px solid transparent; background:none; color:var(--muted);
+  border-radius:7px; padding:0 5px; min-width:26px; min-height:26px; font-size:13px;
+  cursor:pointer; opacity:0; transition:opacity .12s;
+}
+tr:hover .flipdir, .flipdir:focus-visible{ opacity:1; }
+.flipdir:hover{ border-color:var(--line-2); background:var(--surface); color:var(--ink); }
+.flipdir:focus-visible{ outline:2px solid var(--ds-action); outline-offset:1px; }
+@media (pointer: coarse){ .flipdir{ opacity:1; min-width:44px; min-height:44px; } }
+
 /* The plan reads top to bottom as a worksheet does: a section heading carrying its total,
    the lines underneath it, and the bottom line set apart from all of them. */
 .plan-section{ border-bottom:1px solid var(--line); padding:12px 0; }
