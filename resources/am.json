@@ -512,6 +512,8 @@
   "planFixed": "ቋሚ ወጪዎች",
   "planVariable": "ተለዋዋጭ ወጪዎች",
   "planSavings": "ቁጠባና ዝውውሮች",
+  "planSettlements": "የክሬዲት ካርድ ክፍያ",
+  "planSettlementsNote": "በድምሩ ውስጥ አልተቆጠረም፦ የከፈላቸው ክፍያዎች ከላይ በወጪዎቹ ውስጥ አሉ።",
   "planSurplus": "በዚህ ወር የቀረ",
   "planDeficit": "በዚህ ወር የጎደለ",
   "planLineCount": "{count} ክንውኖች",

@@ -5,7 +5,7 @@ import type { BankTransaction } from './domain-model.js';
    what was set aside. The four sections are the ones a מיפוי worksheet asks a household to
    fill in by hand — filled here from the statements already imported, so nothing on the
    screen is a number anybody typed or guessed. */
-export type PlanSectionKind = 'income' | 'fixed' | 'variable' | 'savings';
+export type PlanSectionKind = 'income' | 'fixed' | 'variable' | 'savings' | 'settlement';
 
 export interface PlanLine {
   /** A category id in the three expense sections; the payee on the income side, because
@@ -30,12 +30,23 @@ export interface FinancialPlan {
   readonly fixed: PlanSection;
   readonly variable: PlanSection;
   readonly savings: PlanSection;
+  /** What the bank took to settle a card, once the card's own charges have been imported.
+      It is shown because a household reading its statement will look for it, and it is
+      left out of every total because the charges it paid for are already in the two
+      spending sections — the same money described twice. */
+  readonly settlements: PlanSection;
   /** Everything that left, set-aside money included: a shekel moved to savings is not
       spent, but it is not available either, and a plan that left it out would report a
-      surplus the household cannot touch. */
+      surplus the household cannot touch. Card settlements are not in it — adding them
+      would count a household's card spending twice and report a month it never had. */
   readonly outgoing: number;
   readonly surplus: number;
 }
+
+/* The category a card settlement carries. It is the same id the reconciliation window in
+   the dashboard uses, and the two have to agree: one of them deciding a line is a
+   settlement while the other does not is how the same money gets counted twice. */
+const SETTLEMENT_CATEGORY = 'credit';
 
 const sectionOf = (
   kind: PlanSectionKind,
@@ -72,6 +83,7 @@ export function buildFinancialPlan(
   const fixed = new Map<string, { amount: number; count: number }>();
   const variable = new Map<string, { amount: number; count: number }>();
   const savings = new Map<string, { amount: number; count: number }>();
+  const settlements = new Map<string, { amount: number; count: number }>();
 
   for (const transaction of transactions) {
     const category = transaction.cat ?? 'other';
@@ -80,7 +92,11 @@ export function buildFinancialPlan(
       continue;
     }
     if (transaction.kind === 'neutral') {
-      add(savings, category, transaction.out - transaction.in);
+      /* `decorate` neutralises a card settlement once the card's own report has been
+         imported, which is what tells the two apart here: money moved to the household's
+         own savings is money set aside, and a settlement is a bill for spending that is
+         already itemised in the sections above. */
+      add(category === SETTLEMENT_CATEGORY ? settlements : savings, category, transaction.out - transaction.in);
       continue;
     }
     add(isFixed(transaction) ? fixed : variable, category, transaction.out - transaction.in);
@@ -91,6 +107,7 @@ export function buildFinancialPlan(
     fixed: sectionOf('fixed', fixed),
     variable: sectionOf('variable', variable),
     savings: sectionOf('savings', savings),
+    settlements: sectionOf('settlement', settlements),
   };
   const outgoing = sections.fixed.total + sections.variable.total + sections.savings.total;
   return { ...sections, outgoing, surplus: sections.income.total - outgoing };

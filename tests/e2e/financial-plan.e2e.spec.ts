@@ -104,3 +104,60 @@ test('offers the plan in every language', async ({ homePage }) => {
     await expect(homePage.page.getByTestId('plan-h')).toHaveText(heading);
   }
 });
+
+/* The settlement line on the statement and the card's own charges are the same money
+   described twice. Counted in the plan's totals as well as in the spending sections, a
+   household's card bill is added to its month a second time and what is left over comes
+   out short by the whole bill — on this screen the figure was 4,812.37 ₪ off. */
+test('leaves a settled card bill out of the month it already counted', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'with-card.csv', mimeType: 'text/csv',
+    buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,זכות,יתרה',
+      '02/09/2026,משכורת,,29000,29000',
+      '03/09/2026,ארנונה עיריית חיפה,1240,,27760',
+      '06/09/2026,ויזה כ.א.ל,4812.37,,22948',
+    ].join('\n')),
+  });
+  await homePage.upload.uploadCreditCardReport({
+    name: 'card.csv', mimeType: 'text/csv',
+    buffer: Buffer.from(['תאריך העסקה,שם בית העסק,סכום החיוב', '04/09/2026,סופר יוחננוף,412.30'].join('\n')),
+  }, 'external', 'visa');
+
+  // 29,000 in, 1,240 + 412.30 out. The 4,812.37 settlement paid for the 412.30.
+  await expect(homePage.dashboard.planSurplus).toHaveText(/\+27,347\.70/);
+  await expect(homePage.dashboard.planSettlement).toContainText('-4,812.37');
+  await expect(homePage.dashboard.planSettlement).toContainText('לא נספר בסיכום');
+  // And it is not filed as money the household chose to set aside.
+  await expect(homePage.dashboard.planSavings).toContainText('אין תנועות בחלק הזה החודש');
+});
+
+/* Without a card report the settlement is the only record of that spending, so it counts. */
+test('counts a card bill that nothing itemises', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'no-card.csv', mimeType: 'text/csv',
+    buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,זכות,יתרה',
+      '02/09/2026,משכורת,,29000,29000',
+      '06/09/2026,ויזה כ.א.ל,4812.37,,24188',
+    ].join('\n')),
+  });
+
+  await expect(homePage.dashboard.planSurplus).toHaveText(/\+24,187\.63/);
+  await expect(homePage.dashboard.planSettlement).toHaveCount(0);
+});
+
+/* A section the month left empty shows a plain zero: money2S signs everything it is given,
+   and "+0.00 ₪" at the head of an expense section reads as money that arrived. */
+test('heads an empty spending section with a plain zero', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'one-row.csv', mimeType: 'text/csv',
+    buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,זכות,יתרה',
+      '02/09/2026,משכורת,,29000,29000',
+    ].join('\n')),
+  });
+
+  await expect(homePage.dashboard.planFixed).toContainText('0.00');
+  await expect(homePage.dashboard.planFixed).not.toContainText('+0.00');
+});

@@ -122,3 +122,52 @@ describe('financial plan', () => {
     expect(plan.surplus).toBe(-2000);
   });
 });
+
+/* A card settlement on the statement and the card's own charges are the same money
+   described twice — the invariant the whole reconciliation rests on. `decorate`
+   neutralises the settlement once card detail arrives, and the plan has to keep it out of
+   its totals: counted there, a household's card spending is added to its month a second
+   time and what is left over comes out short by a full card bill. */
+describe('a card settlement once the card detail is in', () => {
+  const month = [
+    row('משכורת', { in: 29000 }, 'income', 'income'),
+    row('ארנונה', { out: 1240 }, 'home'),
+    row('סופר יוחננוף', { out: 412.3 }, 'food'),
+    row('ויזה כ.א.ל', { out: 4812.37 }, 'credit', 'neutral'),
+  ];
+
+  it('is kept out of what left and out of what is left over', () => {
+    const plan = buildFinancialPlan(month, nothingFixed, byPayee);
+
+    expect(plan.outgoing).toBeCloseTo(1652.3, 2);
+    expect(plan.surplus).toBeCloseTo(27347.7, 2);
+  });
+
+  it('is shown on its own rather than filed as money the household set aside', () => {
+    const plan = buildFinancialPlan(month, nothingFixed, byPayee);
+
+    expect(plan.settlements.lines).toEqual([{ key: 'credit', amount: 4812.37, count: 1 }]);
+    expect(plan.savings.lines).toEqual([]);
+  });
+
+  /* A transfer to the household's own savings is neutral too, and it is not a settlement:
+     it is money set aside, which the surplus must account for. */
+  it('leaves a transfer to savings where it was', () => {
+    const plan = buildFinancialPlan([...month, row('העברה לחיסכון', { out: 2000 }, 'savings', 'neutral')], nothingFixed, byPayee);
+
+    expect(plan.savings.total).toBe(2000);
+    expect(plan.outgoing).toBeCloseTo(3652.3, 2);
+  });
+
+  /* Without card detail imported the settlement is the only record of that spending, and
+     `decorate` leaves it an expense — where the plan must count it. */
+  it('counts a settlement that is still an expense because no card report arrived', () => {
+    const plan = buildFinancialPlan([
+      row('משכורת', { in: 29000 }, 'income', 'income'),
+      row('ויזה כ.א.ל', { out: 4812.37 }, 'credit'),
+    ], nothingFixed, byPayee);
+
+    expect(plan.outgoing).toBeCloseTo(4812.37, 2);
+    expect(plan.settlements.lines).toEqual([]);
+  });
+});
