@@ -79,6 +79,19 @@ The transactions table opens on the account as the bank describes it: statement 
 - Folding changes how a month reads, never what it came to: the totals line counts the charges themselves in both views.
 - Charges are folded only where a statement row stands beside them. A card-only import stays itemised, because there is no settlement line for the summary to be read against.
 
+## Financial plan pattern
+
+`plan` reads the selected month the way a household worksheet asks for it: income, fixed spending, variable spending, money set aside, and the line left over. Every figure is summed from transactions already imported — the app holds no target of its own, and a plan that invented one would be guessing at what this household meant to spend.
+
+- Each section carries its own total in the direction colour, and each line its amount and how many transactions it came from. A section with nothing in it says so rather than disappearing, so the four parts of the month stay on the page whatever it contained.
+- Fixed and variable is the recurring-charge agent's answer, not a property of a row: a charge is fixed because the same business stood in an earlier month. One definition of "recurring" on the page, never two that drift.
+- Money set aside counts as money that left. It is not spent, but it is not available either, and leaving it out would report a surplus the household cannot touch.
+- A card settlement, once the card's own report has been imported, gets its own section and is left out of every total — the charges it paid for are already in the spending sections, and counting it too adds a household's card spending to its month a second time. The section says so in words, and it is not drawn at all in a month that has none. Without card detail the settlement is the only record of that spending and counts as ordinary spending.
+- A section the month left empty is headed with a plain unsigned zero: the signed formatter renders `+0.00 ₪`, which at the head of an expense section reads as money that arrived.
+- A month that spent more than it earned is named a shortfall in words; the figure is never handed over as a negative number sitting where money to spend goes.
+- Income and spending are drawn as two bars on one scale, not one bar in two colours — side by side the segments would read as parts of a whole, and they are two lengths to compare. The figure carries an `aria-label` naming both amounts.
+- Income lines are named by payee and are customer data: they go in with `textContent`, never as markup.
+
 ## Consent pattern
 
 `.consent-card` presents optional cloud-sync disclosure inside settings. It is informative infrastructure, not a precondition for local use.

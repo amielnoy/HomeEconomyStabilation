@@ -474,6 +474,23 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
 .rulerow input, .budrow input, .rulerow select{ font-family:var(--ds-font-body); min-height:40px; }
 .filters input[type=search]{ flex:1 1 200px; }
 .empty-row{ text-align:center; color:var(--muted); padding:26px 0; font-size:14px; }
+
+/* The plan reads top to bottom as a worksheet does: a section heading carrying its total,
+   the lines underneath it, and the bottom line set apart from all of them. */
+.plan-section{ border-bottom:1px solid var(--line); padding:12px 0; }
+.plan-section:first-child{ padding-block-start:2px; }
+.plan-head{ display:flex; align-items:baseline; gap:10px; font-weight:700; font-size:14px; }
+.plan-head .plan-total{ margin-inline-start:auto; font-variant-numeric:tabular-nums; }
+.plan-line{ display:flex; align-items:baseline; gap:10px; font-size:13.5px; padding:4px 0 0; color:var(--ink); }
+.plan-line .plan-name{ color:var(--muted); }
+.plan-line .plan-count{ color:var(--muted); font-size:12px; }
+.plan-line .plan-amount{ margin-inline-start:auto; font-variant-numeric:tabular-nums; }
+.plan-bottom{ display:flex; align-items:baseline; gap:10px; padding:14px 0 2px; font-weight:700; font-size:15px; }
+.plan-bottom .plan-amount{ margin-inline-start:auto; font-size:19px; font-variant-numeric:tabular-nums; }
+.plan-bar{ display:grid; gap:5px; margin-block-start:12px; }
+.plan-bar > span{ display:block; height:10px; border-radius:5px; min-width:3px; }
+.plan-bar-in{ background:var(--good); }
+.plan-bar-out{ background:var(--crit); }
 /* A card folded to the sum it was charged, and the charges opened underneath it. The
    summary sits on its own tone so it reads as a heading for the lines below rather than
    as one more line beside them. */
@@ -1122,6 +1139,15 @@ body.drawer-open{ overflow:hidden; }
       <div id="cat-table" hidden class="tblwrap" role="region" aria-labelledby="cat-h" tabindex="0" data-testid="cat-table"></div>
       </section>
     </div>
+
+    <!-- financial plan --------------------------------------------------- -->
+    <section class="card" id="plan" aria-labelledby="plan-h" data-testid="plan">
+      <header><h2 id="plan-h" data-i18n="financialPlan" data-testid="plan-h">תכנית כלכלית</h2>
+        <div class="tools"><span class="note" id="plan-note" data-testid="plan-note"></span></div>
+      </header>
+      <div id="plan-body" data-testid="plan-body"></div>
+      <p class="note" id="plan-foot" data-i18n="financialPlanFoot" data-testid="plan-foot">התכנית נבנית מהתנועות שכבר נטענו. קבוע הוא חיוב שכבר הופיע בחודש קודם אצל אותו בית עסק; כל השאר משתנה.</p>
+    </section>
 
     <!-- recurring ------------------------------------------------------- -->
     <section class="card" id="recurring" aria-labelledby="rc-h" data-testid="recurring">
