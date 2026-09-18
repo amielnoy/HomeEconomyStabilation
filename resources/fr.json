@@ -500,6 +500,8 @@
   "chooseCard": "Choisir une carte",
   "noCardChargesYet": "Aucune opération de carte sur cette période. Importer un relevé de carte remplit ce tableau.",
   "cardStatementSummary": "{cards} cartes · {count} opérations · {out} sortis · {in} revenus",
+  "overview": "Vue d’ensemble",
+  "screens": "Écrans",
   "savingsGoals": "Objectifs d’épargne",
   "savingsGoalsNote": "Ce que vous mettez de côté, avec les montants que vous saisissez. L’application ignore quel virement correspondait à quel objectif et ne le devinera pas.",
   "addGoal": "Ajouter un objectif",

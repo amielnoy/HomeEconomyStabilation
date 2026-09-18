@@ -891,6 +891,20 @@ function renderRecommendations() {
   });
 }
 
+/* One tab carries `aria-current`, and the buttons that used to announce themselves with
+   aria-pressed keep doing so — a screen the reader is on has to be obvious from the bar
+   without counting colours. */
+const SCREEN_TABS = ['#btn-overview', '#btn-cards', '#btn-goals', '#btn-recommendations', '#btn-savings'] as const;
+
+function markScreen(active: typeof SCREEN_TABS[number]) {
+  for (const selector of SCREEN_TABS) {
+    const tab = $(selector);
+    if (selector === active) tab.setAttribute('aria-current', 'page');
+    else tab.removeAttribute('aria-current');
+    if (selector !== '#btn-overview') tab.setAttribute('aria-pressed', selector === active ? 'true' : 'false');
+  }
+}
+
 function showRecommendations() {
   if (!S.tx.length) {
     setMobileMenu(false);
@@ -919,7 +933,7 @@ function showRecommendations() {
   $('#main').hidden = false;
   $('#recommendations').hidden = false;
   $$('#main > *').forEach((child) => { if (child.id !== 'months' && child.id !== 'recommendations') child.hidden = true; });
-  $('#btn-recommendations').setAttribute('aria-pressed', 'true');
+  markScreen('#btn-recommendations');
   $('#recommendations').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -935,10 +949,7 @@ function showDashboard() {
   $('#main').hidden = !S.tx.length;
   $('#empty').hidden = Boolean(S.tx.length);
   $$('#main > *').forEach((child) => { if (child.id !== 'months' && child.id !== 'recommendations') child.hidden = false; });
-  $('#btn-recommendations').setAttribute('aria-pressed', 'false');
-  $('#btn-savings').setAttribute('aria-pressed', 'false');
-  $('#btn-goals').setAttribute('aria-pressed', 'false');
-  $('#btn-cards').setAttribute('aria-pressed', 'false');
+  markScreen('#btn-overview');
 }
 
 /* One screen at a time: two open at once would leave a household reading one and acting on
@@ -954,10 +965,7 @@ function showCards() {
   $('#savings-directory').hidden = true;
   $('#goals').hidden = true;
   $('#cards').hidden = false;
-  $('#btn-cards').setAttribute('aria-pressed', 'true');
-  $('#btn-goals').setAttribute('aria-pressed', 'false');
-  $('#btn-savings').setAttribute('aria-pressed', 'false');
-  $('#btn-recommendations').setAttribute('aria-pressed', 'false');
+  markScreen('#btn-cards');
   $('#cards').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -975,9 +983,7 @@ function showGoals() {
   $('#main').hidden = true;
   $('#savings-directory').hidden = true;
   $('#goals').hidden = false;
-  $('#btn-goals').setAttribute('aria-pressed', 'true');
-  $('#btn-savings').setAttribute('aria-pressed', 'false');
-  $('#btn-recommendations').setAttribute('aria-pressed', 'false');
+  markScreen('#btn-goals');
   $('#goals').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -994,8 +1000,7 @@ function showSavingsDirectory() {
   $('#empty').hidden = true;
   $('#main').hidden = true;
   $('#savings-directory').hidden = false;
-  $('#btn-savings').setAttribute('aria-pressed', 'true');
-  $('#btn-recommendations').setAttribute('aria-pressed', 'false');
+  markScreen('#btn-savings');
   $('#savings-directory').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -2263,6 +2268,7 @@ function wire() {
   $('#btn-cards-back').addEventListener('click', showDashboard);
   ['#f-card', '#f-card-scope'].forEach((selector) => $(selector).addEventListener('change', renderCards));
   $('#btn-goals-back').addEventListener('click', showDashboard);
+  $('#btn-overview').addEventListener('click', showDashboard);
   $('#btn-directory-back').addEventListener('click', showDashboard);
   const openMarketingUpload = (placement: string) => {
     trackMarketingEvent('marketing_primary_cta_clicked', { locale, placement });
