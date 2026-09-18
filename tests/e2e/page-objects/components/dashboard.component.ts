@@ -14,6 +14,7 @@ export class DashboardComponent {
   readonly cardGroupRows = this.page.getByTestId('card-group-row');
   readonly cardGroupToggles = this.page.getByTestId('card-group-toggle');
   readonly cardGroupSources = this.page.getByTestId('card-group-source');
+  readonly cardGroupCategory = this.page.getByTestId('card-group-category');
   readonly cardGroupAmounts = this.page.getByTestId('card-group-amount');
   readonly accountSummary = this.page.getByTestId('acct');
   readonly balance = this.page.getByTestId('t-bal');

@@ -506,7 +506,6 @@
   "viewEveryCharge": "Toutes les opérations",
   "cardChargeSummary": "{source} · {count} opérations",
   "cardChargeSummaryOne": "{source} · une opération",
-  "mixedCategories": "Mixte",
   "sourceManualEntry": "Saisie manuelle",
   "cardBrand.visa": "Visa",
   "cardBrand.cal": "Cal",

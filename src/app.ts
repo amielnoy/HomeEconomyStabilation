@@ -1476,15 +1476,19 @@ function cardGroupRow(group: CardChargeGroup): DomElement {
     if (open) openCardGroups.delete(group.key); else openCardGroups.add(group.key);
     renderTx();
   });
-  const cats = new Set(group.charges.map((charge) => charge.cat));
-  const only = cats.size === 1 ? [...cats][0] : undefined;
   const net = group.in - group.out;
   return el('tr', { class: 'cardgroup', 'data-testid': 'card-group-row' }, [
     el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(group.date)) }),
     el('td', { class: 'desc', 'data-label': t('description') }, toggle),
-    el('td', { class: 'catcell', 'data-label': t('category') }, only
-      ? [el('span', { class: 'dot', style: `background:${flowColor({ in: group.in > group.out ? group.in : 0, kind: catById(only).kind })}` }), el('span', { text: catById(only).name })]
-      : [el('span', { class: 'muted-cell', text: t('mixedCategories') })]),
+    /* The line is the card's bill, and `credit` is what a bill from a card issuer is
+       called everywhere else in the app — it is the category the settlement line on the
+       statement carries, and the rules give every issuer. Naming the one category the
+       charges happened to share instead said "פנאי ובידור" about a card, and naming none
+       of them said "מעורב", which is not a thing a household can act on. */
+    el('td', { class: 'catcell', 'data-label': t('category') }, [
+      el('span', { class: 'dot', style: `background:${flowColor({ in: group.in > group.out ? group.in : 0, kind: 'expense' })}` }),
+      el('span', { text: catById('credit').name, 'data-testid': 'card-group-category' }),
+    ]),
     el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: brand, 'data-testid': 'card-group-source' }),
     el('td', { class: 'amountcell n ' + (net > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: money2S(net), 'data-testid': 'card-group-amount' }),
     el('td', { class: 'n' }),
