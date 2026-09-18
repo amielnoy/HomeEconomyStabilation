@@ -1,4 +1,4 @@
-import type { AppState, BankTransaction, CardBrand, Category, CategoryKind, Rule } from './domain-model.js';
+import type { AppState, BankTransaction, CardBrand, Category, CategoryKind, Rule, SavingsGoal } from './domain-model.js';
 import { createPrivacySafeSnapshot, sanitizeTransaction } from './privacy.js';
 
 const MAX_TRANSACTIONS = 50_000;
@@ -63,6 +63,26 @@ function parseBudgets(value: unknown): Record<string, number> | null {
   return output;
 }
 
+/* A goal the household set for itself. Both figures are its own, so the codec's job is to
+   refuse a shape it does not recognise rather than to correct one — a saved state that
+   cannot be trusted returns null and the dashboard stays empty, which is the rule the
+   whole codec follows. */
+const MAX_GOALS = 100;
+
+function parseGoals(value: unknown): SavingsGoal[] | null {
+  if (!Array.isArray(value) || value.length > MAX_GOALS) return null;
+  const goals: SavingsGoal[] = [];
+  for (const item of value) {
+    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'name', 'target', 'saved', 'due'])
+        || !isBoundedString(item.id, 100) || !isBoundedString(item.name, 200)
+        || !isFiniteAmount(item.target) || item.target < 0
+        || !isFiniteAmount(item.saved) || item.saved < 0
+        || !(item.due === null || (isBoundedString(item.due, 7) && /^\d{4}-\d{2}$/.test(item.due)))) return null;
+    goals.push({ id: item.id, name: item.name, target: item.target, saved: item.saved, due: item.due as string | null });
+  }
+  return goals;
+}
+
 function parseRules(value: unknown): Rule[] | null {
   if (!Array.isArray(value) || value.length > MAX_RULES) return null;
   const rules: Rule[] = [];
@@ -100,7 +120,7 @@ export class AppStateCodec {
   decode(value: unknown): AppState | null {
     if (!isRecord(value)) return null;
     // accounts/month are accepted only to migrate legacy local data; neither is copied to the returned state.
-    const allowed = ['app', 'version', 'savedAt', 'tx', 'overrides', 'rules', 'cats', 'budgets', 'accounts', 'month'];
+    const allowed = ['app', 'version', 'savedAt', 'tx', 'overrides', 'rules', 'cats', 'budgets', 'goals', 'accounts', 'month'];
     if (!hasOnlyKeys(value, allowed) || !Array.isArray(value.tx) || value.tx.length > MAX_TRANSACTIONS) return null;
     const tx = value.tx.map(parseTransaction);
     if (tx.some((item) => item === null)) return null;
@@ -108,7 +128,8 @@ export class AppStateCodec {
     const restoredRules = value.rules === undefined ? [] : parseRules(value.rules);
     const cats = value.cats === undefined ? [...this.defaults.cats] : parseCategories(value.cats);
     const budgets = parseBudgets(value.budgets ?? {});
-    if (!overrides || !restoredRules || !cats?.length || !budgets) return null;
+    const goals = parseGoals(value.goals ?? []);
+    if (!overrides || !restoredRules || !cats?.length || !budgets || !goals) return null;
     const rules = [...restoredRules];
     for (const rule of this.defaults.rules) {
       if (!rules.some((candidate) => candidate.match === rule.match && candidate.cat === rule.cat)) rules.push({ ...rule });
@@ -123,7 +144,7 @@ export class AppStateCodec {
         restoredCats.splice(Math.min(index, restoredCats.length), 0, { ...category });
       }
     });
-    return { tx: tx as BankTransaction[], overrides, rules, cats: restoredCats, budgets, accounts: [], month: null };
+    return { tx: tx as BankTransaction[], overrides, rules, cats: restoredCats, budgets, goals, accounts: [], month: null };
   }
 }
 

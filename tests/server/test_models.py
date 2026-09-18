@@ -85,3 +85,35 @@ def test_snapshot_carries_a_directional_rule_end_to_end() -> None:
 
     assert SnapshotInput.model_validate(candidate).payload.persistence_dict()["rules"][0]["when"] == "in"
 
+
+def test_snapshot_model_carries_a_savings_goal() -> None:
+    """A goal is what the household is saving towards, in figures it entered itself."""
+    candidate = valid_snapshot()
+    candidate["payload"]["goals"] = [  # type: ignore[index]
+        {"id": "g1", "name": "family trip", "target": 12000.0, "saved": 3000.0, "due": "2027-07"},
+    ]
+
+    goals = SnapshotInput.model_validate(candidate).payload.goals
+
+    assert [goal.name for goal in goals] == ["family trip"]
+    assert goals[0].due == "2027-07"
+
+
+def test_snapshot_model_accepts_a_payload_saved_before_goals_existed() -> None:
+    """A browser that never had goals sends none, and its snapshot still has to store."""
+    assert SnapshotInput.model_validate(valid_snapshot()).payload.goals == []
+
+
+@pytest.mark.parametrize("goal", [
+    {"id": "g1", "name": "card 4111111111111111", "target": 1.0, "saved": 0.0, "due": None},
+    {"id": "g1", "name": "trip", "target": -1.0, "saved": 0.0, "due": None},
+    {"id": "g1", "name": "trip", "target": 1.0, "saved": 0.0, "due": "2027-7"},
+    {"id": "g1", "name": "trip", "target": 1.0, "saved": 0.0, "due": "2027-07-01"},
+    {"id": "g1", "name": "trip", "target": 1.0, "saved": 0.0, "note": "extra"},
+])
+def test_snapshot_model_rejects_a_goal_it_does_not_recognise(goal: dict[str, object]) -> None:
+    """The name is free text, so it meets the same identifier check a description does."""
+    candidate = valid_snapshot()
+    candidate["payload"]["goals"] = [goal]  # type: ignore[index]
+    with pytest.raises(ValidationError):
+        SnapshotInput.model_validate(candidate)

@@ -1,4 +1,4 @@
-import type { BankTransaction, CardBrand, Category, Rule } from './domain-model.js';
+import type { BankTransaction, CardBrand, Category, Rule, SavingsGoal } from './domain-model.js';
 
 export interface PersistableTransaction {
   date?: string;
@@ -29,10 +29,14 @@ export interface PersistableState<T extends PersistableTransaction = Persistable
   rules: readonly Rule[];
   cats: readonly Category[];
   budgets: Record<string, number>;
+  /* Optional on the way in: a state saved before goals existed simply has none, and a
+     caller that never had them should not have to invent an empty list. */
+  goals?: readonly SavingsGoal[];
 }
 
 export interface PrivacySafeSnapshot extends PersistableState<PersistedTransaction> {
   tx: readonly PersistedTransaction[];
+  goals: readonly SavingsGoal[];
 }
 
 const REDACTED = '[redacted]';
@@ -85,6 +89,16 @@ export function createPrivacySafeSnapshot<T extends PersistableTransaction>(stat
       ({ id: rule.id, match: rule.match, cat: rule.cat, ...(rule.when ? { when: rule.when } : {}) })),
     cats: state.cats.map((category) => ({ id: category.id, name: category.name, kind: category.kind })),
     budgets: { ...state.budgets },
+    /* A goal's name is free text the household typed, so it is redacted on the way out
+       exactly as a description is: nobody means to name an account in a goal, and the one
+       who does should not have it kept. */
+    goals: (state.goals ?? []).map((goal) => ({
+      id: goal.id,
+      name: redactFinancialIdentifiers(goal.name),
+      target: goal.target,
+      saved: goal.saved,
+      due: goal.due,
+    })),
   };
 }
 
@@ -117,7 +131,7 @@ const onlyKeys = (value: Record<string, unknown>, keys: readonly string[]) =>
   Object.keys(value).every((key) => keys.includes(key));
 
 export function isPrivacySafeSnapshot(value: unknown): value is PrivacySafeSnapshot {
-  if (!isRecord(value) || !onlyKeys(value, ['tx', 'overrides', 'rules', 'cats', 'budgets'])) return false;
+  if (!isRecord(value) || !onlyKeys(value, ['tx', 'overrides', 'rules', 'cats', 'budgets', 'goals'])) return false;
   if (!Array.isArray(value.tx) || value.tx.length > 50_000 || !value.tx.every(isPrivacySafeTransaction)) return false;
   const safeKey = (key: string, max: number) => !['__proto__', 'prototype', 'constructor'].includes(key) && isShortString(key, max);
   if (!isRecord(value.overrides) || Object.keys(value.overrides).length > 50_000
@@ -130,7 +144,15 @@ export function isPrivacySafeSnapshot(value: unknown): value is PrivacySafeSnaps
     isRecord(item) && onlyKeys(item, ['id', 'name', 'kind'])
     && isShortString(item.id, 100) && isShortString(item.name, 200)
     && ['expense', 'income', 'neutral'].includes(String(item.kind)))) return false;
-  return isRecord(value.budgets) && Object.keys(value.budgets).length <= 1_000
-    && Object.entries(value.budgets).every(([key, item]) =>
-      safeKey(key, 100) && typeof item === 'number' && Number.isFinite(item) && item >= 0 && item <= 1_000_000_000);
+  if (!isRecord(value.budgets) || Object.keys(value.budgets).length > 1_000
+    || !Object.entries(value.budgets).every(([key, item]) =>
+      safeKey(key, 100) && typeof item === 'number' && Number.isFinite(item) && item >= 0 && item <= 1_000_000_000)) return false;
+  const isGoalAmount = (item: unknown) =>
+    typeof item === 'number' && Number.isFinite(item) && item >= 0 && item <= 1_000_000_000;
+  return value.goals === undefined || (Array.isArray(value.goals) && value.goals.length <= 100
+    && value.goals.every((item) => isRecord(item) && onlyKeys(item, ['id', 'name', 'target', 'saved', 'due'])
+      && isShortString(item.id, 100) && isShortString(item.name, 200)
+      && item.name === redactFinancialIdentifiers(item.name)
+      && isGoalAmount(item.target) && isGoalAmount(item.saved)
+      && (item.due === null || (isShortString(item.due, 7) && /^\d{4}-\d{2}$/.test(String(item.due))))));
 }
