@@ -541,6 +541,8 @@
   "transactionView": "Affichage des opérations",
   "viewBankWithCardTotals": "Banque et totaux des cartes",
   "viewEveryCharge": "Toutes les opérations",
+  "expandCardCharges": "Cliquez pour afficher ici les {count} opérations de {source}",
+  "collapseCardCharges": "Cliquez pour replier les opérations de {source}",
   "cardChargeSummary": "{source} · {count} opérations",
   "cardChargeSummaryOne": "{source} · une opération",
   "sourceManualEntry": "Saisie manuelle",

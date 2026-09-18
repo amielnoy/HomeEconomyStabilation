@@ -541,6 +541,8 @@
   "transactionView": "Transaction view",
   "viewBankWithCardTotals": "Bank with card totals",
   "viewEveryCharge": "Every charge",
+  "expandCardCharges": "Click to open all {count} charges on {source} here",
+  "collapseCardCharges": "Click to fold the charges on {source} back up",
   "cardChargeSummary": "{source} · {count} charges",
   "cardChargeSummaryOne": "{source} · one charge",
   "sourceManualEntry": "Manual entry",

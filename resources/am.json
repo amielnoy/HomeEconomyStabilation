@@ -541,6 +541,8 @@
   "transactionView": "የክንውኖች እይታ",
   "viewBankWithCardTotals": "ባንክ ከካርድ ድምር ጋር",
   "viewEveryCharge": "ሁሉም ክፍያዎች",
+  "expandCardCharges": "የ{source} {count} ክፍያዎችን በሙሉ እዚህ ለመክፈት ይጫኑ",
+  "collapseCardCharges": "የ{source} ክፍያዎችን ለመመለስ ይጫኑ",
   "cardChargeSummary": "{source} · {count} ክፍያዎች",
   "cardChargeSummaryOne": "{source} · አንድ ክፍያ",
   "sourceManualEntry": "በእጅ የገባ",
