@@ -34,6 +34,7 @@ export class DashboardComponent {
   readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
   readonly quickAddButton = this.page.getByTestId('btn-quick-add');
   readonly quickAddDialog = this.page.getByTestId('quick-add');
+  readonly repairButton = this.page.getByTestId('btn-repair');
   readonly cardsButton = this.page.getByTestId('btn-cards');
   readonly cardsNote = this.page.getByTestId('cards-note');
   readonly cardChargeRows = this.page.getByTestId('card-charge-row');
@@ -114,6 +115,14 @@ export class DashboardComponent {
     await this.page.getByTestId('quick-desc').fill(input.description);
     if (input.category) await this.page.getByTestId('quick-cat').selectOption(input.category);
     await this.page.getByTestId('quick-submit').click();
+  }
+
+  /** Takes the offer to turn round the rows a card report left the wrong way: once to
+      arm it, once to apply, the way deleting everything asks twice. */
+  @step('Correct the rows read the wrong way round')
+  async repairMisreadRows(): Promise<void> {
+    await this.repairButton.click();
+    await this.repairButton.click();
   }
 
   /** What is on each card, on its own screen, reached from the header. */

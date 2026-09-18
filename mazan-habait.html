@@ -1264,7 +1264,10 @@ body.drawer-open{ overflow:hidden; }
     <!-- transactions ---------------------------------------------------- -->
     <section class="card" id="transactions" aria-labelledby="tx-h" data-testid="transactions">
       <header><h2 id="tx-h" data-i18n="transactions" data-testid="tx-h">תנועות</h2>
-        <div class="tools"><span class="note" id="tx-count" data-testid="tx-count"></span></div>
+        <div class="tools">
+          <button class="btn sm" id="btn-repair" type="button" hidden data-testid="btn-repair"></button>
+          <span class="note" id="tx-count" data-testid="tx-count"></span>
+        </div>
       </header>
       <div class="filters">
         <input type="search" id="q" placeholder="חיפוש בתיאור הפעולה או באסמכתא" data-i18n-placeholder="searchTransactions" aria-label="חיפוש תנועות" data-i18n-aria-label="searchTransactionsLabel" data-testid="q">

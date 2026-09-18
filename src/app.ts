@@ -13,6 +13,7 @@ import { RuleBasedTransactionCategorizer } from './categorization.js';
 import { transactionViewRows, type CardChargeGroup, type TransactionViewMode } from './transaction-view.js';
 import { buildFinancialPlan, type PlanSection } from './financial-plan.js';
 import { goalProgress, orderGoals } from './savings-goals.js';
+import { asOutgoing, findMisreadRows } from './misread-rows.js';
 import { cardStatements, type CardStatement } from './card-statements.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
@@ -1732,6 +1733,20 @@ function renderTx() {
   if (fd === 'in') list = list.filter((t) => t.in > 0);
   if (q) list = list.filter((t) => (t.desc + ' ' + t.ref).toLowerCase().includes(q));
 
+  /* Offered where the rows are, because that is where a household notices them: a table of
+     merchants written in green with a plus. The count is on the button, so the offer says
+     how much of the month it is about before it is taken. */
+  const misread = findMisreadRows(S.tx);
+  const repair = $('#btn-repair');
+  repair.hidden = !misread.length;
+  if (misread.length) {
+    repair.textContent = repair.dataset.armed
+      ? t('repairMisreadConfirm', { count: misread.length })
+      : t('repairMisread', { count: misread.length });
+  } else {
+    delete repair.dataset.armed;
+  }
+
   const body = $('#tx-body');
   body.textContent = '';
   /* Counted and summed over the charges themselves, whichever view is showing: folding
@@ -2214,6 +2229,35 @@ function wire() {
   $('#btn-recommendations').addEventListener('click', showRecommendations);
   $('#btn-dashboard').addEventListener('click', showDashboard);
   $('#btn-savings').addEventListener('click', showSavingsDirectory);
+  /* Armed on the first click and applied on the second, the way deleting everything is:
+     it rewrites rows the customer did not choose one at a time, so it asks twice. */
+  $('#btn-repair').addEventListener('click', () => {
+    const button = $('#btn-repair');
+    const misread = findMisreadRows(S.tx);
+    if (!misread.length) return;
+    if (!button.dataset.armed) {
+      button.dataset.armed = 'yes';
+      button.textContent = t('repairMisreadConfirm', { count: misread.length });
+      return;
+    }
+    delete button.dataset.armed;
+    const wrong = new Set(misread.map((item) => item.id));
+    S.tx = S.tx.map((transaction) => {
+      if (!wrong.has(transaction.id)) return transaction;
+      const corrected = asOutgoing(transaction);
+      corrected.id = txId(corrected);
+      /* The category the customer chose belongs to the charge, not to the reading of it. */
+      if (transaction.id && S.overrides[transaction.id]) {
+        S.overrides[corrected.id] = S.overrides[transaction.id]!;
+        delete S.overrides[transaction.id];
+      }
+      return corrected;
+    });
+    log.info('transactions.repaired', { count: misread.length });
+    save(); render();
+    toast(t('repairMisreadDone', { count: misread.length }));
+  });
+
   $('#btn-goals').addEventListener('click', () => (goalsOpen ? showDashboard() : showGoals()));
   $('#btn-cards').addEventListener('click', () => (cardsOpen ? showDashboard() : showCards()));
   $('#btn-cards-back').addEventListener('click', showDashboard);
