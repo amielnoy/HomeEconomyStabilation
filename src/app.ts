@@ -1597,7 +1597,10 @@ function cardLabel(statement: CardStatement): string {
   /* Built before the call: a key spliced inside t() reads as a literal to the contract
      test that checks every requested key exists. */
   const brandKey = 'cardBrand.' + statement.brand;
-  return statement.brand ? t(brandKey) : t('sourceCardUnknown');
+  const issuer = statement.brand ? t(brandKey) : t('sourceCardUnknown');
+  /* The issuer names the company and the digits name the card, so the label carries both —
+     "ויזה ••1234" is how the household's own receipts write it. */
+  return statement.last4 ? t('cardWithLast4', { issuer, last4: statement.last4 }) : issuer;
 }
 
 function renderCards() {
@@ -1882,7 +1885,8 @@ function cardGroupRow(group: CardChargeGroup): DomElement {
   /* Built before the call, as in sourceLabel: a key spliced inside t() reads as a literal
      to the contract test that checks every requested key exists. */
   const brandKey = 'cardBrand.' + group.brand;
-  const brand = group.brand ? t(brandKey) : t('sourceCardUnknown');
+  const issuer = group.brand ? t(brandKey) : t('sourceCardUnknown');
+  const brand = group.last4 ? t('cardWithLast4', { issuer, last4: group.last4 }) : issuer;
   const toggle = el('button', {
     type: 'button', class: 'cardgroup-toggle', 'aria-expanded': String(open),
     /* The line reads as a total and gives no sign that it opens. `aria-expanded` says so
@@ -2251,6 +2255,11 @@ function logCommand(event: Event): void {
    dialog, and the answer travels with the rows that import. */
 let pendingCardKind: CardIssuer | null = null;
 let pendingCardBrand: CardBrand = 'other';
+/* The last four digits of the card, as the customer typed them. Two Visas are two cards and
+   no export says which is which; the issuer names the company, not the card. Left blank,
+   the card is known by its issuer as before. */
+let pendingCardLast4 = '';
+let pendingCardLast4Refused = false;
 
 /* querySelector rather than the $ helper: its DomElement is a convenience shape for the
    controls this file mostly touches, and a dialog's own API is not in it. */
@@ -2260,6 +2269,9 @@ function openCardSource(): void {
   const dialog = cardSourceDialog();
   pendingCardKind = null;
   pendingCardBrand = 'other';
+  pendingCardLast4 = '';
+  pendingCardLast4Refused = false;
+  document.querySelector<HTMLInputElement>('#card-source-last4')!.value = '';
   /* The select keeps its value between visits like returnValue does, and a brand left
      over from the previous import would be recorded against a card nobody named. */
   document.querySelector<HTMLSelectElement>('#card-source-issuer')!.value = 'other';
@@ -2285,7 +2297,16 @@ function onCardSourceClosed(): void {
   }
   pendingCardKind = chosen;
   pendingCardBrand = readCardBrand();
-  log.info('ui.card-source.chosen', { cardKind: chosen, cardBrand: pendingCardBrand });
+  /* Four digits or nothing: anything else is not carried at all rather than trimmed into
+     something that looks like an answer. */
+  const typed = clean(document.querySelector<HTMLInputElement>('#card-source-last4')?.value ?? '');
+  pendingCardLast4 = /^\d{4}$/.test(typed) ? typed : '';
+  /* Typed and not four digits — a whole card number pasted in, most likely. The file is
+     imported anyway, because losing a statement over an optional label is the worse
+     outcome, and nothing of what was typed is kept. The import says which happened. */
+  pendingCardLast4Refused = Boolean(typed) && !pendingCardLast4;
+  /* That the card was identified is worth knowing; the digits are not written to a log. */
+  log.info('ui.card-source.chosen', { cardKind: chosen, cardBrand: pendingCardBrand, named: Boolean(pendingCardLast4) });
   document.querySelector<HTMLInputElement>('#card-file')!.click();
 }
 
@@ -2297,7 +2318,7 @@ function readCardBrand(): CardBrand {
 }
 
 /* ---------------------------------------------------------- file load -- */
-async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank', cardKind?: CardIssuer, cardBrand?: CardBrand) {
+async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank', cardKind?: CardIssuer, cardBrand?: CardBrand, cardLast4?: string) {
   const files = [...fileList];
   if (!files.length) return;
   log.info('report.import.started', { source, files: files.length, ...(cardKind ? { cardKind } : {}), ...(cardBrand ? { cardBrand } : {}) });
@@ -2409,6 +2430,8 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
         /* 'other' is the customer declining to name the issuer, and storing it would
            dress a non-answer as one. The row keeps no brand and the column says so. */
         if (cardBrand && cardBrand !== 'other') t.cardBrand = cardBrand;
+        /* A card nobody identified is known by its issuer, exactly as it was before. */
+        if (cardLast4) t.cardLast4 = cardLast4;
         have.add(t.id); S.tx.push(t); added++;
       }
     } catch (e) {
@@ -2424,6 +2447,7 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
   const parts = [];
   if (added) parts.push(t('transactionsAdded', { count: added }));
   if (dup) parts.push(t('transactionsDuplicated', { count: dup }));
+  if (source === 'card' && pendingCardLast4Refused) parts.push(t('cardLast4Refused'));
   /* Counted out loud: rows quietly replaced would look like rows that never existed. */
   if (corrected) parts.push(t('transactionsCorrected', { count: corrected }));
   if (reclassified.length) parts.push(reclassified.length > 2 ? t('filesReadAsCardReports', { count: reclassified.length }) : reclassified.join(' · '));
@@ -2449,7 +2473,7 @@ function wire() {
   $('#card-source').addEventListener('close', onCardSourceClosed);
   $('#card-file').addEventListener('change', (e) => {
     const input = e.currentTarget as HTMLInputElement;
-    if (input.files) handleFiles(input.files, 'card', pendingCardKind ?? undefined, pendingCardBrand);
+    if (input.files) handleFiles(input.files, 'card', pendingCardKind ?? undefined, pendingCardBrand, pendingCardLast4);
     input.value = '';
     pendingCardKind = null;
     pendingCardBrand = 'other';

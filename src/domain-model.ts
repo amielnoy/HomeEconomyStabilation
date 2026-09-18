@@ -29,6 +29,13 @@ export interface BankTransaction {
   source?: TransactionSource;
   cardKind?: CardIssuer;
   cardBrand?: CardBrand;
+  /* The last four digits of the card a report came from, as the customer typed them at
+     import. Two Visas are two cards and no export says which is which — the issuer names
+     the company, not the card. Four digits are what every receipt prints and what a
+     household recognises its own card by; the field accepts nothing else, so it cannot
+     hold a card number, an account number or an IBAN however they are typed. Absent on
+     every row imported before it was asked for, and on every row left blank. */
+  cardLast4?: string;
   src: string;
   id?: string;
   cat?: string;

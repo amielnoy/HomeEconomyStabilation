@@ -1434,6 +1434,16 @@ body.drawer-open{ overflow:hidden; }
         <option value="other" selected data-i18n="cardBrand.other">אחר / לא ידוע</option>
       </select>
     </label>
+    <label class="picker-field" for="card-source-last4">
+      <span data-i18n="cardLast4Label">ארבע הספרות האחרונות של הכרטיס</span>
+      <!-- Neither maxlength nor pattern, both on purpose. maxlength would truncate a pasted
+           card number to its first four digits and keep those — the wrong four, and digits
+           off a card number. pattern would refuse to submit, which loses the household its
+           statement over an optional label. What is not exactly four digits is carried as
+           nothing at all, and the import says so. -->
+      <input id="card-source-last4" type="text" inputmode="numeric" size="6"
+        placeholder="לא חובה" data-i18n-placeholder="optional" data-testid="card-source-last4">
+    </label>
     <button class="picker-option" type="submit" value="bank" id="card-source-bank" data-testid="card-source-bank">
       <span class="picker-option-title" data-i18n="cardSourceBank">כרטיס אשראי בנקאי</span>
       <span class="picker-option-hint" data-i18n="cardSourceBankHint">מונפק על ידי הבנק ומחויב בחיוב חודשי מרוכז בדוח הבנק.</span>

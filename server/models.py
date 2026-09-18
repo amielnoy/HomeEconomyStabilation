@@ -56,6 +56,12 @@ class Transaction(BaseModel):
     cat: str | None = Field(default=None, max_length=100)
     kind: CategoryKind | None = None
 
+    # The last four digits of the card, as the customer typed them at import. Two Visas
+    # are two cards and no export says which is which; four digits are what every receipt
+    # prints. The shape is the protection: exactly four digits and nothing else can be
+    # stored here, so the field cannot hold a card number, an account number or an IBAN.
+    cardLast4: str | None = Field(default=None, pattern=r"^\d{4}$")
+
     @field_validator("desc")
     @classmethod
     def description_has_no_financial_identifier(cls, value: str) -> str:
