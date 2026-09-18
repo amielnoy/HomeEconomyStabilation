@@ -511,6 +511,43 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
 .goalfields input[type=number]{ width:110px; }
 .goalfields input[type=month]{ width:150px; }
 @media (pointer: coarse){ .goalfields input{ min-height:48px; } }
+
+/* The one thing a household does between statements is spend cash, and recording it used
+   to cost a drawer and five fields. The button stays on the screen, clear of the safe
+   area, and never sits over the last row of a table — the page reserves room for it. */
+.fab{
+  position:fixed; inset-block-end:calc(18px + env(safe-area-inset-bottom));
+  inset-inline-end:calc(18px + env(safe-area-inset-right));
+  width:56px; height:56px; border-radius:50%; border:0; z-index:30;
+  background:var(--ds-action); color:#fff; font-size:30px; line-height:1;
+  display:grid; place-items:center; cursor:pointer; box-shadow:var(--ds-shadow-2);
+  font-family:var(--ds-font-body);
+}
+.fab:hover{ filter:brightness(1.07); }
+.fab:focus-visible{ outline:3px solid var(--ds-focus); outline-offset:3px; }
+.quick-add{
+  border:1px solid var(--line); border-radius:16px; padding:20px 22px 22px;
+  background:var(--surface); color:var(--ink); width:min(420px,calc(100vw - 32px));
+  box-shadow:var(--ds-shadow-2); direction:inherit;
+}
+.quick-add::backdrop{ background:rgba(4,12,14,.5); }
+.quick-add h2{ font-size:19px; margin:0 0 4px; }
+.quick-add .note{ margin:0 0 14px; font-size:12.5px; }
+.quick-field{ display:block; font-size:12.5px; color:var(--muted); margin-block:10px 4px; }
+.quick-add input, .quick-add select{
+  width:100%; border:1px solid var(--line-2); background:var(--page); color:var(--ink);
+  border-radius:10px; padding:9px 11px; font-size:16px; min-height:44px;
+  font-family:var(--ds-font-body);
+}
+.quick-add input:focus-visible, .quick-add select:focus-visible{
+  outline:2px solid var(--ds-action); outline-offset:1px;
+}
+.quick-actions{ display:flex; gap:10px; margin-block-start:18px; }
+.quick-actions .btn{ flex:1 1 auto; justify-content:center; }
+@media (pointer: coarse){
+  .fab{ width:60px; height:60px; }
+  .quick-add input, .quick-add select{ min-height:48px; }
+}
 /* A card folded to the sum it was charged, and the charges opened underneath it. The
    summary sits on its own tone so it reads as a heading for the lines below rather than
    as one more line beside them. */
@@ -1213,6 +1250,33 @@ body.drawer-open{ overflow:hidden; }
         <th data-i18n="transactionSource">מקור</th><th data-i18n="amount">סכום</th><th data-i18n="balance">יתרה</th><th data-i18n="reference">אסמכתא</th>
       </tr></thead><tbody id="tx-body" data-testid="tx-body"></tbody></table></div>
     </section>
+
+    <!-- quick add ---------------------------------------------------------- -->
+    <button class="fab" id="btn-quick-add" type="button" aria-haspopup="dialog"
+      aria-label="הוספת הוצאה מהירה" data-i18n-aria-label="quickAdd" data-testid="btn-quick-add">
+      <span aria-hidden="true">+</span>
+    </button>
+
+    <dialog id="quick-add" class="quick-add" aria-labelledby="quick-add-h" data-testid="quick-add">
+      <form method="dialog" id="quick-add-form" data-testid="quick-add-form">
+        <h2 id="quick-add-h" data-i18n="quickAddTitle" data-testid="quick-add-h">הוספת הוצאה</h2>
+        <p class="note" data-i18n="quickAddNote" data-testid="quick-add-note">למה שדף החשבון לא מראה — מזומן, תשלום בין אנשים, כל מה שיצא ולא נרשם.</p>
+        <label class="quick-field" for="quick-amount" data-i18n="amount">סכום</label>
+        <input id="quick-amount" type="number" min="0.01" step="0.01" inputmode="decimal" required
+          aria-label="סכום בשקלים" data-i18n-aria-label="amountInShekels" data-testid="quick-amount">
+        <label class="quick-field" for="quick-desc" data-i18n="description">תיאור פעולה</label>
+        <input id="quick-desc" type="text" required maxlength="120"
+          aria-label="תיאור פעולה" data-i18n-aria-label="description" data-testid="quick-desc">
+        <label class="quick-field" for="quick-cat" data-i18n="category">קטגוריה</label>
+        <select id="quick-cat" aria-label="קטגוריה" data-i18n-aria-label="category" data-testid="quick-cat"></select>
+        <label class="quick-field" for="quick-date" data-i18n="date">תאריך</label>
+        <input id="quick-date" type="date" required aria-label="תאריך" data-i18n-aria-label="date" data-testid="quick-date">
+        <div class="quick-actions">
+          <button class="btn primary" type="submit" value="save" data-i18n="saveTransaction" data-testid="quick-submit">שמירת תנועה</button>
+          <button class="btn" type="button" id="quick-cancel" data-i18n="cancel" data-testid="quick-cancel">ביטול</button>
+        </div>
+      </form>
+    </dialog>
 
     <footer class="foot">
       <p id="foot-note" data-testid="foot-note"></p>
