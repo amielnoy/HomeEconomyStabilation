@@ -492,6 +492,8 @@
   "planFixed": "Dépenses fixes",
   "planVariable": "Dépenses variables",
   "planSavings": "Épargne et virements",
+  "planSettlements": "Prélèvement de carte",
+  "planSettlementsNote": "Non compté dans le total : les opérations qu’il règle figurent déjà dans les dépenses ci-dessus.",
   "planSurplus": "Reste ce mois-ci",
   "planDeficit": "Manque ce mois-ci",
   "planLineCount": "{count} opérations",

@@ -1285,12 +1285,14 @@ const PLAN_SECTION_TESTID: Record<PlanSection['kind'], string> = {
   fixed: 'plan-section-fixed',
   variable: 'plan-section-variable',
   savings: 'plan-section-savings',
+  settlement: 'plan-section-settlement',
 };
 
 function planSectionLabel(section: PlanSection): string {
   if (section.kind === 'income') return t('planIncome');
   if (section.kind === 'fixed') return t('planFixed');
   if (section.kind === 'variable') return t('planVariable');
+  if (section.kind === 'settlement') return t('planSettlements');
   return t('planSavings');
 }
 
@@ -1314,14 +1316,21 @@ function renderPlan() {
     return;
   }
 
-  for (const section of [plan.income, plan.fixed, plan.variable, plan.savings]) {
+  /* The settlement section is rendered only when there is one: a household with no card
+     detail imported has no settlement to exclude, and an empty section headed "already
+     counted" would raise a question the month does not contain. */
+  const sections = [plan.income, plan.fixed, plan.variable, plan.savings,
+    ...(plan.settlements.lines.length ? [plan.settlements] : [])];
+  for (const section of sections) {
     const incoming = section.kind === 'income';
     const box = el('div', { class: 'plan-section', 'data-testid': PLAN_SECTION_TESTID[section.kind] });
     box.append(el('div', { class: 'plan-head' }, [
       el('span', { text: planSectionLabel(section) }),
+      /* A section that stayed empty shows a plain zero. money2S signs everything it is
+         given, and "+0.00 ₪" at the head of an expense section reads as money arriving. */
       el('span', {
-        class: 'plan-total ' + (incoming ? 'pos' : 'neg'),
-        text: money2S(incoming ? section.total : -section.total),
+        class: 'plan-total ' + (section.total === 0 ? '' : incoming ? 'pos' : 'neg'),
+        text: section.total === 0 ? money2(0) : money2S(incoming ? section.total : -section.total),
         'data-testid': 'plan-section-total',
       }),
     ]));
@@ -1341,6 +1350,9 @@ function renderPlan() {
     }
     if (!section.lines.length) {
       box.append(el('div', { class: 'plan-line' }, el('span', { class: 'plan-name', text: t('planSectionEmpty') })));
+    }
+    if (section.kind === 'settlement') {
+      box.append(el('p', { class: 'note', text: t('planSettlementsNote'), 'data-testid': 'plan-settlement-note' }));
     }
     body.append(box);
   }
