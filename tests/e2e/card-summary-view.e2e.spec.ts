@@ -36,6 +36,8 @@ test('opens on the statement with each card folded to the sum it charged', async
 
   await expect(homePage.dashboard.cardGroupRows).toHaveCount(1);
   await expect(homePage.dashboard.cardGroupSources).toHaveText('ישראכרט');
+  // The line is the card's bill, whoever issued the card, so that is what it is filed as.
+  await expect(homePage.dashboard.cardGroupCategory).toHaveText('כרטיסי אשראי');
   await expect(homePage.dashboard.cardGroupAmounts).toHaveText(/172\.50/);
   // The statement rows stand beside it, itemised as they always were.
   await expect(homePage.dashboard.transactionRows).toHaveCount(2);
@@ -87,4 +89,39 @@ test('reports the same count and totals in both views', async ({ homePage }) => 
   await homePage.dashboard.showEveryCharge();
 
   await expect(homePage.dashboard.transactionCount).toHaveText(folded);
+});
+
+/* Whoever issued the card — a bank or a credit company — the folded line is a card's bill
+   and is filed as one. Naming the single category its charges happened to share said
+   "פנאי ובידור" about a card, and naming none of them said "מעורב", which is not
+   something a household can act on or budget against. */
+test.describe('the classification on a folded card', () => {
+  const singleCategoryCard = () => ({
+    name: 'card.csv', mimeType: 'text/csv',
+    buffer: Buffer.from([
+      'תאריך העסקה,שם בית העסק,סכום החיוב',
+      '03/08/2026,נטפליקס,54.90',
+      '05/08/2026,ספוטיפיי,19.90',
+    ].join('\n')),
+  });
+
+  for (const issuer of ['bank', 'external'] as const) {
+    test(`files a ${issuer}-issued card's charges as a credit-card bill`, async ({ homePage }) => {
+      await homePage.upload.uploadBankReport(statement());
+      await homePage.upload.uploadCreditCardReport(singleCategoryCard(), issuer, 'visa');
+
+      await expect(homePage.dashboard.cardGroupCategory).toHaveText('כרטיסי אשראי');
+    });
+  }
+
+  /* The charges underneath keep the categories they earned — folding the card does not
+     recategorise a household's spending, it only names the line that stands for it. */
+  test('leaves the charges underneath in the categories they were given', async ({ homePage }) => {
+    await homePage.upload.uploadBankReport(statement());
+    await homePage.upload.uploadCreditCardReport(singleCategoryCard(), 'external', 'visa');
+    await homePage.dashboard.openCardSummaries();
+
+    await expect(homePage.dashboard.transactionRows.filter({ hasText: 'נטפליקס' })
+      .getByTestId('transaction-category-select')).toHaveValue('leisure');
+  });
 });

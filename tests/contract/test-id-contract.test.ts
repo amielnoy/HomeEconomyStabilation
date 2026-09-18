@@ -28,7 +28,9 @@ describe('automation test-id contract', () => {
     const source = readFileSync(resolve(root, 'src/app.ts'), 'utf8');
     for (const testId of [
       'month-chip', 'attention-item', 'recommendation-card', 'recommendation-action',
-      'budget-row', 'category-row', 'recurring-row', 'recurring-amount', 'transaction-row', 'transaction-flow-dot',
+      'budget-row', 'category-row', 'category-amount', 'category-table-amount',
+      'recurring-row', 'recurring-amount', 'transaction-row', 'transaction-flow-dot',
+      'card-group-row', 'card-group-category',
       'goal-row', 'goal-name-input', 'goal-target-input', 'goal-saved-input', 'goal-due-input', 'goal-remove',
       'plan-line', 'plan-line-amount', 'plan-surplus',
       'transaction-balance', 'transaction-category-select', 'budget-limit-input',

@@ -14,6 +14,7 @@ export class DashboardComponent {
   readonly cardGroupRows = this.page.getByTestId('card-group-row');
   readonly cardGroupToggles = this.page.getByTestId('card-group-toggle');
   readonly cardGroupSources = this.page.getByTestId('card-group-source');
+  readonly cardGroupCategory = this.page.getByTestId('card-group-category');
   readonly cardGroupAmounts = this.page.getByTestId('card-group-amount');
   readonly accountSummary = this.page.getByTestId('acct');
   readonly balance = this.page.getByTestId('t-bal');
@@ -28,6 +29,8 @@ export class DashboardComponent {
   readonly spendingGuideRetained = this.page.getByTestId('spending-guide-retained');
   readonly spendingGuideAsOf = this.page.getByTestId('spending-guide-asof');
   readonly spendingGuideDate = this.page.getByTestId('spending-guide-date');
+  readonly categoryAmounts = this.page.getByTestId('category-amount');
+  readonly categoryTableAmounts = this.page.getByTestId('category-table-amount');
   readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
   readonly goals = this.page.getByTestId('goals');
   readonly goalRows = this.page.getByTestId('goal-row');

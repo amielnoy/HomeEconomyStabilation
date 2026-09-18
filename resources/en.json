@@ -521,7 +521,6 @@
   "viewEveryCharge": "Every charge",
   "cardChargeSummary": "{source} · {count} charges",
   "cardChargeSummaryOne": "{source} · one charge",
-  "mixedCategories": "Mixed",
   "sourceManualEntry": "Manual entry",
   "cardBrand.visa": "Visa",
   "cardBrand.cal": "Cal",

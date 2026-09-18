@@ -1249,7 +1249,11 @@ function renderCategories() {
         el('span', { class: 'dot', style: `background:${catColor(S.cats, cid)}` }),
         el('span', { class: 'nm', text: catById(cid).name }),
         el('span', { class: 'pct num', text: Math.round((v / total) * 100) + '%' }),
-        el('span', { class: 'amt num', text: money(v) }),
+        /* Written as the charge it is: signed and in the spending colour, like every
+           other figure on the page. A breakdown of where the money went is a list of
+           money that left, and reading it as plain black numbers beside a salary that
+           carries its plus made the two look like the same kind of figure. */
+        el('span', { class: 'amt num neg', text: money2S(-v), 'data-testid': 'category-amount' }),
       ]),
       el('div', { class: 'track' }, [
         el('div', { class: 'fill', style: `width:${(v / max) * 100}%;background:${catColor(S.cats, cid)}` }),
@@ -1266,7 +1270,7 @@ function renderCategories() {
   for (const [cid, v] of rows) {
     tb.append(el('tr', { 'data-testid': 'category-table-row' }, [
       el('td', { text: catById(cid).name }),
-      el('td', { class: 'n', text: money2(v) }),
+      el('td', { class: 'n neg', text: money2S(-v), 'data-testid': 'category-table-amount' }),
       el('td', { class: 'n', text: Math.round((v / total) * 100) + '%' }),
       el('td', { class: 'n', text: list.filter((x) => x.cat === cid && x.out > 0).length }),
     ]));
@@ -1557,15 +1561,19 @@ function cardGroupRow(group: CardChargeGroup): DomElement {
     if (open) openCardGroups.delete(group.key); else openCardGroups.add(group.key);
     renderTx();
   });
-  const cats = new Set(group.charges.map((charge) => charge.cat));
-  const only = cats.size === 1 ? [...cats][0] : undefined;
   const net = group.in - group.out;
   return el('tr', { class: 'cardgroup', 'data-testid': 'card-group-row' }, [
     el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(group.date)) }),
     el('td', { class: 'desc', 'data-label': t('description') }, toggle),
-    el('td', { class: 'catcell', 'data-label': t('category') }, only
-      ? [el('span', { class: 'dot', style: `background:${flowColor({ in: group.in > group.out ? group.in : 0, kind: catById(only).kind })}` }), el('span', { text: catById(only).name })]
-      : [el('span', { class: 'muted-cell', text: t('mixedCategories') })]),
+    /* The line is the card's bill, and `credit` is what a bill from a card issuer is
+       called everywhere else in the app — it is the category the settlement line on the
+       statement carries, and the rules give every issuer. Naming the one category the
+       charges happened to share instead said "פנאי ובידור" about a card, and naming none
+       of them said "מעורב", which is not a thing a household can act on. */
+    el('td', { class: 'catcell', 'data-label': t('category') }, [
+      el('span', { class: 'dot', style: `background:${flowColor({ in: group.in > group.out ? group.in : 0, kind: 'expense' })}` }),
+      el('span', { text: catById('credit').name, 'data-testid': 'card-group-category' }),
+    ]),
     el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: brand, 'data-testid': 'card-group-source' }),
     el('td', { class: 'amountcell n ' + (net > 0 ? 'pos' : 'neg'), 'data-label': t('amount'), text: money2S(net), 'data-testid': 'card-group-amount' }),
     el('td', { class: 'n' }),
