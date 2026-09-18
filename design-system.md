@@ -100,6 +100,14 @@ Where the app can tell that saved rows were read the wrong way round — money a
 - The same expense recorded twice is the mistake two taps make easiest, so a repeat is named rather than added.
 - The button clears the safe-area inset and the page reserves room below its last row for it, at 56px and 60px on coarse pointers.
 
+## Screen navigation
+
+`screen-nav` names every screen that stands beside the dashboard — overview, credit cards, savings goals, recommendations and the savings directory — in one bar below the header. They used to be four buttons among the header actions, which on a phone meant behind the overflow toggle: a household that had not opened that menu did not know the screens existed.
+
+- The bar scrolls sideways rather than wrapping, so it costs the page one line at every width, and it sits outside the header so the header's own height budget is untouched.
+- The screen in view carries `aria-current="page"` and exactly one tab has it. Colour is not the only marker: the current tab is the one the reader's assistive technology announces as current.
+- Every tab keeps the id and test id it had as a header button, so the screens stay addressable by the same names.
+
 ## Savings goal pattern
 
 `goals` is a screen of its own, opened from the header beside the savings directory and closed back to the dashboard — goals are the one thing here not read from a statement, and a household opens them to plan rather than to review. It opens with nothing imported at all, because naming what you are saving towards does not wait for a bank. Only one screen stands at a time: opening another closes it, and the header button carries `aria-pressed`.

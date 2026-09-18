@@ -500,6 +500,8 @@
   "chooseCard": "ካርድ ይምረጡ",
   "noCardChargesYet": "በዚህ ክልል የካርድ ክፍያዎች የሉም። የካርድ ሪፖርት ማስገባት ይህን ሰንጠረዥ ይሞላል።",
   "cardStatementSummary": "{cards} ካርዶች · {count} ክፍያዎች · {out} ወጪ · {in} ተመላሽ",
+  "overview": "አጠቃላይ እይታ",
+  "screens": "ማያ ገጾች",
   "savingsGoals": "የቁጠባ ግቦች",
   "savingsGoalsNote": "የምትቆጥቡበት ነገር፣ እናንተ በምታስገቡት መጠን። መተግበሪያው የትኛው ዝውውር ለየትኛው ግብ እንደነበር አያውቅም፤ አይገምትም።",
   "addGoal": "ግብ ጨምር",

@@ -500,6 +500,8 @@
   "chooseCard": "Choose a card",
   "noCardChargesYet": "No card charges in this range. Importing a card report fills this table.",
   "cardStatementSummary": "{cards} cards · {count} charges · {out} out · {in} back",
+  "overview": "Overview",
+  "screens": "Screens",
   "savingsGoals": "Savings goals",
   "savingsGoalsNote": "What you are saving towards, in figures you enter. The app does not know which transfer belonged to which goal, and will not guess.",
   "addGoal": "Add a goal",

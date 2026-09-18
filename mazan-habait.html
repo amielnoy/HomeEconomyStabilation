@@ -475,6 +475,28 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
 .filters input[type=search]{ flex:1 1 200px; }
 .empty-row{ text-align:center; color:var(--muted); padding:26px 0; font-size:14px; }
 
+/* The screens, named and one click away. They used to be four buttons among the actions,
+   and on a phone that meant behind the overflow toggle — a household that had not opened
+   that menu did not know the screens existed. The bar scrolls sideways rather than wrapping
+   into a second row, so it costs the page one line at every width. */
+.screens{
+  display:flex; gap:8px; overflow-x:auto; padding-block:4px 14px; margin-block-end:4px;
+  scrollbar-width:none; scroll-snap-type:x proximity;
+}
+.screens::-webkit-scrollbar{ display:none; }
+.screentab{
+  flex:0 0 auto; scroll-snap-align:start; border:1px solid var(--line-2);
+  background:var(--surface); color:var(--ink); border-radius:999px;
+  padding:0 16px; min-height:40px; font-family:var(--ds-font-body); font-size:14px;
+  font-weight:600; cursor:pointer; white-space:nowrap;
+}
+.screentab:hover{ border-color:var(--ds-action-border); }
+.screentab:focus-visible{ outline:2px solid var(--ds-action); outline-offset:2px; }
+.screentab[aria-current="page"]{
+  background:var(--ds-action); border-color:var(--ds-action); color:#fff;
+}
+@media (pointer: coarse){ .screentab{ min-height:48px; } }
+
 /* A row that carries money out is read as one line, so it is coloured as one line. The
    muted greys of the reference and the source are overridden on purpose: a charge that
    announced itself in one cell and looked ordinary in the other five was read as ordinary.
@@ -899,10 +921,6 @@ body.drawer-open{ overflow:hidden; }
       <input type="file" id="card-file" accept=".xls,.xlsx,.csv,.html,.htm" multiple hidden data-testid="card-file">
       <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
       <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
-        <button class="btn" id="btn-recommendations" type="button" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
-        <button class="btn" id="btn-cards" type="button" aria-pressed="false" data-i18n="cardStatements" data-testid="btn-cards">כרטיסי אשראי</button>
-        <button class="btn" id="btn-goals" type="button" aria-pressed="false" data-i18n="savingsGoals" data-testid="btn-goals">מטרות חיסכון</button>
-        <button class="btn" id="btn-savings" type="button" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
         <label class="locale-picker" data-testid="language-picker">
           <span class="vh" data-i18n="languageLabel">שפת ממשק</span>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M2.8 10h14.4M10 2.5c2 2.1 3 4.6 3 7.5s-1 5.4-3 7.5c-2-2.1-3-4.6-3-7.5s1-5.4 3-7.5Z" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -1088,6 +1106,16 @@ body.drawer-open{ overflow:hidden; }
   <!-- ============================================================= main -->
   <!-- savings goals: its own screen, reached from the header ------------- -->
   <!-- credit cards: what is on each card, on its own screen --------------- -->
+
+    <!-- screen navigation ---------------------------------------------------- -->
+    <nav class="screens" aria-label="מסכים" data-i18n-aria-label="screens" data-testid="screen-nav">
+      <button class="screentab" id="btn-overview" type="button" aria-current="page" data-i18n="overview" data-testid="btn-overview">תמונת מצב</button>
+      <button class="screentab" id="btn-cards" type="button" aria-pressed="false" data-i18n="cardStatements" data-testid="btn-cards">כרטיסי אשראי</button>
+      <button class="screentab" id="btn-goals" type="button" aria-pressed="false" data-i18n="savingsGoals" data-testid="btn-goals">מטרות חיסכון</button>
+      <button class="screentab" id="btn-recommendations" type="button" aria-pressed="false" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
+      <button class="screentab" id="btn-savings" type="button" aria-pressed="false" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
+    </nav>
+
   <section class="directory" id="cards" hidden aria-labelledby="cards-h" data-testid="cards">
     <header><h2 id="cards-h" data-i18n="cardStatements" data-testid="cards-h">כרטיסי אשראי</h2>
       <div class="tools">
