@@ -1594,6 +1594,9 @@ function showExpenses() {
    the question a bill asks — recognise these charges before paying them — so it is one
    card at a time, newest first, the way an issuer prints it. */
 function cardLabel(statement: CardStatement): string {
+  /* The household's own name wins: it is what tells two cards from one issuer apart, and
+     it is the only name that reads back as the card it was given to. */
+  if (statement.name) return statement.name;
   /* Built before the call: a key spliced inside t() reads as a literal to the contract
      test that checks every requested key exists. */
   const brandKey = 'cardBrand.' + statement.brand;
@@ -1882,7 +1885,7 @@ function cardGroupRow(group: CardChargeGroup): DomElement {
   /* Built before the call, as in sourceLabel: a key spliced inside t() reads as a literal
      to the contract test that checks every requested key exists. */
   const brandKey = 'cardBrand.' + group.brand;
-  const brand = group.brand ? t(brandKey) : t('sourceCardUnknown');
+  const brand = group.name ? group.name : group.brand ? t(brandKey) : t('sourceCardUnknown');
   const toggle = el('button', {
     type: 'button', class: 'cardgroup-toggle', 'aria-expanded': String(open),
     /* The line reads as a total and gives no sign that it opens. `aria-expanded` says so
@@ -2251,6 +2254,10 @@ function logCommand(event: Event): void {
    dialog, and the answer travels with the rows that import. */
 let pendingCardKind: CardIssuer | null = null;
 let pendingCardBrand: CardBrand = 'other';
+/* What the household calls this card. Two Visas are two cards and no export says which is
+   which; the issuer names the company, not the card. Left blank, the card is known by its
+   issuer as before. */
+let pendingCardName = '';
 
 /* querySelector rather than the $ helper: its DomElement is a convenience shape for the
    controls this file mostly touches, and a dialog's own API is not in it. */
@@ -2260,6 +2267,8 @@ function openCardSource(): void {
   const dialog = cardSourceDialog();
   pendingCardKind = null;
   pendingCardBrand = 'other';
+  pendingCardName = '';
+  document.querySelector<HTMLInputElement>('#card-source-name')!.value = '';
   /* The select keeps its value between visits like returnValue does, and a brand left
      over from the previous import would be recorded against a card nobody named. */
   document.querySelector<HTMLSelectElement>('#card-source-issuer')!.value = 'other';
@@ -2285,7 +2294,10 @@ function onCardSourceClosed(): void {
   }
   pendingCardKind = chosen;
   pendingCardBrand = readCardBrand();
-  log.info('ui.card-source.chosen', { cardKind: chosen, cardBrand: pendingCardBrand });
+  pendingCardName = clean(document.querySelector<HTMLInputElement>('#card-source-name')?.value ?? '').slice(0, 40);
+  /* The name is the customer's own text and never reaches a log line. That a card was
+     named is worth knowing; what they called it is not. */
+  log.info('ui.card-source.chosen', { cardKind: chosen, cardBrand: pendingCardBrand, named: Boolean(pendingCardName) });
   document.querySelector<HTMLInputElement>('#card-file')!.click();
 }
 
@@ -2297,7 +2309,7 @@ function readCardBrand(): CardBrand {
 }
 
 /* ---------------------------------------------------------- file load -- */
-async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank', cardKind?: CardIssuer, cardBrand?: CardBrand) {
+async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank', cardKind?: CardIssuer, cardBrand?: CardBrand, cardName?: string) {
   const files = [...fileList];
   if (!files.length) return;
   log.info('report.import.started', { source, files: files.length, ...(cardKind ? { cardKind } : {}), ...(cardBrand ? { cardBrand } : {}) });
@@ -2409,6 +2421,8 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
         /* 'other' is the customer declining to name the issuer, and storing it would
            dress a non-answer as one. The row keeps no brand and the column says so. */
         if (cardBrand && cardBrand !== 'other') t.cardBrand = cardBrand;
+        /* A card nobody named is known by its issuer, exactly as it was before. */
+        if (cardName) t.cardName = cardName;
         have.add(t.id); S.tx.push(t); added++;
       }
     } catch (e) {
@@ -2449,7 +2463,7 @@ function wire() {
   $('#card-source').addEventListener('close', onCardSourceClosed);
   $('#card-file').addEventListener('change', (e) => {
     const input = e.currentTarget as HTMLInputElement;
-    if (input.files) handleFiles(input.files, 'card', pendingCardKind ?? undefined, pendingCardBrand);
+    if (input.files) handleFiles(input.files, 'card', pendingCardKind ?? undefined, pendingCardBrand, pendingCardName);
     input.value = '';
     pendingCardKind = null;
     pendingCardBrand = 'other';

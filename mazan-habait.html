@@ -1434,6 +1434,10 @@ body.drawer-open{ overflow:hidden; }
         <option value="other" selected data-i18n="cardBrand.other">אחר / לא ידוע</option>
       </select>
     </label>
+    <label class="picker-field" for="card-source-name">
+      <span data-i18n="cardNameLabel">איך תקראו לכרטיס הזה?</span>
+      <input id="card-source-name" type="text" maxlength="40" placeholder="לא חובה" data-i18n-placeholder="optional" data-testid="card-source-name">
+    </label>
     <button class="picker-option" type="submit" value="bank" id="card-source-bank" data-testid="card-source-bank">
       <span class="picker-option-title" data-i18n="cardSourceBank">כרטיס אשראי בנקאי</span>
       <span class="picker-option-hint" data-i18n="cardSourceBankHint">מונפק על ידי הבנק ומחויב בחיוב חודשי מרוכז בדוח הבנק.</span>

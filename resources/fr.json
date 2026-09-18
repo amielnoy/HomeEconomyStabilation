@@ -489,6 +489,8 @@
   "forecastTableSummary": "Solde projeté par semaine, en tableau",
   "month": "Mois",
   "transactionSource": "Source",
+  "cardNameLabel": "Comment appelez-vous cette carte ?",
+  "optional": "Facultatif",
   "cardIssuerLabel": "Quelle société a émis la carte ?",
   "sourceBank": "Banque",
   "sourceCardUnknown": "Carte de crédit",

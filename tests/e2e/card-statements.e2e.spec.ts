@@ -98,3 +98,69 @@ test('offers the screen in every language', async ({ homePage, page }) => {
     await expect(page.getByTestId('cards-h')).toHaveText(heading);
   }
 });
+
+/* A household holding two cards from one issuer had them gathered under one heading, at a
+   total neither card was ever charged. No export says which Visa is which — the issuer
+   names the company, not the card — so the customer is asked, once, at import. */
+test.describe('two cards from one issuer', () => {
+  const second = () => ({
+    name: 'visa-2.csv', mimeType: 'text/csv',
+    buffer: Buffer.from(['תאריך העסקה,שם בית העסק,סכום החיוב', '06/09/2026,מוסך הכרמל,900.00'].join('\n')),
+  });
+
+  test('lists each named card on its own in the chooser', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(statement());
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa', 'הכרטיס של אמא');
+    await homePage.upload.uploadCreditCardReport(second(), 'external', 'visa', 'הכרטיס של אבא');
+    await homePage.dashboard.openCards();
+
+    await expect(page.getByTestId('f-card').locator('option'))
+      .toHaveText(['כל הכרטיסים', 'הכרטיס של אבא', 'הכרטיס של אמא']);
+  });
+
+  test('shows only that card when one of them is chosen', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(statement());
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa', 'הכרטיס של אמא');
+    await homePage.upload.uploadCreditCardReport(second(), 'external', 'visa', 'הכרטיס של אבא');
+    await homePage.dashboard.openCards();
+
+    await page.getByTestId('f-card').selectOption({ label: 'הכרטיס של אבא' });
+
+    await expect(homePage.dashboard.cardChargeRows).toHaveCount(1);
+    await expect(homePage.dashboard.cardChargeRows.first()).toContainText('מוסך הכרמל');
+  });
+
+  /* And the folded line in the transactions table folds the same way. */
+  test('folds each card into a line of its own in the transactions table', async ({ homePage }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(statement());
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa', 'הכרטיס של אמא');
+    await homePage.upload.uploadCreditCardReport(second(), 'external', 'visa', 'הכרטיס של אבא');
+
+    await expect(homePage.dashboard.cardGroupRows).toHaveCount(2);
+    await expect(homePage.dashboard.cardGroupRows.filter({ hasText: 'הכרטיס של אמא' })).toHaveCount(1);
+  });
+
+  /* A card nobody named is known by its issuer, exactly as before. */
+  test('leaves a card nobody named known by its issuer', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(statement());
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa');
+    await homePage.dashboard.openCards();
+
+    await expect(page.getByTestId('f-card').locator('option')).toHaveText(['כל הכרטיסים', 'ויזה']);
+  });
+
+  /* The name is free text, and a household that types a card number into it must not have
+     it kept — the same rule a merchant description follows. */
+  test('does not keep a card number typed into the name', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa', 'כרטיס 4580-1234-5678');
+
+    const stored = await page.evaluate(() => window.localStorage.getItem('mazan-habait/v1') ?? '');
+    expect(stored).not.toContain('5678');
+    expect(stored).toContain('redacted');
+  });
+});

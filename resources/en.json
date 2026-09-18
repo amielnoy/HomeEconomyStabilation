@@ -489,6 +489,8 @@
   "forecastTableSummary": "Projected balance by week, as a table",
   "month": "Month",
   "transactionSource": "Source",
+  "cardNameLabel": "What do you call this card?",
+  "optional": "Optional",
   "cardIssuerLabel": "Which company issued the card?",
   "sourceBank": "Bank",
   "sourceCardUnknown": "Credit card",

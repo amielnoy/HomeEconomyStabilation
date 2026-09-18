@@ -16,6 +16,7 @@ export interface PersistableTransaction {
   kind?: 'expense' | 'income' | 'neutral';
   cardKind?: 'bank' | 'external';
   cardBrand?: CardBrand;
+  cardName?: string;
 }
 
 export interface PersistedTransaction extends BankTransaction {
@@ -78,6 +79,9 @@ export function sanitizeTransaction(transaction: PersistableTransaction): Persis
     ...(transaction.kind ? { kind: transaction.kind } : {}),
     ...(transaction.cardKind ? { cardKind: transaction.cardKind } : {}),
     ...(transaction.cardBrand ? { cardBrand: transaction.cardBrand } : {}),
+    /* Free text the customer typed, so it is redacted exactly as a description is: nobody
+       means to name a card by its number, and the one who does should not have it kept. */
+    ...(transaction.cardName ? { cardName: redactFinancialIdentifiers(String(transaction.cardName)).slice(0, 40) } : {}),
   };
 }
 
@@ -105,7 +109,7 @@ export function createPrivacySafeSnapshot<T extends PersistableTransaction>(stat
 export function isPrivacySafeTransaction(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const transaction = value as Record<string, unknown>;
-  const allowed = new Set(['date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind', 'cardBrand']);
+  const allowed = new Set(['date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind', 'cardBrand', 'cardName']);
   return Object.keys(transaction).every((key) => allowed.has(key))
     && transaction.ref === ''
     && typeof transaction.src === 'string' && SAFE_SOURCES.has(transaction.src)
@@ -121,7 +125,9 @@ export function isPrivacySafeTransaction(value: unknown): boolean {
     && (transaction.kind === undefined || ['expense', 'income', 'neutral'].includes(String(transaction.kind)))
     && (transaction.cardKind === undefined || transaction.cardKind === 'bank' || transaction.cardKind === 'external')
     && (transaction.cardBrand === undefined
-      || ['visa', 'cal', 'isracard', 'diners', 'amex', 'max', 'leumi', 'other'].includes(String(transaction.cardBrand)));
+      || ['visa', 'cal', 'isracard', 'diners', 'amex', 'max', 'leumi', 'other'].includes(String(transaction.cardBrand)))
+    && (transaction.cardName === undefined
+      || (isShortString(transaction.cardName, 40) && transaction.cardName === redactFinancialIdentifiers(transaction.cardName)));
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

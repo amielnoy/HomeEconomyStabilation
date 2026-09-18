@@ -489,6 +489,8 @@
   "forecastTableSummary": "የተገመተ ቀሪ ሂሳብ በሳምንት፣ እንደ ሰንጠረዥ",
   "month": "ወር",
   "transactionSource": "ምንጭ",
+  "cardNameLabel": "ይህን ካርድ ምን ትሉታላችሁ?",
+  "optional": "አማራጭ",
   "cardIssuerLabel": "ካርዱን ያወጣው የትኛው ኩባንያ ነው?",
   "sourceBank": "ባንክ",
   "sourceCardUnknown": "የክሬዲት ካርድ",

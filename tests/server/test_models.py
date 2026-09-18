@@ -117,3 +117,25 @@ def test_snapshot_model_rejects_a_goal_it_does_not_recognise(goal: dict[str, obj
     candidate["payload"]["goals"] = [goal]  # type: ignore[index]
     with pytest.raises(ValidationError):
         SnapshotInput.model_validate(candidate)
+
+
+def test_transaction_carries_the_name_the_household_gave_the_card() -> None:
+    """Two Visas are two cards, and only a name the customer chose tells them apart."""
+    payload = {
+        "date": "2026-09-04", "vdate": "2026-09-04", "ref": "", "desc": "shop",
+        "out": 412.3, "in": 0.0, "bal": None, "pending": False, "src": "card-report",
+        "source": "card", "cardBrand": "visa", "cardName": "mum's card",
+    }
+
+    assert Transaction.model_validate(payload).cardName == "mum's card"
+
+
+def test_transaction_refuses_a_card_number_typed_into_the_name() -> None:
+    """The name is free text, so it meets the check a description meets."""
+    payload = {
+        "date": "2026-09-04", "vdate": "2026-09-04", "ref": "", "desc": "shop",
+        "out": 412.3, "in": 0.0, "bal": None, "pending": False, "src": "card-report",
+        "source": "card", "cardName": "card 4111111111111111",
+    }
+    with pytest.raises(ValidationError):
+        Transaction.model_validate(payload)

@@ -29,6 +29,12 @@ export interface BankTransaction {
   source?: TransactionSource;
   cardKind?: CardIssuer;
   cardBrand?: CardBrand;
+  /* What this household calls this card, typed at import. Two Visas are two cards, and no
+     export says which is which — the issuer is the company, not the card. A name the
+     customer chose is the only thing that can tell them apart without keeping a card
+     number, which this app never does. Absent on every row imported before it was asked
+     for, and on every row whose customer left it blank. */
+  cardName?: string;
   src: string;
   id?: string;
   cat?: string;

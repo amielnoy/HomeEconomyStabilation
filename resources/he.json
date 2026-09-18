@@ -406,6 +406,8 @@
   "forecastTableSummary": "תחזית היתרה לפי שבוע, כטבלה",
   "month": "חודש",
   "transactionSource": "מקור",
+  "cardNameLabel": "איך תקראו לכרטיס הזה?",
+  "optional": "לא חובה",
   "cardIssuerLabel": "מי הנפיק את הכרטיס?",
   "sourceBank": "בנק",
   "sourceCardUnknown": "כרטיס אשראי",

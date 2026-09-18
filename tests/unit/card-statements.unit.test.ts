@@ -60,3 +60,40 @@ describe('what is on each card', () => {
     expect(cardStatements([statement('2026-09-02', 'משכורת', 0)])).toEqual([]);
   });
 });
+
+/* Two Visas are two cards, and no export says which is which — the issuer names the
+   company, not the card. Grouping by issuer alone put a household's spending on both under
+   one heading, and under a total neither card was ever charged. */
+describe('a household with two cards from one issuer', () => {
+  const named = (date: string, desc: string, out: number, name: string): BankTransaction =>
+    ({ ...charge(date, desc, out, 'visa'), cardName: name });
+
+  it('keeps each named card apart, and apart from an unnamed one', () => {
+    const cards = cardStatements([
+      named('2026-09-04', 'סופר', 412.3, 'הכרטיס של אמא'),
+      named('2026-09-05', 'מוסך', 900, 'הכרטיס של אבא'),
+      charge('2026-09-06', 'נטפליקס', 54.9, 'visa'),
+    ]);
+
+    expect(cards.map((card) => [card.name, card.count]))
+      .toEqual([['הכרטיס של אמא', 1], ['הכרטיס של אבא', 1], [undefined, 1]]);
+  });
+
+  it('gathers everything charged to one named card under it', () => {
+    const cards = cardStatements([
+      named('2026-09-04', 'סופר', 400, 'הכרטיס של אמא'),
+      named('2026-09-07', 'בית קפה', 50, 'הכרטיס של אמא'),
+    ]);
+
+    expect(cards).toHaveLength(1);
+    expect(cards[0]).toMatchObject({ name: 'הכרטיס של אמא', count: 2, out: 450 });
+  });
+
+  /* A card named after its issuer must not merge with the unnamed card of that issuer:
+     one is a card the household pointed at, the other is everything else it holds. */
+  it('does not merge a card named after its issuer with the unnamed one', () => {
+    const cards = cardStatements([named('2026-09-04', 'א', 10, 'ויזה'), charge('2026-09-05', 'ב', 20, 'visa')]);
+
+    expect(cards).toHaveLength(2);
+  });
+});

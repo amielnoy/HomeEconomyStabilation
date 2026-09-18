@@ -56,6 +56,18 @@ class Transaction(BaseModel):
     cat: str | None = Field(default=None, max_length=100)
     kind: CategoryKind | None = None
 
+    # What the household calls this card, typed at import. Two Visas are two cards and no
+    # export says which is which; a name the customer chose is the only thing that tells
+    # them apart without keeping a card number, which this boundary refuses outright.
+    cardName: str | None = Field(default=None, max_length=40)
+
+    @field_validator("cardName")
+    @classmethod
+    def card_name_has_no_financial_identifier(cls, value: str | None) -> str | None:
+        if value is not None and _contains_financial_identifier(value):
+            raise ValueError("financial identifier is not allowed")
+        return value
+
     @field_validator("desc")
     @classmethod
     def description_has_no_financial_identifier(cls, value: str) -> str:
