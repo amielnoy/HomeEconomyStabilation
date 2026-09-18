@@ -34,6 +34,7 @@ export class DashboardComponent {
   readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
   readonly quickAddButton = this.page.getByTestId('btn-quick-add');
   readonly quickAddDialog = this.page.getByTestId('quick-add');
+  readonly repairButton = this.page.getByTestId('btn-repair');
   readonly goalsButton = this.page.getByTestId('btn-goals');
   readonly goals = this.page.getByTestId('goals');
   readonly goalRows = this.page.getByTestId('goal-row');
@@ -110,6 +111,14 @@ export class DashboardComponent {
     await this.page.getByTestId('quick-desc').fill(input.description);
     if (input.category) await this.page.getByTestId('quick-cat').selectOption(input.category);
     await this.page.getByTestId('quick-submit').click();
+  }
+
+  /** Takes the offer to turn round the rows a card report left the wrong way: once to
+      arm it, once to apply, the way deleting everything asks twice. */
+  @step('Correct the rows read the wrong way round')
+  async repairMisreadRows(): Promise<void> {
+    await this.repairButton.click();
+    await this.repairButton.click();
   }
 
   /** The goals screen stands beside the dashboard, reached from the header. */

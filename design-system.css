@@ -117,6 +117,13 @@ html .drawer.on { transform: none; }
   border-color: color-mix(in srgb, var(--ds-action) 88%, var(--ds-text));
 }
 .ds-button[data-variant="quiet"],
+/* A button the code has hidden has to be gone. `display: inline-flex` above outranks the
+   user agent's `[hidden] { display: none }`, so a control that believed it was hidden kept
+   sitting on the screen — and an offer to rewrite a household's rows is the worst kind of
+   button to leave visible after it has been taken. */
+.ds-button[hidden],
+.btn[hidden] { display: none; }
+
 .btn.quiet { border-color: transparent; background: transparent; }
 .ds-button[data-variant="destructive"],
 .btn.destructive { color: var(--ds-critical); }

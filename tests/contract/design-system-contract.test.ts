@@ -31,6 +31,12 @@ describe('design system contract', () => {
     expect(page).toMatch(/@media \(pointer: coarse\)\{[\s\S]*?\.cardgroup-toggle,[\s\S]*?min-height:48px/);
   });
 
+  /* The button recipe sets `display`, which outranks the user agent's rule for `[hidden]`.
+     Without this, every `hidden` button in the app is still on the screen. */
+  it('hides a button the code has hidden', () => {
+    expect(css).toMatch(/\.btn\[hidden\]\s*\{\s*display:\s*none/);
+  });
+
   it('provides visible focus and reduced-motion behavior', () => {
     expect(css).toContain(':focus-visible');
     expect(css).toContain('@media (prefers-reduced-motion: reduce)');
