@@ -109,6 +109,13 @@ Where the app can tell that saved rows were read the wrong way round — money a
 - The same expense recorded twice is the mistake two taps make easiest, so a repeat is named rather than added.
 - The button clears the safe-area inset and the page reserves room below its last row for it, at 56px and 60px on coarse pointers.
 
+## Choosing a month
+
+The month chips choose the month the dashboard is on. The transactions table and the credit-cards screen name the months in their own filter as well, because those are the tables people arrive at with a month in mind, and sending them back up to the chips to say which was a step nobody should have to take.
+
+- The selected month is the app's, not the control's: picking one in either filter sets it everywhere, and the chips set it too. A control that preferred whatever it last held let the two disagree — a chip click moved the month while the table went on showing the old one.
+- `all history` belongs to the table that asked for it and does not move the rest of the dashboard.
+
 ## Screen navigation
 
 `screen-nav` names every screen that stands beside the dashboard — overview, credit cards, savings goals, recommendations and the savings directory — in one bar below the header. They used to be four buttons among the header actions, which on a phone meant behind the overflow toggle: a household that had not opened that menu did not know the screens existed.

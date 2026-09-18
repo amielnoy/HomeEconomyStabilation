@@ -1153,10 +1153,7 @@ body.drawer-open{ overflow:hidden; }
     <p class="note" id="cards-note" data-testid="cards-note"></p>
     <div class="filters">
       <select id="f-card" aria-label="בחירת כרטיס" data-i18n-aria-label="chooseCard" data-testid="f-card"></select>
-      <select id="f-card-scope" aria-label="טווח" data-i18n-aria-label="range" data-testid="f-card-scope">
-        <option value="month" data-i18n="selectedMonth">החודש הנבחר</option>
-        <option value="all" data-i18n="allHistory">כל ההיסטוריה</option>
-      </select>
+      <select id="f-card-scope" aria-label="בחירת חודש" data-i18n-aria-label="chooseMonth" data-testid="f-card-scope"></select>
     </div>
     <div class="tblwrap" role="region" aria-labelledby="cards-h" tabindex="0" data-testid="cards-table-scroll">
       <table id="cards-table" data-testid="cards-table"><thead><tr>
@@ -1333,10 +1330,7 @@ body.drawer-open{ overflow:hidden; }
           <option value="out" data-i18n="outOnly">יוצא בלבד</option>
           <option value="in" data-i18n="inOnly">נכנס בלבד</option>
         </select>
-        <select id="f-scope" aria-label="טווח" data-i18n-aria-label="range" data-testid="f-scope">
-          <option value="month" data-i18n="selectedMonth">החודש הנבחר</option>
-          <option value="all" data-i18n="allHistory">כל ההיסטוריה</option>
-        </select>
+        <select id="f-scope" aria-label="בחירת חודש" data-i18n-aria-label="chooseMonth" data-testid="f-scope"></select>
         <select id="f-view" aria-label="תצוגת התנועות" data-i18n-aria-label="transactionView" data-testid="f-view">
           <option value="bank-with-card-totals" data-i18n="viewBankWithCardTotals">בנק וסיכום כרטיסים</option>
           <option value="every-charge" data-i18n="viewEveryCharge">כל החיובים</option>

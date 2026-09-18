@@ -1454,8 +1454,22 @@ function cardLabel(statement: CardStatement): string {
 }
 
 function renderCards() {
-  const scope = $('#f-card-scope').value;
-  const statements = cardStatements(scope === 'all' ? S.tx : txOfMonth(S.month));
+  /* The month chips live on the dashboard, and this screen stands beside it — so a
+     household here had to go back to change the month it was reading. The months are
+     named in place instead, and picking one moves the whole app to it: two screens
+     disagreeing about which month is open is worse than one extra control. */
+  const scopeSelect = $('#f-card-scope');
+  const months = monthsPresent();
+  const chosenScope = scopeSelect.value;
+  scopeSelect.textContent = '';
+  for (const mk of months) scopeSelect.append(el('option', { value: mk, text: monthLabel(mk) }));
+  scopeSelect.append(el('option', { value: 'all', text: t('allHistory') }));
+  scopeSelect.value = chosenScope === 'all' ? 'all'
+    : S.month && months.includes(S.month) ? S.month
+    : months[0] ?? 'all';
+
+  const scope = scopeSelect.value;
+  const statements = cardStatements(scope === 'all' ? S.tx : txOfMonth(scope));
   /* Sorted by the name the reader sees, which only this layer can translate. */
   const named = statements
     .map((statement) => ({ statement, label: cardLabel(statement) }))
@@ -1759,11 +1773,33 @@ function cardGroupRow(group: CardChargeGroup): DomElement {
   ]);
 }
 
+/* The months a household can read, named in the control that reads them. The chips above
+   choose the month the whole dashboard is on; this table is the one people arrive at with
+   a month in mind, and sending them back up to the chips to say which was a step nobody
+   should have to take. Picking one here moves the dashboard too — two controls disagreeing
+   about which month is open is worse than one extra list. */
+function fillMonthFilter() {
+  const select = $('#f-scope');
+  const months = monthsPresent();
+  const chosen = select.value;
+  select.textContent = '';
+  for (const mk of months) select.append(el('option', { value: mk, text: monthLabel(mk) }));
+  select.append(el('option', { value: 'all', text: t('allHistory') }));
+  /* The selected month is the app's, not this control's: choosing one here sets it, and
+     the chips above set it too. Preferring whatever the select last held let the two
+     disagree — a chip click moved the month and the table went on showing the old one. */
+  select.value = chosen === 'all' ? 'all'
+    : S.month && months.includes(S.month) ? S.month
+    : months[0] ?? 'all';
+  return select.value;
+}
+
 function renderTx() {
   const q = clean($('#q').value).toLowerCase();
-  const fc = $('#f-cat').value, fd = $('#f-dir').value, fs = $('#f-scope').value;
+  const fc = $('#f-cat').value, fd = $('#f-dir').value;
+  const fs = fillMonthFilter();
   const view = $('#f-view').value as TransactionViewMode;
-  let list = fs === 'all' ? S.tx : txOfMonth(S.month);
+  let list = fs === 'all' ? S.tx : txOfMonth(fs);
   if (fc) list = list.filter((t) => t.cat === fc);
   if (fd === 'out') list = list.filter((t) => t.out > 0);
   if (fd === 'in') list = list.filter((t) => t.in > 0);
@@ -2321,7 +2357,13 @@ function wire() {
   $('#btn-goals').addEventListener('click', () => (goalsOpen ? showDashboard() : showGoals()));
   $('#btn-cards').addEventListener('click', () => (cardsOpen ? showDashboard() : showCards()));
   $('#btn-cards-back').addEventListener('click', showDashboard);
-  ['#f-card', '#f-card-scope'].forEach((selector) => $(selector).addEventListener('change', renderCards));
+  $('#f-card').addEventListener('change', renderCards);
+  $('#f-card-scope').addEventListener('change', () => {
+    const value = $('#f-card-scope').value;
+    /* Choosing a month here chooses it everywhere; "all history" belongs to this table. */
+    if (value !== 'all' && value !== S.month) { S.month = value; render(); return; }
+    renderCards();
+  });
   $('#btn-goals-back').addEventListener('click', showDashboard);
   $('#btn-overview').addEventListener('click', showDashboard);
   $('#btn-directory-back').addEventListener('click', showDashboard);
@@ -2467,8 +2509,14 @@ function wire() {
   });
 
   $('#fc-horizon').addEventListener('change', renderForecast);
-  ['#q', '#f-cat', '#f-dir', '#f-scope', '#f-view'].forEach((sel) =>
+  ['#q', '#f-cat', '#f-dir', '#f-view'].forEach((sel) =>
     $(sel).addEventListener('input', renderTx));
+  $('#f-scope').addEventListener('change', () => {
+    const value = $('#f-scope').value;
+    /* Choosing a month here chooses it everywhere; "all history" belongs to this table. */
+    if (value !== 'all' && value !== S.month) { S.month = value; render(); return; }
+    renderTx();
+  });
   $('#btn-cattbl').addEventListener('click', () => {
     const btn = $('#btn-cattbl');
     const on = btn.getAttribute('aria-pressed') === 'true';
