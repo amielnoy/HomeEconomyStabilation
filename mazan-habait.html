@@ -475,6 +475,16 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
 .filters input[type=search]{ flex:1 1 200px; }
 .empty-row{ text-align:center; color:var(--muted); padding:26px 0; font-size:14px; }
 
+/* A row that carries money out is read as one line, so it is coloured as one line. The
+   muted greys of the reference and the source are overridden on purpose: a charge that
+   announced itself in one cell and looked ordinary in the other five was read as ordinary.
+   The amount keeps its weight, which is what still separates it from the rest of the row. */
+tr.outgoing > td,
+tr.outgoing > td.refcell,
+tr.outgoing > td.srccell,
+tr.outgoing .catsel{ color:var(--crit-text); }
+tr.outgoing > td.amountcell{ font-weight:600; }
+
 /* The plan reads top to bottom as a worksheet does: a section heading carrying its total,
    the lines underneath it, and the bottom line set apart from all of them. */
 .plan-section{ border-bottom:1px solid var(--line); padding:12px 0; }
@@ -890,6 +900,7 @@ body.drawer-open{ overflow:hidden; }
       <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
       <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
         <button class="btn" id="btn-recommendations" type="button" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
+        <button class="btn" id="btn-cards" type="button" aria-pressed="false" data-i18n="cardStatements" data-testid="btn-cards">כרטיסי אשראי</button>
         <button class="btn" id="btn-goals" type="button" aria-pressed="false" data-i18n="savingsGoals" data-testid="btn-goals">מטרות חיסכון</button>
         <button class="btn" id="btn-savings" type="button" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
         <label class="locale-picker" data-testid="language-picker">
@@ -1076,6 +1087,29 @@ body.drawer-open{ overflow:hidden; }
 
   <!-- ============================================================= main -->
   <!-- savings goals: its own screen, reached from the header ------------- -->
+  <!-- credit cards: what is on each card, on its own screen --------------- -->
+  <section class="directory" id="cards" hidden aria-labelledby="cards-h" data-testid="cards">
+    <header><h2 id="cards-h" data-i18n="cardStatements" data-testid="cards-h">כרטיסי אשראי</h2>
+      <div class="tools">
+        <button class="btn sm" id="btn-cards-back" type="button" data-i18n="backToDashboard" data-testid="btn-cards-back">חזרה לתמונת מצב</button>
+      </div>
+    </header>
+    <p class="note" id="cards-note" data-testid="cards-note"></p>
+    <div class="filters">
+      <select id="f-card" aria-label="בחירת כרטיס" data-i18n-aria-label="chooseCard" data-testid="f-card"></select>
+      <select id="f-card-scope" aria-label="טווח" data-i18n-aria-label="range" data-testid="f-card-scope">
+        <option value="month" data-i18n="selectedMonth">החודש הנבחר</option>
+        <option value="all" data-i18n="allHistory">כל ההיסטוריה</option>
+      </select>
+    </div>
+    <div class="tblwrap" role="region" aria-labelledby="cards-h" tabindex="0" data-testid="cards-table-scroll">
+      <table id="cards-table" data-testid="cards-table"><thead><tr>
+        <th data-i18n="date">תאריך</th><th data-i18n="description">תיאור פעולה</th>
+        <th data-i18n="category">קטגוריה</th><th data-i18n="transactionSource">מקור</th><th data-i18n="amount">סכום</th>
+      </tr></thead><tbody id="cards-body" data-testid="cards-body"></tbody></table>
+    </div>
+  </section>
+
   <section class="directory" id="goals" hidden aria-labelledby="goals-h" data-testid="goals">
     <header><h2 id="goals-h" data-i18n="savingsGoals" data-testid="goals-h">מטרות חיסכון</h2>
       <div class="tools">

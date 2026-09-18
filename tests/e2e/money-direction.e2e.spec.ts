@@ -86,3 +86,24 @@ test('writes every figure in the spending breakdown as a red charge', async ({ h
     await expect(amount).toHaveText(/-/);
   }
 });
+
+/* A charge that announced itself in the amount cell and looked ordinary in the other five
+   was read as ordinary. A household scans a month by the line, so the line carries it. */
+test('colours a whole outgoing row, not only its amount', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport(statement());
+  const spent = await homePage.dashboard.resolvedColour('--crit-text');
+
+  const spending = homePage.dashboard.transactionRows.filter({ hasText: 'שופרסל דיל' });
+  for (const cell of await spending.locator('td').all()) {
+    await expect(cell).toHaveCSS('color', spent);
+  }
+});
+
+/* Money arriving is not spending and must not be dressed as it. */
+test('leaves a row that brought money in uncoloured', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport(statement());
+  const spent = await homePage.dashboard.resolvedColour('--crit-text');
+
+  const arriving = homePage.dashboard.transactionRows.filter({ hasText: 'משכורת' });
+  await expect(arriving.locator('td').first()).not.toHaveCSS('color', spent);
+});

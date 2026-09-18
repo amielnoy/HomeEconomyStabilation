@@ -14,6 +14,7 @@ import { transactionViewRows, type CardChargeGroup, type TransactionViewMode } f
 import { buildFinancialPlan, type PlanSection } from './financial-plan.js';
 import { goalProgress, orderGoals } from './savings-goals.js';
 import { asOutgoing, findMisreadRows } from './misread-rows.js';
+import { cardStatements, type CardStatement } from './card-statements.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
 interface DomElement extends HTMLElement { value: string; files: FileList | null; reset(): void; }
@@ -27,6 +28,7 @@ let directoryOpen = window.location.hash === '#savings-directory';
    here that is not read from a statement, and a household opens it to plan rather than to
    review. A hash so a reload comes back to it. */
 let goalsOpen = window.location.hash === '#goals';
+let cardsOpen = window.location.hash === '#cards';
 const consentRepository = new LocalConsentRepository(localStorage);
 let drawerReturnFocus: HTMLElement | null = null;
 
@@ -579,20 +581,24 @@ function render() {
   invalidateAgentResults();
   fillCatFilter();
   const months = monthsPresent();
+  /* Settled before anything is drawn, because the screens that stand beside the dashboard
+     are drawn before it and read the same month. */
+  if (!S.month || !months.includes(S.month)) S.month = months[0] ?? null;
   $('#savings-directory').hidden = !directoryOpen;
   $('#goals').hidden = !goalsOpen;
+  $('#cards').hidden = !cardsOpen;
   /* Rendered before the dashboard gives up on an empty month: a household can say what it
      is saving towards before it has a statement, and the goals screen asks for its own
      figures anyway. */
   renderGoals();
+  renderCards();
   if (!S.tx.length) {
-    $('#empty').hidden = directoryOpen || goalsOpen;
+    $('#empty').hidden = directoryOpen || goalsOpen || cardsOpen;
     $('#main').hidden = true;
     return;
   }
   $('#empty').hidden = true;
-  $('#main').hidden = directoryOpen || goalsOpen;
-  if (!S.month || !months.includes(S.month)) S.month = months[0] ?? null;
+  $('#main').hidden = directoryOpen || goalsOpen || cardsOpen;
   const month = S.month;
   if (!month) return;
 
@@ -890,9 +896,11 @@ function showRecommendations() {
     setMobileMenu(false);
     directoryOpen = false;
     goalsOpen = false;
+    cardsOpen = false;
     if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
     $('#savings-directory').hidden = true;
     $('#goals').hidden = true;
+    $('#cards').hidden = true;
     $('#empty').hidden = false;
     const uploadCallToAction = $('#marketing-upload');
     uploadCallToAction.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -903,9 +911,11 @@ function showRecommendations() {
   setMobileMenu(false);
   directoryOpen = false;
   goalsOpen = false;
+  cardsOpen = false;
   if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
   $('#savings-directory').hidden = true;
   $('#goals').hidden = true;
+  $('#cards').hidden = true;
   $('#main').hidden = false;
   $('#recommendations').hidden = false;
   $$('#main > *').forEach((child) => { if (child.id !== 'months' && child.id !== 'recommendations') child.hidden = true; });
@@ -916,9 +926,11 @@ function showRecommendations() {
 function showDashboard() {
   directoryOpen = false;
   goalsOpen = false;
+  cardsOpen = false;
   if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
   $('#savings-directory').hidden = true;
   $('#goals').hidden = true;
+  $('#cards').hidden = true;
   $('#recommendations').hidden = true;
   $('#main').hidden = !S.tx.length;
   $('#empty').hidden = Boolean(S.tx.length);
@@ -926,6 +938,27 @@ function showDashboard() {
   $('#btn-recommendations').setAttribute('aria-pressed', 'false');
   $('#btn-savings').setAttribute('aria-pressed', 'false');
   $('#btn-goals').setAttribute('aria-pressed', 'false');
+  $('#btn-cards').setAttribute('aria-pressed', 'false');
+}
+
+/* One screen at a time: two open at once would leave a household reading one and acting on
+   the other. */
+function showCards() {
+  setMobileMenu(false);
+  directoryOpen = false;
+  goalsOpen = false;
+  cardsOpen = true;
+  history.replaceState(null, '', '#cards');
+  $('#empty').hidden = true;
+  $('#main').hidden = true;
+  $('#savings-directory').hidden = true;
+  $('#goals').hidden = true;
+  $('#cards').hidden = false;
+  $('#btn-cards').setAttribute('aria-pressed', 'true');
+  $('#btn-goals').setAttribute('aria-pressed', 'false');
+  $('#btn-savings').setAttribute('aria-pressed', 'false');
+  $('#btn-recommendations').setAttribute('aria-pressed', 'false');
+  $('#cards').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* Reachable with nothing imported: a household can say what it is saving towards before it
@@ -933,6 +966,9 @@ function showDashboard() {
 function showGoals() {
   setMobileMenu(false);
   directoryOpen = false;
+  cardsOpen = false;
+  $('#cards').hidden = true;
+  $('#btn-cards').setAttribute('aria-pressed', 'false');
   goalsOpen = true;
   history.replaceState(null, '', '#goals');
   $('#empty').hidden = true;
@@ -947,6 +983,9 @@ function showGoals() {
 
 function showSavingsDirectory() {
   setMobileMenu(false);
+  cardsOpen = false;
+  $('#cards').hidden = true;
+  $('#btn-cards').setAttribute('aria-pressed', 'false');
   goalsOpen = false;
   $('#goals').hidden = true;
   $('#btn-goals').setAttribute('aria-pressed', 'false');
@@ -1397,6 +1436,69 @@ function goalStatus(goal: SavingsGoal, progress: ReturnType<typeof goalProgress>
   });
 }
 
+/* ------------------------------------------------------------ cards ----- */
+/* What is on each card. The dashboard's table answers "what did we spend"; this answers
+   the question a bill asks — recognise these charges before paying them — so it is one
+   card at a time, newest first, the way an issuer prints it. */
+function cardLabel(statement: CardStatement): string {
+  /* Built before the call: a key spliced inside t() reads as a literal to the contract
+     test that checks every requested key exists. */
+  const brandKey = 'cardBrand.' + statement.brand;
+  return statement.brand ? t(brandKey) : t('sourceCardUnknown');
+}
+
+function renderCards() {
+  const scope = $('#f-card-scope').value;
+  const statements = cardStatements(scope === 'all' ? S.tx : txOfMonth(S.month));
+  /* Sorted by the name the reader sees, which only this layer can translate. */
+  const named = statements
+    .map((statement) => ({ statement, label: cardLabel(statement) }))
+    .sort((first, second) => first.label.localeCompare(second.label, locale));
+
+  const select = $('#f-card');
+  const chosen = select.value;
+  select.textContent = '';
+  select.append(el('option', { value: '', text: t('allCards') }));
+  for (const { statement, label } of named) {
+    select.append(el('option', { value: statement.key, text: label }));
+  }
+  /* A card that left the month keeps the reader on every card rather than on a table that
+     silently became somebody else's. */
+  select.value = named.some(({ statement }) => statement.key === chosen) ? chosen : '';
+
+  const shown = select.value === '' ? named : named.filter(({ statement }) => statement.key === select.value);
+  const charges = shown.flatMap(({ statement }) => statement.charges);
+  const out = shown.reduce((sum: number, { statement }) => sum + statement.out, 0);
+  const moneyBack = shown.reduce((sum: number, { statement }) => sum + statement.in, 0);
+  $('#cards-note').textContent = statements.length
+    ? t('cardStatementSummary', { cards: statements.length, count: charges.length, out: money(out), in: money(moneyBack) })
+    : t('noCardChargesYet');
+
+  const body = $('#cards-body');
+  body.textContent = '';
+  if (!charges.length) {
+    body.append(el('tr', {}, el('td', { colspan: 5, class: 'empty-row', text: t('noCardChargesYet') })));
+    return;
+  }
+  for (const charge of charges.slice(0, 400)) {
+    body.append(el('tr', { class: charge.in > 0 ? null : 'outgoing', 'data-testid': 'card-charge-row' }, [
+      el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(charge.date)) }),
+      el('td', { class: 'desc', 'data-label': t('description'), text: charge.desc }),
+      el('td', { 'data-label': t('category'), text: catById(charge.cat ?? 'other').name }),
+      el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: sourceLabel(charge), 'data-testid': 'card-charge-source' }),
+      el('td', {
+        class: 'amountcell n ' + (charge.in > 0 ? 'pos' : 'neg'),
+        'data-label': t('amount'),
+        text: money2S(charge.in > 0 ? charge.in : -charge.out),
+        'data-testid': 'card-charge-amount',
+      }),
+    ]));
+  }
+  if (charges.length > 400) {
+    body.append(el('tr', {}, el('td', { colspan: 5, class: 'empty-row', text: t('showingFirstTransactions', { shown: 400, total: charges.length }) })));
+  }
+}
+
 /* ------------------------------------------------------------- plan ----- */
 /* The household's month in the shape a מיפוי worksheet asks for, filled from the
    statements already imported rather than typed in: income by where it came from, what
@@ -1528,7 +1630,7 @@ function renderRecurring() {
   ])));
   const tb = el('tbody');
   for (const r of rec.slice(0, 14)) {
-    tb.append(el('tr', { 'data-testid': 'recurring-row' }, [
+    tb.append(el('tr', { class: r.dir === 'in' ? null : 'outgoing', 'data-testid': 'recurring-row' }, [
       el('td', { class: 'desc', text: r.label }),
       el('td', {}, [el('span', { class: 'dot', style: `background:${flowColor({ in: r.dir === 'in' ? r.amount : 0, kind: catById(r.cat).kind })}` }), catById(r.cat).name]),
       /* Coloured like the amounts in the transactions table: a recurring charge read in
@@ -1563,7 +1665,11 @@ function transactionRow(transaction: BankTransaction, nested: boolean): DomEleme
   const amt = money2S(transaction.in > 0 ? transaction.in : -transaction.out);
   /* data-label carries the column heading into the stacked mobile layout, where
      there is no header row to read the cell against. */
-  return el('tr', { class: nested ? 'cardcharge' : null, 'data-testid': 'transaction-row' }, [
+  /* The whole row, not only the figure: a household scanning a month reads the line, and
+     a charge that announces itself in one cell and looks ordinary in the other five was
+     read as ordinary. Outgoing rows carry the spending colour across every field. */
+  const outgoing = transaction.in === 0 && transaction.kind !== 'neutral';
+  return el('tr', { class: [nested ? 'cardcharge' : '', outgoing ? 'outgoing' : ''].filter(Boolean).join(' ') || null, 'data-testid': 'transaction-row' }, [
     el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(transaction.date)) }),
     el('td', { class: 'desc', 'data-label': t('description'), text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
     el('td', { class: 'catcell', 'data-label': t('category') }, [el('span', { class: 'dot', style: `background:${flowColor(transaction)}`, 'data-testid': 'transaction-flow-dot' }), sel]),
@@ -1598,7 +1704,7 @@ function cardGroupRow(group: CardChargeGroup): DomElement {
     renderTx();
   });
   const net = group.in - group.out;
-  return el('tr', { class: 'cardgroup', 'data-testid': 'card-group-row' }, [
+  return el('tr', { class: 'cardgroup' + (net < 0 ? ' outgoing' : ''), 'data-testid': 'card-group-row' }, [
     el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(group.date)) }),
     el('td', { class: 'desc', 'data-label': t('description') }, toggle),
     /* The line is the card's bill, and `credit` is what a bill from a card issuer is
@@ -2153,6 +2259,9 @@ function wire() {
   });
 
   $('#btn-goals').addEventListener('click', () => (goalsOpen ? showDashboard() : showGoals()));
+  $('#btn-cards').addEventListener('click', () => (cardsOpen ? showDashboard() : showCards()));
+  $('#btn-cards-back').addEventListener('click', showDashboard);
+  ['#f-card', '#f-card-scope'].forEach((selector) => $(selector).addEventListener('change', renderCards));
   $('#btn-goals-back').addEventListener('click', showDashboard);
   $('#btn-directory-back').addEventListener('click', showDashboard);
   const openMarketingUpload = (placement: string) => {
