@@ -32,6 +32,8 @@ Playwright device profiles are repeatable emulations, not a substitute for final
 | `npm run test:e2e` | All applicable Playwright scenarios pass in one API and three browser projects |
 | `npm run test:all` | Vitest, Pytest and Playwright start together, all complete, and any failure fails the command |
 | `npm run verify` | Build followed by both test frameworks in parallel |
+| `npm run hooks:install` | Points git at `.githooks`; also run from `npm install` through `prepare`, so a fresh clone gets the pre-push gate without reading about it |
+| `git push` | The `.githooks/pre-push` hook refuses unresolved merge markers and runs `npm test` first — about three seconds, against three minutes of CI. `git push --no-verify` skips it |
 | `npm run test:docker` | Compose services start, every test runs, and Allure is published at the printed localhost URL |
 | `npm run test:docker:stop` | The isolated test and report stack stops without affecting the development stack |
 
@@ -103,6 +105,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 
 | File | Coverage |
 | --- | --- |
+| `tests/contract/git-hooks.contract.test.ts` | The pre-push gate's wiring: both scripts staying executable, the hooks path installed from `npm install` rather than from a paragraph in a readme, a checkout that is not a git repository left alone, and the hook running the Vitest gate, refusing merge markers and naming its own escape hatch |
 | `tests/contract/design-system-contract.test.ts` | Semantic tokens, recipe ownership, variants, disabled/focus states, contrast preferences, touch targets, the card summary line's focus ring and touch target, typography and directional drawers |
 | `tests/contract/discovery.contract.test.ts` | Assistant-crawler allowlist, canonical URL and duplicate suppression, sitemap and llms.txt link resolution, structured-data graph integrity, IndexNow key ownership, variable-font face declarations and deployment of every discovery file |
 | `tests/contract/documentation-contract.test.ts` | README, architecture, design system, privacy, Supabase, TODO, monitoring and this test plan stay synchronized |
