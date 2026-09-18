@@ -1,9 +1,10 @@
 import { expect, test } from './fixtures';
 
 /* Cash is the money a statement will never report, and recording it used to cost opening
-   the drawer, finding a section inside it and filling five fields — so it went unrecorded,
-   and every figure built on the month was short by however much the household spent in
-   notes. The button is on the screen and the dialog opens on the amount. */
+   the drawer and finding a section inside it — so it went unrecorded, and every figure
+   built on the month was short by however much the household spent in notes. The button is
+   on the screen, and it leads to the screen that holds both the form and everything
+   recorded through it. */
 
 const statement = () => ({
   name: 'bank.csv',
@@ -37,9 +38,11 @@ test('keeps the category the customer chose over the rule that would have claime
     .getByTestId('transaction-category-select')).toHaveValue('leisure');
 });
 
-test('opens with the cursor in the amount and today already filled in', async ({ homePage, page }) => {
+test('opens the expenses screen with the cursor in the amount and today filled in', async ({ homePage, page }) => {
   await homePage.dashboard.quickAddButton.click();
 
+  await expect(page.getByTestId('expenses')).toBeVisible();
+  await expect(page.getByTestId('btn-expenses')).toHaveAttribute('aria-current', 'page');
   await expect(page.getByTestId('quick-amount')).toBeFocused();
   const today = new Date().toISOString().slice(0, 10);
   await expect(page.getByTestId('quick-date')).toHaveValue(today);
@@ -54,13 +57,45 @@ test('offers only the categories money can leave through', async ({ homePage, pa
   await expect(page.getByTestId('quick-cat')).toHaveValue('cash');
 });
 
-test('adds nothing when the dialog is dismissed', async ({ homePage, page }) => {
+/* A form filled in and left is a form that recorded nothing, and going back must not
+   quietly record it. */
+test('adds nothing when the screen is left without saving', async ({ homePage, page }) => {
   const before = await homePage.dashboard.transactionRows.count();
   await homePage.dashboard.quickAddButton.click();
   await page.getByTestId('quick-amount').fill('60');
-  await page.getByTestId('quick-cancel').click();
+  await page.getByTestId('btn-expenses-back').click();
 
   await expect(homePage.dashboard.transactionRows).toHaveCount(before);
+});
+
+/* The form empties after a save: the same figures still on screen read as a charge that
+   did not go in, and the next one is typed straight away. */
+test('empties the form and keeps the cursor for the next one', async ({ homePage, page }) => {
+  await homePage.dashboard.quickAdd({ amount: 60, description: 'שוק מחנה יהודה' });
+
+  await expect(page.getByTestId('quick-amount')).toHaveValue('');
+  await expect(page.getByTestId('quick-desc')).toHaveValue('');
+  await expect(page.getByTestId('quick-amount')).toBeFocused();
+});
+
+/* What was recorded here is the household's own, so this screen lists it and can take one
+   back out — which an imported row must never offer, being the bank's word. */
+test('lists what was recorded here and takes one back out', async ({ homePage, page }) => {
+  await homePage.dashboard.quickAdd({ amount: 60, description: 'שוק מחנה יהודה' });
+  await expect(page.getByTestId('expense-row')).toHaveCount(1);
+  await expect(page.getByTestId('expenses-note')).toContainText('60');
+
+  await page.getByTestId('expense-remove').click();
+
+  await expect(page.getByTestId('expense-row')).toHaveCount(0);
+  await expect(homePage.dashboard.transactionRows.filter({ hasText: 'שוק מחנה יהודה' })).toHaveCount(0);
+});
+
+test('lists nothing a statement brought in', async ({ homePage, page }) => {
+  await homePage.dashboard.quickAddButton.click();
+
+  await expect(page.getByTestId('expense-row')).toHaveCount(0);
+  await expect(page.getByTestId('expenses')).toContainText('עדיין לא נרשמו כאן הוצאות');
 });
 
 /* The same note recorded twice is the mistake this dialog makes easiest — it takes two
@@ -83,13 +118,13 @@ test('refuses an amount that is not money', async ({ homePage, page }) => {
   await expect(homePage.dashboard.transactionRows).toHaveCount(before);
 });
 
-test('offers the quick path in every language', async ({ homePage, page }) => {
+test('offers the screen in every language', async ({ homePage, page }) => {
   for (const [locale, title] of [
-    ['en', 'Add an expense'], ['fr', 'Ajouter une dépense'], ['he', 'הוספת הוצאה'],
+    ['en', 'Manage expenses'], ['fr', 'Gestion des dépenses'], ['he', 'ניהול הוצאות'],
   ] as const) {
     await homePage.language.choose(locale);
     await homePage.dashboard.quickAddButton.click();
-    await expect(page.getByTestId('quick-add-h')).toHaveText(title);
-    await page.getByTestId('quick-cancel').click();
+    await expect(page.getByTestId('expenses-h')).toHaveText(title);
+    await page.getByTestId('btn-expenses-back').click();
   }
 });

@@ -98,11 +98,17 @@ Where the app can tell that saved rows were read the wrong way round — money a
 - The offer disappears once taken rather than sitting there inviting a second run — which is only true because the button recipe now honours `hidden`.
 - A balance is what protects real money: a statement row carries the account's balance after it, so a salary, an allowance or a refund the bank reported is never touched.
 
+## Expense management
+
+`expenses` is the screen the plus button leads to: recording one charge and seeing what has already been recorded are the same task, so one screen holds both. The cursor lands on the amount, which is the figure the customer arrived with, and the form empties after a save — the same figures still on screen read as a charge that did not go in.
+
+- The table below the form holds **only rows this household typed**. An imported row is the bank's word, and offering to delete one here would let the month disagree with the statement it came from.
+- Leaving the screen with a half-filled form records nothing, and says nothing either: the browser's own validation stands on the fields.
+
 ## Quick-add pattern
 
-`btn-quick-add` is a floating action button on every populated dashboard, opening the `quick-add` dialog. It exists for the money a statement will never report — cash, paying a person — which used to cost opening the drawer, finding a section inside it and filling five fields, and so went unrecorded.
+`btn-quick-add` is a floating action button on every populated dashboard. It opens the expenses screen rather than a box over the page. It exists for the money a statement will never report — cash, paying a person — which used to cost opening the drawer, finding a section inside it and filling five fields, and so went unrecorded.
 
-- The dialog is a native `<dialog>` opened with `showModal()`: focus is trapped, Escape closes it and the backdrop comes free. It opens with the cursor in the amount, which is the only figure the customer has in mind, and today's date already filled in.
 - Expenses only. Money arriving is on a statement, and offering an income category on the quick path would invite a household to record its salary twice.
 - The chosen category is stored as an override, exactly as choosing one on a transaction row is: it outranks any rule that would have claimed the description.
 - The same expense recorded twice is the mistake two taps make easiest, so a repeat is named rather than added.
