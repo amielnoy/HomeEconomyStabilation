@@ -22,7 +22,7 @@ const hasOnlyKeys = (value: Record<string, unknown>, keys: readonly string[]): b
 const CARD_BRANDS = new Set<CardBrand>(['visa', 'cal', 'isracard', 'diners', 'amex', 'max', 'leumi', 'other']);
 
 const transactionKeys = [
-  'date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind', 'cardBrand', 'cardName',
+  'date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind', 'cardBrand', 'cardLast4',
 ] as const;
 
 function parseTransaction(value: unknown): BankTransaction | null {
@@ -38,7 +38,7 @@ function parseTransaction(value: unknown): BankTransaction | null {
   if (value.kind !== undefined && !CATEGORY_KINDS.has(value.kind as CategoryKind)) return null;
   if (value.cardKind !== undefined && value.cardKind !== 'bank' && value.cardKind !== 'external') return null;
   if (value.cardBrand !== undefined && !CARD_BRANDS.has(value.cardBrand as CardBrand)) return null;
-  if (value.cardName !== undefined && !isBoundedString(value.cardName, 40)) return null;
+  if (value.cardLast4 !== undefined && !(typeof value.cardLast4 === 'string' && /^\d{4}$/.test(value.cardLast4))) return null;
   return sanitizeTransaction(value as unknown as BankTransaction);
 }
 

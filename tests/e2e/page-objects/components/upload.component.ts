@@ -27,21 +27,21 @@ export class UploadComponent {
      only the answer opens the file dialog. Driving the chooser rather than setting the
      input directly keeps the test honest about the step in between. */
   @step('Upload a credit-card report')
-  async uploadCreditCardReport(file: FilePayload, issuer: 'bank' | 'external' = 'bank', brand?: string, name?: string): Promise<void> {
-    await this.chooseCardSource(file, issuer, brand, name);
+  async uploadCreditCardReport(file: FilePayload, issuer: 'bank' | 'external' = 'bank', brand?: string, last4?: string): Promise<void> {
+    await this.chooseCardSource(file, issuer, brand, last4);
     await this.page.getByTestId('main').waitFor({ state: 'visible' });
   }
 
   @step('Choose a card source and hand over the report')
-  async chooseCardSource(file: FilePayload, issuer: 'bank' | 'external' = 'bank', brand?: string, name?: string): Promise<void> {
+  async chooseCardSource(file: FilePayload, issuer: 'bank' | 'external' = 'bank', brand?: string, last4?: string): Promise<void> {
     await this.cardTrigger.click();
     await this.cardSourceDialog.waitFor({ state: 'visible' });
     /* The issuer is a second, independent answer: a Visa is issued both by a bank and by
        a credit company, so naming the brand does not answer who settles it. */
     if (brand) await this.cardIssuer.selectOption(brand);
-    /* What the household calls this card: the only answer that tells two cards from one
-       issuer apart, and the only one it is allowed to leave blank. */
-    if (name) await this.page.getByTestId('card-source-name').fill(name);
+    /* The four digits the household's own receipts print: the only answer that tells two
+       cards from one issuer apart, and the only one it is allowed to leave blank. */
+    if (last4) await this.page.getByTestId('card-source-last4').fill(last4);
     const chooser = this.page.waitForEvent('filechooser');
     await this.page.getByTestId(`card-source-${issuer}`).click();
     await (await chooser).setFiles(file);

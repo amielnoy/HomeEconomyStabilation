@@ -56,17 +56,11 @@ class Transaction(BaseModel):
     cat: str | None = Field(default=None, max_length=100)
     kind: CategoryKind | None = None
 
-    # What the household calls this card, typed at import. Two Visas are two cards and no
-    # export says which is which; a name the customer chose is the only thing that tells
-    # them apart without keeping a card number, which this boundary refuses outright.
-    cardName: str | None = Field(default=None, max_length=40)
-
-    @field_validator("cardName")
-    @classmethod
-    def card_name_has_no_financial_identifier(cls, value: str | None) -> str | None:
-        if value is not None and _contains_financial_identifier(value):
-            raise ValueError("financial identifier is not allowed")
-        return value
+    # The last four digits of the card, as the customer typed them at import. Two Visas
+    # are two cards and no export says which is which; four digits are what every receipt
+    # prints. The shape is the protection: exactly four digits and nothing else can be
+    # stored here, so the field cannot hold a card number, an account number or an IBAN.
+    cardLast4: str | None = Field(default=None, pattern=r"^\d{4}$")
 
     @field_validator("desc")
     @classmethod

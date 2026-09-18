@@ -11,8 +11,8 @@ export interface CardStatement {
       under one heading and under a total neither card was ever charged. */
   readonly key: string;
   readonly brand: CardBrand | undefined;
-  /** What the household calls it, when it said. */
-  readonly name: string | undefined;
+  /** The four digits the household typed, when it did. */
+  readonly last4: string | undefined;
   readonly count: number;
   readonly out: number;
   readonly in: number;
@@ -22,26 +22,28 @@ export interface CardStatement {
 /* Charges newest first inside each card, which is the order every issuer prints and the
    order the dashboard already uses. The cards themselves come back in the order they were
    met; naming them is the caller's job, and so is sorting by a name only it can translate. */
-/* The name comes first because it is the only thing that separates two cards from one
-   issuer, and it is prefixed so a household that names a card "ויזה" does not merge it
-   with the unnamed Visa beside it. */
+/* Issuer and digits together, because neither alone names a card: two Visas share an
+   issuer, and a Visa and an Isracard can end in the same four digits. Prefixed so the key
+   can never collide with a bare brand id. */
 export function cardKey(transaction: BankTransaction): string {
-  return transaction.cardName ? `name:${transaction.cardName}` : transaction.cardBrand ?? '';
+  return transaction.cardLast4
+    ? `card:${transaction.cardBrand ?? ''}:${transaction.cardLast4}`
+    : transaction.cardBrand ?? '';
 }
 
 export function cardStatements(transactions: readonly BankTransaction[]): CardStatement[] {
-  const groups = new Map<string, { brand: CardBrand | undefined; name: string | undefined; charges: BankTransaction[] }>();
+  const groups = new Map<string, { brand: CardBrand | undefined; last4: string | undefined; charges: BankTransaction[] }>();
   for (const transaction of transactions) {
     if (transaction.source !== 'card') continue;
     const key = cardKey(transaction);
-    const group = groups.get(key) ?? { brand: transaction.cardBrand, name: transaction.cardName, charges: [] };
+    const group = groups.get(key) ?? { brand: transaction.cardBrand, last4: transaction.cardLast4, charges: [] };
     group.charges.push(transaction);
     groups.set(key, group);
   }
   return [...groups.entries()].map(([key, group]) => ({
     key,
     brand: group.brand,
-    name: group.name,
+    last4: group.last4,
     count: group.charges.length,
     out: group.charges.reduce((sum, charge) => sum + charge.out, 0),
     in: group.charges.reduce((sum, charge) => sum + charge.in, 0),

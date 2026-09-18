@@ -71,6 +71,14 @@ Each transaction row uses the native `.ds-field`-compatible category select iden
 - Every figure that stands for money is written with its sign and coloured by direction: `--crit-text` when it leaves, `--good-text` when it arrives. That covers the rows that carry money — a transaction, a card summary line, a recurring charge — and the spending breakdown and its table, where every figure is a charge and none of them used to say so. The dot beside the category on a money row carries the same direction: `--crit` for spending, `--good` for money arriving, the neutral for a transfer between the household's own accounts. The categorical slot hues stay in the charts and category lists, where telling one category from another is the job. Beside an amount they misread: the third slot is a green close to the income green, and every category past the eighth shares the grey that also stands for `other`.
 - Existing persisted rule sets are merged with new safe defaults by match/category identity, preserving user rules and manual overrides.
 
+## Naming a card at import
+
+The card-source question asks who issued the card and, optionally, its last four digits. Two cards from one issuer are two cards and no export says which is which — the issuer names the company, not the card — so the four digits are what separate them in the chooser, in the folded line and in every total.
+
+- The field carries neither `maxlength` nor `pattern`, both deliberately. `maxlength` would truncate a pasted card number to its **first** four digits and keep those; `pattern` would refuse to submit, losing the household its statement over an optional label. What is not exactly four digits is carried as nothing at all, and the import says so.
+- A card nobody identified is known by its issuer exactly as before.
+- The label reads `ויזה ••1234` — the issuer names the company and the digits name the card, the way the household's own receipts write it.
+
 ## Card summary line
 
 The transactions table opens on the account as the bank describes it: statement rows, and one `card-group-row` per issuer carrying the full sum that card was charged. The `f-view` select offers the itemised list beside it, so nothing is hidden behind a default.

@@ -13,7 +13,7 @@ export interface CardChargeGroup {
   /** Stable across renders so an opened card stays open; the brand, or '' when unnamed. */
   readonly key: string;
   readonly brand: CardBrand | undefined;
-  readonly name: string | undefined;
+  readonly last4: string | undefined;
   /** The newest charge in the group, so the summary sorts where the card's month ends. */
   readonly date: string;
   readonly count: number;
@@ -45,7 +45,7 @@ export function transactionViewRows(
   if (mode === 'every-charge') return list.map(asRow);
   if (!list.some((transaction) => transaction.source !== 'card')) return list.map(asRow);
 
-  const groups = new Map<string, { charges: BankTransaction[]; brand: CardBrand | undefined; name: string | undefined }>();
+  const groups = new Map<string, { charges: BankTransaction[]; brand: CardBrand | undefined; last4: string | undefined }>();
   const rows: Array<SingleTransactionRow | { kind: 'placeholder'; key: string }> = [];
   for (const transaction of list) {
     if (transaction.source !== 'card') { rows.push(asRow(transaction)); continue; }
@@ -53,7 +53,7 @@ export function transactionViewRows(
     const key = cardKey(transaction);
     const group = groups.get(key);
     if (group) { group.charges.push(transaction); continue; }
-    groups.set(key, { charges: [transaction], brand: transaction.cardBrand, name: transaction.cardName });
+    groups.set(key, { charges: [transaction], brand: transaction.cardBrand, last4: transaction.cardLast4 });
     rows.push({ kind: 'placeholder', key });
   }
 
@@ -64,7 +64,7 @@ export function transactionViewRows(
       kind: 'card-group',
       key: row.key,
       brand: group.brand,
-      name: group.name,
+      last4: group.last4,
       date: group.charges.reduce((latest, charge) => (charge.date > latest ? charge.date : latest), group.charges[0]!.date),
       count: group.charges.length,
       out: group.charges.reduce((sum, charge) => sum + charge.out, 0),

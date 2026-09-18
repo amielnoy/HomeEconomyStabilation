@@ -119,23 +119,24 @@ def test_snapshot_model_rejects_a_goal_it_does_not_recognise(goal: dict[str, obj
         SnapshotInput.model_validate(candidate)
 
 
-def test_transaction_carries_the_name_the_household_gave_the_card() -> None:
-    """Two Visas are two cards, and only a name the customer chose tells them apart."""
+def test_transaction_carries_the_four_digits_that_name_the_card() -> None:
+    """Two Visas are two cards, and only the digits the customer typed tell them apart."""
     payload = {
         "date": "2026-09-04", "vdate": "2026-09-04", "ref": "", "desc": "shop",
         "out": 412.3, "in": 0.0, "bal": None, "pending": False, "src": "card-report",
-        "source": "card", "cardBrand": "visa", "cardName": "mum's card",
+        "source": "card", "cardBrand": "visa", "cardLast4": "1234",
     }
 
-    assert Transaction.model_validate(payload).cardName == "mum's card"
+    assert Transaction.model_validate(payload).cardLast4 == "1234"
 
 
-def test_transaction_refuses_a_card_number_typed_into_the_name() -> None:
-    """The name is free text, so it meets the check a description meets."""
+@pytest.mark.parametrize("value", ["4111111111111111", "12345", "123", "12a4", ""])
+def test_transaction_refuses_anything_that_is_not_four_digits(value: str) -> None:
+    """The shape is the protection: four digits or nothing reaches storage."""
     payload = {
         "date": "2026-09-04", "vdate": "2026-09-04", "ref": "", "desc": "shop",
         "out": 412.3, "in": 0.0, "bal": None, "pending": False, "src": "card-report",
-        "source": "card", "cardName": "card 4111111111111111",
+        "source": "card", "cardLast4": value,
     }
     with pytest.raises(ValidationError):
         Transaction.model_validate(payload)

@@ -16,7 +16,7 @@ export interface PersistableTransaction {
   kind?: 'expense' | 'income' | 'neutral';
   cardKind?: 'bank' | 'external';
   cardBrand?: CardBrand;
-  cardName?: string;
+  cardLast4?: string;
 }
 
 export interface PersistedTransaction extends BankTransaction {
@@ -79,9 +79,10 @@ export function sanitizeTransaction(transaction: PersistableTransaction): Persis
     ...(transaction.kind ? { kind: transaction.kind } : {}),
     ...(transaction.cardKind ? { cardKind: transaction.cardKind } : {}),
     ...(transaction.cardBrand ? { cardBrand: transaction.cardBrand } : {}),
-    /* Free text the customer typed, so it is redacted exactly as a description is: nobody
-       means to name a card by its number, and the one who does should not have it kept. */
-    ...(transaction.cardName ? { cardName: redactFinancialIdentifiers(String(transaction.cardName)).slice(0, 40) } : {}),
+    /* Four digits or nothing. The shape is the protection: anything longer than four, or
+       anything that is not a digit, is not carried at all rather than trimmed into
+       something that looks like an answer. */
+    ...(/^\d{4}$/.test(String(transaction.cardLast4 ?? '')) ? { cardLast4: String(transaction.cardLast4) } : {}),
   };
 }
 
@@ -109,7 +110,7 @@ export function createPrivacySafeSnapshot<T extends PersistableTransaction>(stat
 export function isPrivacySafeTransaction(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const transaction = value as Record<string, unknown>;
-  const allowed = new Set(['date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind', 'cardBrand', 'cardName']);
+  const allowed = new Set(['date', 'vdate', 'ref', 'desc', 'out', 'in', 'bal', 'pending', 'source', 'src', 'id', 'cat', 'kind', 'cardKind', 'cardBrand', 'cardLast4']);
   return Object.keys(transaction).every((key) => allowed.has(key))
     && transaction.ref === ''
     && typeof transaction.src === 'string' && SAFE_SOURCES.has(transaction.src)
@@ -126,8 +127,7 @@ export function isPrivacySafeTransaction(value: unknown): boolean {
     && (transaction.cardKind === undefined || transaction.cardKind === 'bank' || transaction.cardKind === 'external')
     && (transaction.cardBrand === undefined
       || ['visa', 'cal', 'isracard', 'diners', 'amex', 'max', 'leumi', 'other'].includes(String(transaction.cardBrand)))
-    && (transaction.cardName === undefined
-      || (isShortString(transaction.cardName, 40) && transaction.cardName === redactFinancialIdentifiers(transaction.cardName)));
+    && (transaction.cardLast4 === undefined || /^\d{4}$/.test(String(transaction.cardLast4)));
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
