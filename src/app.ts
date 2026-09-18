@@ -11,6 +11,7 @@ import { AppStateCodec, LocalStorageStateRepository } from './state-repository.j
 import { bankImporter, cleanTransactionText as clean, readsAsCardReport, transactionId as txId } from './bank-importer.js';
 import { RuleBasedTransactionCategorizer } from './categorization.js';
 import { transactionViewRows, type CardChargeGroup, type TransactionViewMode } from './transaction-view.js';
+import { buildFinancialPlan, type PlanSection } from './financial-plan.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
 interface DomElement extends HTMLElement { value: string; files: FileList | null; reset(): void; }
@@ -592,6 +593,7 @@ function render() {
   renderForecast();
   renderBudgets();
   renderCategories();
+  renderPlan();
   renderRecurring();
   renderTx();
   renderFoot();
@@ -1272,6 +1274,116 @@ function renderCategories() {
   }
   table.append(tb);
   tbl.append(table);
+}
+
+/* ------------------------------------------------------------- plan ----- */
+/* The household's month in the shape a מיפוי worksheet asks for, filled from the
+   statements already imported rather than typed in: income by where it came from, what
+   leaves whether or not anyone decided it this month, what was decided this month, what
+   was set aside, and what is left over. Nothing here is a target — the app does not know
+   what this household meant to spend, and a plan that invented one would be guessing. */
+/* One test id per section rather than one built by concatenation: the literal is what a
+   Page Object and the test-id contract both look for. */
+const PLAN_SECTION_TESTID: Record<PlanSection['kind'], string> = {
+  income: 'plan-section-income',
+  fixed: 'plan-section-fixed',
+  variable: 'plan-section-variable',
+  savings: 'plan-section-savings',
+  settlement: 'plan-section-settlement',
+};
+
+function planSectionLabel(section: PlanSection): string {
+  if (section.kind === 'income') return t('planIncome');
+  if (section.kind === 'fixed') return t('planFixed');
+  if (section.kind === 'variable') return t('planVariable');
+  if (section.kind === 'settlement') return t('planSettlements');
+  return t('planSavings');
+}
+
+function renderPlan() {
+  const body = $('#plan-body');
+  body.textContent = '';
+  const list = txOfMonth(S.month);
+  /* Fixed is not a property of a row: a charge is fixed because the same payee came
+     before, which is the recurring agent's answer. Asking it here keeps one definition
+     of "recurring" on the page instead of two that drift. */
+  const fixedKeys = new Set(recurring().filter((item) => item.dir === 'out').map((item) => item.key));
+  const plan = buildFinancialPlan(
+    list,
+    (transaction) => fixedKeys.has('out:' + normPayee(transaction.desc)),
+    (transaction) => normPayee(transaction.desc) || transaction.desc || t('planUnnamedIncome'),
+  );
+
+  $('#plan-note').textContent = t('planSummary', { month: monthLabel(S.month) });
+  if (!list.length) {
+    body.append(el('div', { class: 'empty-row', text: t('noData') }));
+    return;
+  }
+
+  /* The settlement section is rendered only when there is one: a household with no card
+     detail imported has no settlement to exclude, and an empty section headed "already
+     counted" would raise a question the month does not contain. */
+  const sections = [plan.income, plan.fixed, plan.variable, plan.savings,
+    ...(plan.settlements.lines.length ? [plan.settlements] : [])];
+  for (const section of sections) {
+    const incoming = section.kind === 'income';
+    const box = el('div', { class: 'plan-section', 'data-testid': PLAN_SECTION_TESTID[section.kind] });
+    box.append(el('div', { class: 'plan-head' }, [
+      el('span', { text: planSectionLabel(section) }),
+      /* A section that stayed empty shows a plain zero. money2S signs everything it is
+         given, and "+0.00 ₪" at the head of an expense section reads as money arriving. */
+      el('span', {
+        class: 'plan-total ' + (section.total === 0 ? '' : incoming ? 'pos' : 'neg'),
+        text: section.total === 0 ? money2(0) : money2S(incoming ? section.total : -section.total),
+        'data-testid': 'plan-section-total',
+      }),
+    ]));
+    for (const line of section.lines) {
+      /* An income line is named by its payee, which is the customer's own data and goes
+         in as text; an expense line is a category the app already names. */
+      const name = incoming ? line.key : catById(line.key).name;
+      box.append(el('div', { class: 'plan-line', 'data-testid': 'plan-line' }, [
+        el('span', { class: 'plan-name', text: name }),
+        el('span', { class: 'plan-count', text: line.count === 1 ? t('planLineCountOne') : t('planLineCount', { count: line.count }) }),
+        el('span', {
+          class: 'plan-amount ' + ((incoming ? line.amount : -line.amount) >= 0 ? 'pos' : 'neg'),
+          text: money2S(incoming ? line.amount : -line.amount),
+          'data-testid': 'plan-line-amount',
+        }),
+      ]));
+    }
+    if (!section.lines.length) {
+      box.append(el('div', { class: 'plan-line' }, el('span', { class: 'plan-name', text: t('planSectionEmpty') })));
+    }
+    if (section.kind === 'settlement') {
+      box.append(el('p', { class: 'note', text: t('planSettlementsNote'), 'data-testid': 'plan-settlement-note' }));
+    }
+    body.append(box);
+  }
+
+  /* Said as what it is. A month that spent more than it earned gets the word for it and
+     the spending colour — never a negative number sitting where money to spend goes. */
+  const short = plan.surplus < 0;
+  body.append(el('div', { class: 'plan-bottom', 'data-testid': 'plan-bottom' }, [
+    el('span', { text: short ? t('planDeficit') : t('planSurplus') }),
+    el('span', {
+      class: 'plan-amount ' + (short ? 'neg' : 'pos'),
+      text: money2S(plan.surplus),
+      'data-testid': 'plan-surplus',
+    }),
+  ]));
+  /* Two bars on one scale rather than one bar in two colours: side by side the segments
+     read as parts of a whole, and income and spending are not parts of anything — they
+     are two lengths to compare. The longer one fills the width. */
+  const scale = Math.max(plan.income.total, plan.outgoing);
+  if (scale > 0) {
+    const bar = el('div', { class: 'plan-bar', role: 'img', 'aria-label': t('planBarLabel', {
+      in: money(plan.income.total), out: money(plan.outgoing),
+    }), 'data-testid': 'plan-bar' });
+    bar.append(el('span', { class: 'plan-bar-in', style: `width:${Math.max(plan.income.total, 0) / scale * 100}%` }));
+    bar.append(el('span', { class: 'plan-bar-out', style: `width:${Math.max(plan.outgoing, 0) / scale * 100}%` }));
+    body.append(bar);
+  }
 }
 
 /* --------------------------------------------------------- recurring ---- */
