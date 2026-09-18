@@ -110,7 +110,7 @@ export class DashboardComponent {
   /** The two-tap path: open the dialog, say how much and what it was, save. */
   @step('Record a cash expense from the quick-add button')
   async quickAdd(input: { amount: number; description: string; category?: string }): Promise<void> {
-    await this.quickAddButton.click();
+    if (!await this.page.getByTestId('quick-amount').isVisible()) await this.quickAddButton.click();
     await this.page.getByTestId('quick-amount').fill(String(input.amount));
     await this.page.getByTestId('quick-desc').fill(input.description);
     if (input.category) await this.page.getByTestId('quick-cat').selectOption(input.category);

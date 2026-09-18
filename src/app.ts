@@ -30,6 +30,7 @@ let directoryOpen = window.location.hash === '#savings-directory';
    review. A hash so a reload comes back to it. */
 let goalsOpen = window.location.hash === '#goals';
 let cardsOpen = window.location.hash === '#cards';
+let expensesOpen = window.location.hash === '#expenses';
 const consentRepository = new LocalConsentRepository(localStorage);
 let drawerReturnFocus: HTMLElement | null = null;
 
@@ -159,7 +160,8 @@ const SLOT = ['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--s5)','var(-
 const catColor = (cats: readonly Category[], id: string | undefined) => {
   if (id === 'income') return 'var(--good)';
   const i = cats.filter((c) => c.id !== 'income').findIndex((c) => c.id === id);
-  return i >= 0 && i < 8 ? SLOT[i] : 'var(--s0)';
+  /* `?? ` for the type rather than for the case: the index is already bounded above. */
+  return i >= 0 && i < 8 ? SLOT[i] ?? 'var(--s0)' : 'var(--s0)';
 };
 
 /* On a row that carries money the dot says which way the money went, not which slot the
@@ -588,18 +590,20 @@ function render() {
   $('#savings-directory').hidden = !directoryOpen;
   $('#goals').hidden = !goalsOpen;
   $('#cards').hidden = !cardsOpen;
+  $('#expenses').hidden = !expensesOpen;
   /* Rendered before the dashboard gives up on an empty month: a household can say what it
      is saving towards before it has a statement, and the goals screen asks for its own
      figures anyway. */
   renderGoals();
   renderCards();
+  renderExpenses();
   if (!S.tx.length) {
-    $('#empty').hidden = directoryOpen || goalsOpen || cardsOpen;
+    $('#empty').hidden = directoryOpen || goalsOpen || cardsOpen || expensesOpen;
     $('#main').hidden = true;
     return;
   }
   $('#empty').hidden = true;
-  $('#main').hidden = directoryOpen || goalsOpen || cardsOpen;
+  $('#main').hidden = directoryOpen || goalsOpen || cardsOpen || expensesOpen;
   const month = S.month;
   if (!month) return;
 
@@ -895,7 +899,7 @@ function renderRecommendations() {
 /* One tab carries `aria-current`, and the buttons that used to announce themselves with
    aria-pressed keep doing so — a screen the reader is on has to be obvious from the bar
    without counting colours. */
-const SCREEN_TABS = ['#btn-overview', '#btn-cards', '#btn-goals', '#btn-recommendations', '#btn-savings'] as const;
+const SCREEN_TABS = ['#btn-overview', '#btn-cards', '#btn-goals', '#btn-recommendations', '#btn-savings', '#btn-expenses'] as const;
 
 function markScreen(active: typeof SCREEN_TABS[number]) {
   for (const selector of SCREEN_TABS) {
@@ -912,10 +916,12 @@ function showRecommendations() {
     directoryOpen = false;
     goalsOpen = false;
     cardsOpen = false;
+    expensesOpen = false;
     if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
     $('#savings-directory').hidden = true;
     $('#goals').hidden = true;
     $('#cards').hidden = true;
+    $('#expenses').hidden = true;
     $('#empty').hidden = false;
     const uploadCallToAction = $('#marketing-upload');
     uploadCallToAction.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -927,10 +933,12 @@ function showRecommendations() {
   directoryOpen = false;
   goalsOpen = false;
   cardsOpen = false;
+  expensesOpen = false;
   if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
   $('#savings-directory').hidden = true;
   $('#goals').hidden = true;
   $('#cards').hidden = true;
+  $('#expenses').hidden = true;
   $('#main').hidden = false;
   $('#recommendations').hidden = false;
   $$('#main > *').forEach((child) => { if (child.id !== 'months' && child.id !== 'recommendations') child.hidden = true; });
@@ -942,10 +950,12 @@ function showDashboard() {
   directoryOpen = false;
   goalsOpen = false;
   cardsOpen = false;
+  expensesOpen = false;
   if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
   $('#savings-directory').hidden = true;
   $('#goals').hidden = true;
   $('#cards').hidden = true;
+  $('#expenses').hidden = true;
   $('#recommendations').hidden = true;
   $('#main').hidden = !S.tx.length;
   $('#empty').hidden = Boolean(S.tx.length);
@@ -1440,6 +1450,143 @@ function goalStatus(goal: SavingsGoal, progress: ReturnType<typeof goalProgress>
     monthly: money2(progress.monthlyNeed), months: progress.monthsLeft ?? 0,
     remaining: money2(progress.remaining), month: monthLabel(goal.due),
   });
+}
+
+/* --------------------------------------------------------- expenses ----- */
+/* Where money the statement will never report is recorded and kept: cash, a payment
+   between people, anything that left without a trace. The table below the form holds only
+   the rows this household typed, because those are the only ones it owns — an imported row
+   is the bank's word, and deleting one here would make the month disagree with the
+   statement it came from. */
+/* A ring per category with a cap on it: how much of that cap this month has used. Drawn
+   rather than written because eight of them read at a glance and eight bars do not — but
+   the two figures are written inside every one, because a ring is a proportion and a
+   household budgets in shekels. Over the cap is said in words and in the row's colour,
+   never by the ring alone. */
+function categoryRing(id: string, spent: number, cap: number): DomElement {
+  const share = cap > 0 ? Math.min(spent / cap, 1) : 0;
+  const over = cap > 0 && spent > cap;
+  const radius = 26;
+  const circumference = 2 * Math.PI * radius;
+  const ring = el('div', {
+    class: 'ring' + (over ? ' over' : ''), role: 'listitem', 'data-testid': 'category-ring',
+  });
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 64 64');
+  svg.setAttribute('width', '64');
+  svg.setAttribute('height', '64');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', t(over ? 'ringOverCap' : 'ringWithinCap', {
+    category: catById(id).name, spent: money(spent), cap: money(cap), percent: Math.round((cap > 0 ? spent / cap : 0) * 100),
+  }));
+  for (const [stroke, dash] of [
+    ['var(--surface-3)', null],
+    [over ? 'var(--crit)' : catColor(S.cats, id), `${circumference * share} ${circumference}`],
+  ] as const) {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', '32');
+    circle.setAttribute('cy', '32');
+    circle.setAttribute('r', String(radius));
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', stroke);
+    circle.setAttribute('stroke-width', '6');
+    if (dash) {
+      circle.setAttribute('stroke-dasharray', dash);
+      circle.setAttribute('stroke-linecap', 'round');
+      circle.setAttribute('transform', 'rotate(-90 32 32)');
+    }
+    svg.append(circle);
+  }
+  ring.append(svg);
+  ring.append(el('span', { class: 'ring-name', text: catById(id).name }));
+  ring.append(el('span', { class: 'ring-figures', text: `${money(spent)}/${money(cap)}` }));
+  return ring;
+}
+
+function renderExpenses() {
+  fillQuickCategories();
+  /* The month's spending, the figures the dashboard already reasons with, and the caps the
+     household set — gathered here rather than recomputed: a second opinion about what is
+     left over is worse than no second screen. */
+  const month = txOfMonth(S.month);
+  const spent = totals(month).out;
+  $('#expenses-total').textContent = money(spent);
+  $('#expenses-since').textContent = t('spentSince', { month: monthLabel(S.month) });
+
+  const payday = currentAgentResults().payday;
+  $('#expenses-left').textContent = payday && payday.nextIncomeDate && payday.daysRemaining != null && payday.available >= 0
+    ? t('leftForTheMonth', {
+      amount: money(Math.max(0, payday.freeToSpend)),
+      daily: money(Math.max(0, payday.dailyAllowance || 0)),
+    })
+    : t('leftForTheMonthUnknown');
+
+  const spendByCategory = new Map(byCategory(month));
+  const capped = S.cats.filter((category) => category.kind === 'expense' && budgetOf(category.id) > 0);
+  const rings = $('#expenses-rings');
+  rings.textContent = '';
+  if (!capped.length) {
+    rings.append(el('p', { class: 'note', text: t('noCapsYet'), 'data-testid': 'no-caps' }));
+  }
+  for (const category of capped) {
+    rings.append(categoryRing(category.id, spendByCategory.get(category.id) ?? 0, budgetOf(category.id)));
+  }
+
+  const typed = S.tx.filter((transaction) => transaction.src === 'manual-entry' || transaction.src === 'הזנה ידנית')
+    .sort((first, second) => (first.date < second.date ? 1 : first.date > second.date ? -1 : 0));
+  $('#expenses-note').textContent = typed.length
+    ? t('typedExpensesSummary', { count: typed.length, out: money(typed.reduce((sum, item) => sum + item.out, 0)) })
+    : t('noTypedExpensesYet');
+
+  const body = $('#expenses-body');
+  body.textContent = '';
+  for (const transaction of typed.slice(0, 400)) {
+    const remove = el('button', {
+      class: 'btn sm', type: 'button', text: t('remove'),
+      'aria-label': t('removeExpense', { description: transaction.desc }),
+      'data-testid': 'expense-remove',
+    });
+    remove.addEventListener('click', () => {
+      S.tx = S.tx.filter((item) => item.id !== transaction.id);
+      if (transaction.id) delete S.overrides[transaction.id];
+      save(); render();
+      toast(t('expenseRemoved'));
+    });
+    body.append(el('tr', { class: transaction.in > 0 ? null : 'outgoing', 'data-testid': 'expense-row' }, [
+      el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(transaction.date)) }),
+      el('td', { class: 'desc', 'data-label': t('description'), text: transaction.desc }),
+      el('td', { 'data-label': t('category'), text: catById(transaction.cat ?? 'other').name }),
+      el('td', {
+        class: 'amountcell n ' + (transaction.in > 0 ? 'pos' : 'neg'),
+        'data-label': t('amount'),
+        text: money2S(transaction.in > 0 ? transaction.in : -transaction.out),
+        'data-testid': 'expense-amount',
+      }),
+      el('td', {}, remove),
+    ]));
+  }
+}
+
+/* The plus button leads here rather than opening a box over the page: recording one charge
+   and seeing what has already been recorded are the same task, and the screen holds both.
+   The cursor lands on the amount, which is the figure the customer arrived with. */
+function showExpenses() {
+  setMobileMenu(false);
+  directoryOpen = false;
+  goalsOpen = false;
+  cardsOpen = false;
+  expensesOpen = true;
+  history.replaceState(null, '', '#expenses');
+  $('#empty').hidden = true;
+  $('#main').hidden = true;
+  $('#savings-directory').hidden = true;
+  $('#goals').hidden = true;
+  $('#cards').hidden = true;
+  $('#expenses').hidden = false;
+  markScreen('#btn-expenses');
+  if (!$('#quick-date').value) $('#quick-date').value = new Date().toISOString().slice(0, 10);
+  $('#expenses').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('#quick-amount').focus({ preventScroll: true });
 }
 
 /* ------------------------------------------------------------ cards ----- */
@@ -2466,22 +2613,22 @@ function wire() {
      and recording it used to cost opening the drawer, finding a section and filling five
      fields. The button is on the screen and the dialog opens with the cursor in the
      amount, which is the only figure the customer has in mind. */
-  const quickAdd = document.querySelector<HTMLDialogElement>('#quick-add')!;
   $('#btn-quick-add').addEventListener('click', () => {
-    fillQuickCategories();
     $('#quick-date').value = new Date().toISOString().slice(0, 10);
     $('#quick-amount').value = '';
     $('#quick-desc').value = '';
-    quickAdd.showModal();
-    $('#quick-amount').focus();
+    showExpenses();
   });
-  $('#quick-cancel').addEventListener('click', () => quickAdd.close());
+  $('#btn-expenses').addEventListener('click', () => (expensesOpen ? showDashboard() : showExpenses()));
+  $('#btn-expenses-back').addEventListener('click', showDashboard);
   $('#quick-add-form').addEventListener('submit', (event) => {
+    event.preventDefault();
     const amount = Number($('#quick-amount').value);
     const desc = clean($('#quick-desc').value);
     const date = $('#quick-date').value;
-    /* A form that closes without saving would look exactly like one that saved. */
-    if (!date || !desc || !Number.isFinite(amount) || amount <= 0) { event.preventDefault(); return; }
+    /* Nothing is recorded from a half-filled form, and nothing is said either: the fields
+       stay as they are, with the browser's own validation on them. */
+    if (!date || !desc || !Number.isFinite(amount) || amount <= 0) return;
     const transaction: BankTransaction = {
       date, vdate: date, ref: '', desc, out: amount, in: 0, bal: null, pending: false,
       src: 'manual-entry', id: '',
@@ -2497,6 +2644,11 @@ function wire() {
     S.overrides[transaction.id] = $('#quick-cat').value;
     S.month = monthKey(date);
     save(); render();
+    /* Cleared rather than left standing: the same figures still on screen after a save
+       read as a charge that did not go in. */
+    $('#quick-amount').value = '';
+    $('#quick-desc').value = '';
+    $('#quick-amount').focus();
     toast(t('transactionAdded'));
   });
 
