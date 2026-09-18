@@ -51,12 +51,26 @@ export interface Rule {
   when?: 'in' | 'out';
 }
 
+/* A goal the household set for itself: what it is saving towards, how much it has put
+   aside so far and by when. Both figures are the household's own — no statement says which
+   transfer belonged to which goal, so the app never infers them. Stored like a budget cap,
+   because it is the same kind of thing: an output the customer approved, not a finding. */
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  target: number;
+  saved: number;
+  /** 'YYYY-MM', or null for a goal with no date on it. */
+  due: string | null;
+}
+
 export interface AppState {
   tx: BankTransaction[];
   overrides: Record<string, string>;
   rules: Rule[];
   cats: Category[];
   budgets: Record<string, number>;
+  goals: SavingsGoal[];
   accounts: string[];
   month: string | null;
 }

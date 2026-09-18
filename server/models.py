@@ -82,6 +82,29 @@ class Category(BaseModel):
     kind: CategoryKind
 
 
+class SavingsGoal(BaseModel):
+    """What a household is saving towards, in figures it entered itself.
+
+    The name is free text the customer typed, so it passes the same identifier check a
+    description does: nobody means to write an account number into a goal, and the one who
+    does should not have it kept.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(max_length=100)
+    name: str = Field(max_length=200)
+    target: float = Field(ge=0, le=1_000_000_000)
+    saved: float = Field(ge=0, le=1_000_000_000)
+    due: str | None = Field(default=None, max_length=7, pattern=r"^\d{4}-\d{2}$")
+
+    @field_validator("name")
+    @classmethod
+    def name_has_no_financial_identifier(cls, value: str) -> str:
+        if _contains_financial_identifier(value):
+            raise ValueError("financial identifier is not allowed")
+        return value
+
+
 class CloudStatePayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -90,6 +113,7 @@ class CloudStatePayload(BaseModel):
     rules: list[CategoryRule] = Field(max_length=1_000)
     cats: list[Category] = Field(max_length=1_000)
     budgets: dict[str, float]
+    goals: list[SavingsGoal] = Field(default_factory=list, max_length=100)
 
     @model_validator(mode="after")
     def validate_dictionaries(self) -> "CloudStatePayload":

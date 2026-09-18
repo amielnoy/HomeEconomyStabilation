@@ -6,12 +6,13 @@ import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js
 import { runFinancialAgents, type FinancialAgentResults } from './financial-agents.js';
 import { LocalConsentRepository } from './consent.js';
 import { Logger, resolveLevel } from './logging.js';
-import type { AppState, BankTransaction, CardBrand, CardIssuer, Category, CategoryKind, Rule } from './domain-model.js';
+import type { AppState, BankTransaction, CardBrand, CardIssuer, Category, CategoryKind, Rule, SavingsGoal } from './domain-model.js';
 import { AppStateCodec, LocalStorageStateRepository } from './state-repository.js';
 import { bankImporter, cleanTransactionText as clean, readsAsCardReport, transactionId as txId } from './bank-importer.js';
 import { RuleBasedTransactionCategorizer } from './categorization.js';
 import { transactionViewRows, type CardChargeGroup, type TransactionViewMode } from './transaction-view.js';
 import { buildFinancialPlan, type PlanSection } from './financial-plan.js';
+import { goalProgress, orderGoals } from './savings-goals.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
 interface DomElement extends HTMLElement { value: string; files: FileList | null; reset(): void; }
@@ -334,6 +335,7 @@ let S: AppState = {
   rules: DEFAULT_RULES as Rule[],
   cats: DEFAULT_CATS as Category[],
   budgets: {},       // catId -> monthly ceiling
+  goals: [],         // what the household is saving towards, in its own figures
   accounts: [],
   month: null,
 };
@@ -593,6 +595,7 @@ function render() {
   renderForecast();
   renderBudgets();
   renderCategories();
+  renderGoals();
   renderPlan();
   renderRecurring();
   renderTx();
@@ -1270,6 +1273,88 @@ function renderCategories() {
   }
   table.append(tb);
   tbl.append(table);
+}
+
+/* ------------------------------------------------------------ goals ----- */
+/* What the household is saving towards. Both figures are its own: no statement says which
+   transfer belonged to which goal, so the app asks rather than infers — a progress bar
+   built on a guess is worse than no progress bar. What it does compute is the arithmetic
+   nobody wants to do monthly: what is left, and what that asks of this month. */
+function renderGoals() {
+  const box = $('#goals-list');
+  box.textContent = '';
+  const today = new Date();
+  const goals = orderGoals(S.goals, today);
+  if (!goals.length) {
+    box.append(el('div', { class: 'empty-row', text: t('noGoalsYet') }));
+    return;
+  }
+  for (const goal of goals) {
+    const progress = goalProgress(goal, today);
+    const row = el('div', { class: 'goalrow', 'data-testid': 'goal-row' });
+
+    const name = el('input', {
+      type: 'text', value: goal.name, maxlength: 200,
+      'aria-label': t('goalName'), 'data-testid': 'goal-name-input',
+    });
+    name.addEventListener('change', () => { goal.name = clean(name.value).slice(0, 200) || t('newGoal'); save(); render(); });
+    const target = el('input', {
+      type: 'number', min: '0', step: '10', inputmode: 'decimal', value: String(goal.target),
+      'aria-label': t('goalTarget'), 'data-testid': 'goal-target-input',
+    });
+    target.addEventListener('change', () => { goal.target = Math.max(0, Number(target.value) || 0); save(); render(); });
+    const saved = el('input', {
+      type: 'number', min: '0', step: '10', inputmode: 'decimal', value: String(goal.saved),
+      'aria-label': t('goalSaved'), 'data-testid': 'goal-saved-input',
+    });
+    saved.addEventListener('change', () => { goal.saved = Math.max(0, Number(saved.value) || 0); save(); render(); });
+    const due = el('input', {
+      type: 'month', value: goal.due ?? '',
+      'aria-label': t('goalDue'), 'data-testid': 'goal-due-input',
+    });
+    due.addEventListener('change', () => { goal.due = /^\d{4}-\d{2}$/.test(due.value) ? due.value : null; save(); render(); });
+    const remove = el('button', {
+      class: 'btn sm', type: 'button', text: t('remove'),
+      'aria-label': t('removeGoal', { name: goal.name }), 'data-testid': 'goal-remove',
+    });
+    remove.addEventListener('click', () => {
+      S.goals = S.goals.filter((item) => item.id !== goal.id);
+      save(); render();
+    });
+
+    /* Said in words beside the bar, because a bar on its own is a length and a household
+       reading it needs the two numbers it stands for. */
+    row.append(el('div', { class: 'top' }, [
+      el('span', { class: 'nm', text: goal.name }),
+      el('span', { class: 'goal-share', text: Math.round(progress.share * 100) + '%', 'data-testid': 'goal-share' }),
+    ]));
+    row.append(el('div', { class: 'track' }, [
+      el('div', { class: 'fill', style: `width:${clamp(progress.share, 0, 1) * 100}%;background:${progress.done ? 'var(--good)' : 'var(--s1)'}` }),
+    ]));
+    row.append(el('p', { class: 'note', 'data-testid': 'goal-status', text: goalStatus(goal, progress) }));
+    row.append(el('div', { class: 'goalfields' }, [
+      name,
+      el('label', {}, [el('span', { text: t('goalTarget') }), target]),
+      el('label', {}, [el('span', { text: t('goalSaved') }), saved]),
+      el('label', {}, [el('span', { text: t('goalDue') }), due]),
+      remove,
+    ]));
+    box.append(row);
+  }
+}
+
+function goalStatus(goal: SavingsGoal, progress: ReturnType<typeof goalProgress>): string {
+  if (progress.done) return t('goalReached', { target: money2(goal.target) });
+  if (progress.monthlyNeed === null) {
+    return t('goalRemaining', { remaining: money2(progress.remaining), saved: money2(goal.saved), target: money2(goal.target) });
+  }
+  /* A target month already gone is not a month to spread the remainder over, and saying
+     "0 ₪ a month" about a goal that is behind would read as nothing left to do. */
+  if (progress.overdue) return t('goalOverdue', { remaining: money2(progress.remaining), month: monthLabel(goal.due) });
+  return t('goalMonthly', {
+    monthly: money2(progress.monthlyNeed), months: progress.monthsLeft ?? 0,
+    remaining: money2(progress.remaining), month: monthLabel(goal.due),
+  });
 }
 
 /* ------------------------------------------------------------- plan ----- */
@@ -2041,6 +2126,14 @@ function wire() {
     const id = 'c' + Date.now();
     S.cats.splice(S.cats.length - 1, 0, { id, name: t('newCategory'), kind: 'expense' });
     save(); renderDrawer(); render();
+  });
+
+  $('#btn-addgoal').addEventListener('click', () => {
+    /* Added empty and named by the customer: a goal the app filled in with a number would
+       be the app deciding what this household is saving for. */
+    S.goals.push({ id: 'g' + Date.now(), name: t('newGoal'), target: 0, saved: 0, due: null });
+    save(); render();
+    $('#goals-list').scrollIntoView({ block: 'nearest' });
   });
 
   $('#fc-horizon').addEventListener('change', renderForecast);

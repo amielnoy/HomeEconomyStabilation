@@ -79,6 +79,16 @@ The transactions table opens on the account as the bank describes it: statement 
 - Folding changes how a month reads, never what it came to: the totals line counts the charges themselves in both views.
 - Charges are folded only where a statement row stands beside them. A card-only import stays itemised, because there is no settlement line for the summary to be read against.
 
+## Savings goal pattern
+
+`goals` lists what the household is saving towards. The target and the amount put aside are figures the household enters: no statement says which transfer belonged to which goal, so nothing here is inferred from transactions — a progress bar built on a guess is worse than no progress bar.
+
+- Each goal is one block: name and share saved, a bar, and in words underneath what is left and what reaching it asks of this month. The bar is a length; the sentence carries the two numbers it stands for, so the goal is readable without seeing colour.
+- The fields stay on the row rather than behind an edit mode. The amount saved is the number a household changes most often, and a screen that hides it behind a pencil asks for a click a month.
+- A goal reached is marked and sinks to the bottom rather than disappearing — it is the household's evidence that the screen works.
+- The arithmetic never produces something unshowable: a target of zero is not divided by, a share stops at full, and a target month already passed is named rather than spread over the months it does not have.
+- A goal name is free text the customer typed and is redacted at the persistence boundary exactly as a description is.
+
 ## Financial plan pattern
 
 `plan` reads the selected month the way a household worksheet asks for it: income, fixed spending, variable spending, money set aside, and the line left over. Every figure is summed from transactions already imported — the app holds no target of its own, and a plan that invented one would be guessing at what this household meant to spend.

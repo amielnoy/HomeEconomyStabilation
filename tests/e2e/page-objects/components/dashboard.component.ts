@@ -29,6 +29,11 @@ export class DashboardComponent {
   readonly spendingGuideAsOf = this.page.getByTestId('spending-guide-asof');
   readonly spendingGuideDate = this.page.getByTestId('spending-guide-date');
   readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
+  readonly goals = this.page.getByTestId('goals');
+  readonly goalRows = this.page.getByTestId('goal-row');
+  readonly addGoal = this.page.getByTestId('btn-addgoal');
+  readonly goalShares = this.page.getByTestId('goal-share');
+  readonly goalStatuses = this.page.getByTestId('goal-status');
   readonly plan = this.page.getByTestId('plan');
   readonly planIncome = this.page.getByTestId('plan-section-income');
   readonly planFixed = this.page.getByTestId('plan-section-fixed');
@@ -89,6 +94,29 @@ export class DashboardComponent {
       if (box.left >= -0.5 && box.right <= window.innerWidth + 0.5) return [];
       return [{ text: (cell.textContent || '').trim(), left: Math.round(box.left), right: Math.round(box.right) }];
     }));
+  }
+
+  /** Add a goal and fill it in the way a household would: name it, say what it costs, say
+      what is already put aside, and give it a month. The new row is found by the name it
+      is created with rather than by position — goals are ordered by what still needs
+      doing, so the one just added is not necessarily the last. */
+  @step('Add and fill in a savings goal')
+  async createGoal(input: { name: string; target: number; saved: number; due?: string; placeholder?: string }): Promise<void> {
+    await this.addGoal.click();
+    const row = this.goalRows.filter({ hasText: input.placeholder ?? 'מטרה חדשה' }).first();
+    /* Named last on purpose. Every field change re-renders and re-orders the list, and the
+       row is found by the name it was created with — rename it first and the locator has
+       nothing left to match. */
+    for (const [testId, value] of [
+      ['goal-target-input', String(input.target)],
+      ['goal-saved-input', String(input.saved)],
+      ...(input.due ? [['goal-due-input', input.due]] : []),
+      ['goal-name-input', input.name],
+    ] as const) {
+      const field = row.getByTestId(testId);
+      await field.fill(value);
+      await field.blur();
+    }
   }
 
   /** A colour token as the browser resolves it, so a test can say "the colour money
