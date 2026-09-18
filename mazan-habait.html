@@ -496,6 +496,20 @@ select.catsel:hover{ border-color:var(--line-2); background:var(--surface); }
   background:var(--ds-action); border-color:var(--ds-action); color:#fff;
 }
 @media (pointer: coarse){ .screentab{ min-height:48px; } }
+/* A phone held sideways has about 360px of height for everything, and the bar costs a
+   line there like everywhere else. It keeps its place and gives back what it can: the
+   first figure a household looks for has to stay above the fold. */
+/* A phone held sideways has about 360px of height for everything, and the first figure a
+   household looks for has to stay above the fold. The bar gives back its padding and the
+   card around the headline gives back its own — but never the tab's height: a control too
+   small to hit is not a saving, it is a control nobody can use. */
+@media (max-height: 460px){
+  .screens{ padding-block:0 6px; margin-block-end:0; }
+  .screentab{ font-size:13px; padding-inline:12px; }
+  .spending-guide{ margin-top:8px; padding-block:14px; }
+  /* The tagline under the name is the one thing on this screen nobody is looking for. */
+  .brand .sub{ display:none; }
+}
 
 /* A row that carries money out is read as one line, so it is coloured as one line. The
    muted greys of the reference and the source are overridden on purpose: a charge that
