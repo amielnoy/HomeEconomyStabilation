@@ -85,3 +85,31 @@ test('leaves a refund the statement itself reported alone', async ({ homePage })
   await expect(homePage.dashboard.transactionRows).toHaveCount(3);
   await expect(homePage.toast).not.toContainText('תוקנו');
 });
+
+
+test('replaces the legacy purchase total with the billed installment and persists it', async ({ homePage, page }) => {
+  await homePage.upload.uploadBankReport({
+    name: 'legacy.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('תאריך,תיאור פעולה,זכות,אסמכתא\n08/09/2026,מועדון,200,reference-a'),
+  });
+  const amount = () => homePage.dashboard.transactionRows.filter({ hasText: 'מועדון' }).getByTestId('transaction-amount');
+  await expect(amount()).toContainText('+200.00');
+  await homePage.dashboard.transactionRows.filter({ hasText: 'מועדון' }).getByTestId('transaction-category-select').selectOption('leisure');
+  const { xlsxWorkbook } = await import('../helpers/workbook-fixtures');
+  const report = {
+    name: 'card.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: Buffer.from(xlsxWorkbook([
+      ['שם כרטיס', 'חיוב לתאריך', 'תאריך', 'שם בית עסק', "סכום חיוב בש''ח", 'סכום קנייה', 'אסמכתא'].map(value => ({ value })),
+      [{ value: '1234' }, { value: (Date.UTC(2026, 9, 10) - Date.UTC(1899, 11, 30)) / 86400000, date: true }, { value: '08/09/2026' }, { value: 'מועדון' }, { value: 40 }, { value: 200 }, { value: 'reference-a' }],
+    ])),
+  };
+  await homePage.upload.uploadCreditCardReport(report, 'bank', 'cal');
+  await expect(homePage.toast).toContainText('1 תנועות תוקנו');
+  await expect(homePage.dashboard.transactionRows).toHaveCount(1);
+  await expect(amount()).toContainText('-40.00');
+  await expect(homePage.dashboard.transactionRows.getByTestId('transaction-category-select')).toHaveValue('leisure');
+  await homePage.upload.uploadCreditCardReport(report, 'bank', 'cal');
+  await page.reload();
+  await expect(homePage.dashboard.transactionRows).toHaveCount(1);
+  await expect(amount()).toContainText('-40.00');
+});
