@@ -34,10 +34,12 @@ export class DashboardComponent {
   readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
   readonly quickAddButton = this.page.getByTestId('btn-quick-add');
   readonly quickAddDialog = this.page.getByTestId('quick-add');
+
   readonly cardsButton = this.page.getByTestId('btn-cards');
   readonly cardsNote = this.page.getByTestId('cards-note');
   readonly cardChargeRows = this.page.getByTestId('card-charge-row');
   readonly cardChargeAmounts = this.page.getByTestId('card-charge-amount');
+
   readonly goalsButton = this.page.getByTestId('btn-goals');
   readonly goals = this.page.getByTestId('goals');
   readonly goalRows = this.page.getByTestId('goal-row');
@@ -116,12 +118,14 @@ export class DashboardComponent {
     await this.page.getByTestId('quick-submit').click();
   }
 
+
   /** What is on each card, on its own screen, reached from the header. */
   @step('Open the credit cards screen')
   async openCards(): Promise<void> {
     if (!await this.cardsButton.isVisible()) await this.page.getByTestId('mobile-menu-toggle').click();
     await this.cardsButton.click();
     await this.page.getByTestId('cards').waitFor({ state: 'visible' });
+
   }
 
   /** The goals screen stands beside the dashboard, reached from the header. */
