@@ -79,6 +79,16 @@ The transactions table opens on the account as the bank describes it: statement 
 - Folding changes how a month reads, never what it came to: the totals line counts the charges themselves in both views.
 - Charges are folded only where a statement row stands beside them. A card-only import stays itemised, because there is no settlement line for the summary to be read against.
 
+## Quick-add pattern
+
+`btn-quick-add` is a floating action button on every populated dashboard, opening the `quick-add` dialog. It exists for the money a statement will never report — cash, paying a person — which used to cost opening the drawer, finding a section inside it and filling five fields, and so went unrecorded.
+
+- The dialog is a native `<dialog>` opened with `showModal()`: focus is trapped, Escape closes it and the backdrop comes free. It opens with the cursor in the amount, which is the only figure the customer has in mind, and today's date already filled in.
+- Expenses only. Money arriving is on a statement, and offering an income category on the quick path would invite a household to record its salary twice.
+- The chosen category is stored as an override, exactly as choosing one on a transaction row is: it outranks any rule that would have claimed the description.
+- The same expense recorded twice is the mistake two taps make easiest, so a repeat is named rather than added.
+- The button clears the safe-area inset and the page reserves room below its last row for it, at 56px and 60px on coarse pointers.
+
 ## Savings goal pattern
 
 `goals` lists what the household is saving towards. The target and the amount put aside are figures the household enters: no statement says which transfer belonged to which goal, so nothing here is inferred from transactions — a progress bar built on a guess is worse than no progress bar.

@@ -29,6 +29,8 @@ export class DashboardComponent {
   readonly spendingGuideAsOf = this.page.getByTestId('spending-guide-asof');
   readonly spendingGuideDate = this.page.getByTestId('spending-guide-date');
   readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
+  readonly quickAddButton = this.page.getByTestId('btn-quick-add');
+  readonly quickAddDialog = this.page.getByTestId('quick-add');
   readonly goals = this.page.getByTestId('goals');
   readonly goalRows = this.page.getByTestId('goal-row');
   readonly addGoal = this.page.getByTestId('btn-addgoal');
@@ -94,6 +96,16 @@ export class DashboardComponent {
       if (box.left >= -0.5 && box.right <= window.innerWidth + 0.5) return [];
       return [{ text: (cell.textContent || '').trim(), left: Math.round(box.left), right: Math.round(box.right) }];
     }));
+  }
+
+  /** The two-tap path: open the dialog, say how much and what it was, save. */
+  @step('Record a cash expense from the quick-add button')
+  async quickAdd(input: { amount: number; description: string; category?: string }): Promise<void> {
+    await this.quickAddButton.click();
+    await this.page.getByTestId('quick-amount').fill(String(input.amount));
+    await this.page.getByTestId('quick-desc').fill(input.description);
+    if (input.category) await this.page.getByTestId('quick-cat').selectOption(input.category);
+    await this.page.getByTestId('quick-submit').click();
   }
 
   /** Add a goal and fill it in the way a household would: name it, say what it costs, say

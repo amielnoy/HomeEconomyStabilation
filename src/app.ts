@@ -2128,6 +2128,44 @@ function wire() {
     save(); renderDrawer(); render();
   });
 
+  /* Spending cash is the one thing a household does that no statement will ever report,
+     and recording it used to cost opening the drawer, finding a section and filling five
+     fields. The button is on the screen and the dialog opens with the cursor in the
+     amount, which is the only figure the customer has in mind. */
+  const quickAdd = document.querySelector<HTMLDialogElement>('#quick-add')!;
+  $('#btn-quick-add').addEventListener('click', () => {
+    fillQuickCategories();
+    $('#quick-date').value = new Date().toISOString().slice(0, 10);
+    $('#quick-amount').value = '';
+    $('#quick-desc').value = '';
+    quickAdd.showModal();
+    $('#quick-amount').focus();
+  });
+  $('#quick-cancel').addEventListener('click', () => quickAdd.close());
+  $('#quick-add-form').addEventListener('submit', (event) => {
+    const amount = Number($('#quick-amount').value);
+    const desc = clean($('#quick-desc').value);
+    const date = $('#quick-date').value;
+    /* A form that closes without saving would look exactly like one that saved. */
+    if (!date || !desc || !Number.isFinite(amount) || amount <= 0) { event.preventDefault(); return; }
+    const transaction: BankTransaction = {
+      date, vdate: date, ref: '', desc, out: amount, in: 0, bal: null, pending: false,
+      src: 'manual-entry', id: '',
+    };
+    transaction.id = txId(transaction);
+    if (S.tx.some((item) => item.id === transaction.id)) {
+      toast(t('transactionAlreadyRecorded'));
+      return;
+    }
+    S.tx.push(transaction);
+    /* The category the customer picked is an override, the same as choosing one on the
+       row: it outranks any rule that would have claimed the description. */
+    S.overrides[transaction.id] = $('#quick-cat').value;
+    S.month = monthKey(date);
+    save(); render();
+    toast(t('transactionAdded'));
+  });
+
   $('#btn-addgoal').addEventListener('click', () => {
     /* Added empty and named by the customer: a goal the app filled in with a number would
        be the app deciding what this household is saving for. */
@@ -2151,6 +2189,18 @@ function wire() {
   window.addEventListener('resize', () => {
     if (!$('#main').hidden) { drawWaterline(monthsPresent()); renderForecast(); }
   });
+}
+
+/* Expenses only, and income left out on purpose: money arriving is on a statement, and
+   the drawer's form is there for the row that is not. */
+function fillQuickCategories() {
+  const select = $('#quick-cat');
+  const current = select.value;
+  select.textContent = '';
+  for (const category of S.cats.filter((item) => item.kind !== 'income')) {
+    select.append(el('option', { value: category.id, text: catById(category.id).name }));
+  }
+  select.value = current && S.cats.some((item) => item.id === current) ? current : 'cash';
 }
 
 function fillCatFilter() {
