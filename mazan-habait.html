@@ -589,6 +589,20 @@ tr:hover .flipdir, .flipdir:focus-visible{ opacity:1; }
 .expense-form input:focus-visible, .expense-form select:focus-visible{
   outline:2px solid var(--ds-action); outline-offset:1px;
 }
+/* The month at a glance: what has gone, what is left and what that is a day. The figures
+   are the dashboard's own — this screen gathers them where the spending is recorded. */
+.spent-head{ text-align:center; margin-block:18px 6px; }
+.spent-total{ font-family:var(--ds-font-display); font-size:46px; font-weight:700; margin:0; line-height:1.05; }
+.spent-since{ margin:2px 0 0; color:var(--muted); font-size:13px; }
+.spent-left{ margin:12px 0 0; font-size:13.5px; }
+.rings-title{ font-size:15px; margin:22px 0 10px; font-family:var(--ds-font-body); font-weight:700; }
+.rings{ display:flex; flex-wrap:wrap; gap:14px; }
+.ring{ width:104px; text-align:center; }
+.ring svg{ display:block; margin:0 auto 6px; }
+.ring .ring-name{ display:block; font-size:12.5px; font-weight:600; }
+.ring .ring-figures{ display:block; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.ring.over .ring-name, .ring.over .ring-figures{ color:var(--crit-text); }
+
 /* The form the plus button leads to. Fields on one line where there is room, stacked
    where there is not, and the amount first because it is the figure the customer has in
    mind on the way here. */
@@ -1152,6 +1166,15 @@ body.drawer-open{ overflow:hidden; }
         <button class="btn sm" id="btn-expenses-back" type="button" data-i18n="backToDashboard" data-testid="btn-expenses-back">חזרה לתמונת מצב</button>
       </div>
     </header>
+    <div class="spent-head">
+      <p class="spent-total" id="expenses-total" data-testid="expenses-total">—</p>
+      <p class="spent-since" id="expenses-since" data-testid="expenses-since"></p>
+      <p class="spent-left note" id="expenses-left" data-testid="expenses-left"></p>
+    </div>
+
+    <h3 class="rings-title" id="expenses-rings-h" data-i18n="againstYourLimits" data-testid="expenses-rings-h">מול התקציבים שלכם</h3>
+    <div class="rings" id="expenses-rings" role="list" aria-labelledby="expenses-rings-h" data-testid="expenses-rings"></div>
+
     <p class="note" data-i18n="quickAddNote" data-testid="quick-add-note">למה שדף החשבון לא מראה — מזומן, תשלום בין אנשים, כל מה שיצא ולא נרשם.</p>
     <form id="quick-add-form" class="expense-form" data-testid="quick-add-form">
       <label class="quick-field" for="quick-amount" data-i18n="amount">סכום</label>

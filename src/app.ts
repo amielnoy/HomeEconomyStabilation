@@ -160,7 +160,8 @@ const SLOT = ['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--s5)','var(-
 const catColor = (cats: readonly Category[], id: string | undefined) => {
   if (id === 'income') return 'var(--good)';
   const i = cats.filter((c) => c.id !== 'income').findIndex((c) => c.id === id);
-  return i >= 0 && i < 8 ? SLOT[i] : 'var(--s0)';
+  /* `?? ` for the type rather than for the case: the index is already bounded above. */
+  return i >= 0 && i < 8 ? SLOT[i] ?? 'var(--s0)' : 'var(--s0)';
 };
 
 /* On a row that carries money the dot says which way the money went, not which slot the
@@ -1457,8 +1458,80 @@ function goalStatus(goal: SavingsGoal, progress: ReturnType<typeof goalProgress>
    the rows this household typed, because those are the only ones it owns — an imported row
    is the bank's word, and deleting one here would make the month disagree with the
    statement it came from. */
+/* A ring per category with a cap on it: how much of that cap this month has used. Drawn
+   rather than written because eight of them read at a glance and eight bars do not — but
+   the two figures are written inside every one, because a ring is a proportion and a
+   household budgets in shekels. Over the cap is said in words and in the row's colour,
+   never by the ring alone. */
+function categoryRing(id: string, spent: number, cap: number): DomElement {
+  const share = cap > 0 ? Math.min(spent / cap, 1) : 0;
+  const over = cap > 0 && spent > cap;
+  const radius = 26;
+  const circumference = 2 * Math.PI * radius;
+  const ring = el('div', {
+    class: 'ring' + (over ? ' over' : ''), role: 'listitem', 'data-testid': 'category-ring',
+  });
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 64 64');
+  svg.setAttribute('width', '64');
+  svg.setAttribute('height', '64');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', t(over ? 'ringOverCap' : 'ringWithinCap', {
+    category: catById(id).name, spent: money(spent), cap: money(cap), percent: Math.round((cap > 0 ? spent / cap : 0) * 100),
+  }));
+  for (const [stroke, dash] of [
+    ['var(--surface-3)', null],
+    [over ? 'var(--crit)' : catColor(S.cats, id), `${circumference * share} ${circumference}`],
+  ] as const) {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', '32');
+    circle.setAttribute('cy', '32');
+    circle.setAttribute('r', String(radius));
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', stroke);
+    circle.setAttribute('stroke-width', '6');
+    if (dash) {
+      circle.setAttribute('stroke-dasharray', dash);
+      circle.setAttribute('stroke-linecap', 'round');
+      circle.setAttribute('transform', 'rotate(-90 32 32)');
+    }
+    svg.append(circle);
+  }
+  ring.append(svg);
+  ring.append(el('span', { class: 'ring-name', text: catById(id).name }));
+  ring.append(el('span', { class: 'ring-figures', text: `${money(spent)}/${money(cap)}` }));
+  return ring;
+}
+
 function renderExpenses() {
   fillQuickCategories();
+  /* The month's spending, the figures the dashboard already reasons with, and the caps the
+     household set — gathered here rather than recomputed: a second opinion about what is
+     left over is worse than no second screen. */
+  const month = txOfMonth(S.month);
+  const spent = totals(month).out;
+  $('#expenses-total').textContent = money(spent);
+  $('#expenses-since').textContent = t('spentSince', { month: monthLabel(S.month) });
+
+  const payday = currentAgentResults().payday;
+  $('#expenses-left').textContent = payday && payday.nextIncomeDate && payday.daysRemaining != null && payday.available >= 0
+    ? t('leftForTheMonth', {
+      amount: money(Math.max(0, payday.freeToSpend)),
+      daily: money(Math.max(0, payday.dailyAllowance || 0)),
+    })
+    : t('leftForTheMonthUnknown');
+
+  const spendByCategory = new Map(byCategory(month));
+  const capped = S.cats.filter((category) => category.kind === 'expense' && budgetOf(category.id) > 0);
+  const rings = $('#expenses-rings');
+  rings.textContent = '';
+  if (!capped.length) {
+    rings.append(el('p', { class: 'note', text: t('noCapsYet'), 'data-testid': 'no-caps' }));
+  }
+  for (const category of capped) {
+    rings.append(categoryRing(category.id, spendByCategory.get(category.id) ?? 0, budgetOf(category.id)));
+  }
+
   const typed = S.tx.filter((transaction) => transaction.src === 'manual-entry' || transaction.src === 'הזנה ידנית')
     .sort((first, second) => (first.date < second.date ? 1 : first.date > second.date ? -1 : 0));
   $('#expenses-note').textContent = typed.length

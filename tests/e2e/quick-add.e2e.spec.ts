@@ -128,3 +128,69 @@ test('offers the screen in every language', async ({ homePage, page }) => {
     await page.getByTestId('btn-expenses-back').click();
   }
 });
+
+/* The screen answers "how is the month going" before it asks for another charge: the
+   figures are the dashboard's own, gathered where the spending is recorded rather than
+   worked out a second time. */
+test.describe('the month at a glance', () => {
+  const withCaps = async (page: import('@playwright/test').Page, budgets: Record<string, number>) => {
+    await page.evaluate((caps) => {
+      const raw = JSON.parse(window.localStorage.getItem('mazan-habait/v1')!);
+      raw.budgets = caps;
+      window.localStorage.setItem('mazan-habait/v1', JSON.stringify(raw));
+    }, budgets);
+    await page.reload();
+  };
+
+  const month = () => ({
+    name: 'bank.csv', mimeType: 'text/csv',
+    buffer: Buffer.from([
+      'תאריך,תיאור פעולה,חובה,זכות,יתרה',
+      '02/09/2026,משכורת,,29000,29000',
+      '03/09/2026,שופרסל דיל,400,,28600',
+      '04/09/2026,רמי לוי,300,,28300',
+      '05/09/2026,ארנונה עיריית חיפה,1240,,27060',
+    ].join('\n')),
+  });
+
+  test('says what the month has spent so far', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(month());
+    await homePage.dashboard.quickAddButton.click();
+
+    await expect(page.getByTestId('expenses-total')).toContainText('1,940');
+    await expect(page.getByTestId('expenses-since')).toContainText('ספטמבר 2026');
+  });
+
+  test('draws a ring for every category with a limit, carrying both figures', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(month());
+    await withCaps(page, { food: 2000, home: 1000 });
+    await homePage.dashboard.quickAddButton.click();
+
+    await expect(page.getByTestId('category-ring')).toHaveCount(2);
+    await expect(page.getByTestId('category-ring').filter({ hasText: 'סופר ומזון' })).toContainText('700');
+    await expect(page.getByTestId('category-ring').filter({ hasText: 'סופר ומזון' })).toContainText('2,000');
+  });
+
+  /* Over a limit is said in words and in the row's colour, never by the ring alone. */
+  test('says which limit was passed rather than only drawing it', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(month());
+    await withCaps(page, { home: 1000 });
+    await homePage.dashboard.quickAddButton.click();
+
+    const ring = page.getByTestId('category-ring').filter({ hasText: 'דיור וחשבונות' });
+    await expect(ring.locator('svg')).toHaveAttribute('aria-label', /חריגה/);
+    await expect(ring.locator('svg')).toHaveAttribute('aria-label', /1,240/);
+  });
+
+  test('explains itself to a household that has set no limits', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(month());
+    await homePage.dashboard.quickAddButton.click();
+
+    await expect(page.getByTestId('category-ring')).toHaveCount(0);
+    await expect(page.getByTestId('no-caps')).toContainText('לא הוגדרו תקציבים');
+  });
+});

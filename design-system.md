@@ -102,6 +102,9 @@ Where the app can tell that saved rows were read the wrong way round — money a
 
 `expenses` is the screen the plus button leads to: recording one charge and seeing what has already been recorded are the same task, so one screen holds both. The cursor lands on the amount, which is the figure the customer arrived with, and the form empties after a save — the same figures still on screen read as a charge that did not go in.
 
+- The screen opens on the month before it asks for another charge: what has gone since the month began, what is left until the next income and what that is a day, and a ring per category that has a limit. Every figure is the dashboard's own — a second opinion about what is left over is worse than a second screen without one.
+- A ring is a proportion and a household budgets in shekels, so both figures are written under every ring. Passing a limit is said in the ring's accessible name and in the label's colour, never by the arc alone.
+- A household that has set no limits gets a sentence saying where limits are set, not an empty row.
 - The table below the form holds **only rows this household typed**. An imported row is the bank's word, and offering to delete one here would let the month disagree with the statement it came from.
 - Leaving the screen with a half-filled form records nothing, and says nothing either: the browser's own validation stands on the fields.
 
