@@ -890,6 +890,7 @@ body.drawer-open{ overflow:hidden; }
       <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
       <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
         <button class="btn" id="btn-recommendations" type="button" data-i18n="recommendations" data-testid="btn-recommendations">המלצות פעולה</button>
+        <button class="btn" id="btn-goals" type="button" aria-pressed="false" data-i18n="savingsGoals" data-testid="btn-goals">מטרות חיסכון</button>
         <button class="btn" id="btn-savings" type="button" data-i18n="savingsDirectory" data-testid="btn-savings">חיסכון והשקעות</button>
         <label class="locale-picker" data-testid="language-picker">
           <span class="vh" data-i18n="languageLabel">שפת ממשק</span>
@@ -1074,6 +1075,18 @@ body.drawer-open{ overflow:hidden; }
   </section>
 
   <!-- ============================================================= main -->
+  <!-- savings goals: its own screen, reached from the header ------------- -->
+  <section class="directory" id="goals" hidden aria-labelledby="goals-h" data-testid="goals">
+    <header><h2 id="goals-h" data-i18n="savingsGoals" data-testid="goals-h">מטרות חיסכון</h2>
+      <div class="tools">
+        <button class="btn sm" id="btn-addgoal" type="button" data-i18n="addGoal" data-testid="btn-addgoal">הוספת מטרה</button>
+        <button class="btn sm" id="btn-goals-back" type="button" data-i18n="backToDashboard" data-testid="btn-goals-back">חזרה לתמונת מצב</button>
+      </div>
+    </header>
+    <p class="note" id="goals-note" data-i18n="savingsGoalsNote" data-testid="goals-note">מה שאתם חוסכים אליו, בסכומים שאתם מזינים. האפליקציה לא יודעת איזו העברה שייכת לאיזו מטרה ולא תנחש.</p>
+    <div id="goals-list" data-testid="goals-list"></div>
+  </section>
+
   <main id="main" hidden data-testid="main">
     <section class="spending-guide" id="spending-guide" aria-labelledby="spending-guide-h" data-testid="spending-guide">
       <div class="spending-guide-main">
@@ -1198,14 +1211,6 @@ body.drawer-open{ overflow:hidden; }
     </div>
 
     <!-- savings goals ------------------------------------------------------ -->
-    <section class="card" id="goals" aria-labelledby="goals-h" data-testid="goals">
-      <header><h2 id="goals-h" data-i18n="savingsGoals" data-testid="goals-h">מטרות חיסכון</h2>
-        <div class="tools"><button class="btn sm" id="btn-addgoal" type="button" data-i18n="addGoal" data-testid="btn-addgoal">הוספת מטרה</button></div>
-      </header>
-      <p class="note" id="goals-note" data-i18n="savingsGoalsNote" data-testid="goals-note">מה שאתם חוסכים אליו, בסכומים שאתם מזינים. האפליקציה לא יודעת איזו העברה שייכת לאיזו מטרה ולא תנחש.</p>
-      <div id="goals-list" data-testid="goals-list"></div>
-    </section>
-
     <!-- financial plan --------------------------------------------------- -->
     <section class="card" id="plan" aria-labelledby="plan-h" data-testid="plan">
       <header><h2 id="plan-h" data-i18n="financialPlan" data-testid="plan-h">תכנית כלכלית</h2>

@@ -91,6 +91,9 @@ The transactions table opens on the account as the bank describes it: statement 
 
 ## Savings goal pattern
 
+`goals` is a screen of its own, opened from the header beside the savings directory and closed back to the dashboard — goals are the one thing here not read from a statement, and a household opens them to plan rather than to review. It opens with nothing imported at all, because naming what you are saving towards does not wait for a bank. Only one screen stands at a time: opening another closes it, and the header button carries `aria-pressed`.
+
+
 `goals` lists what the household is saving towards. The target and the amount put aside are figures the household enters: no statement says which transfer belonged to which goal, so nothing here is inferred from transactions — a progress bar built on a guess is worse than no progress bar.
 
 - Each goal is one block: name and share saved, a bar, and in words underneath what is left and what reaching it asks of this month. The bar is a length; the sentence carries the two numbers it stands for, so the goal is readable without seeing colour.

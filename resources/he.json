@@ -238,6 +238,7 @@
   "backupLoadedCount": "הגיבוי נטען: {count} תנועות",
   "invalidBackup": "הקובץ אינו גיבוי תקין של מאזן הבית",
   "transactionsAdded": "{count} תנועות נוספו",
+  "transactionsCorrected": "{count} תנועות תוקנו: הן נטענו קודם בכיוון הפוך והוחלפו.",
   "transactionsDuplicated": "{count} תנועות כבר היו קיימות",
   "filesUnreadable": "{count} קבצים לא נקראו",
   "fileUnreadable": "לא הצלחנו לפתוח את {file}. נסו לייצא שוב מאתר הכרטיס בפורמט Excel או CSV.",

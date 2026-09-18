@@ -22,6 +22,10 @@ interface Resources { [key: string]: ResourceValue | undefined; replace?: Record
 let locale: Locale = resolveLocale(localStorage.getItem('mazan-habait/locale'));
 let resources: Resources = {};
 let directoryOpen = window.location.hash === '#savings-directory';
+/* The goals screen stands beside the dashboard rather than inside it: it is the one thing
+   here that is not read from a statement, and a household opens it to plan rather than to
+   review. A hash so a reload comes back to it. */
+let goalsOpen = window.location.hash === '#goals';
 const consentRepository = new LocalConsentRepository(localStorage);
 let drawerReturnFocus: HTMLElement | null = null;
 
@@ -575,13 +579,18 @@ function render() {
   fillCatFilter();
   const months = monthsPresent();
   $('#savings-directory').hidden = !directoryOpen;
+  $('#goals').hidden = !goalsOpen;
+  /* Rendered before the dashboard gives up on an empty month: a household can say what it
+     is saving towards before it has a statement, and the goals screen asks for its own
+     figures anyway. */
+  renderGoals();
   if (!S.tx.length) {
-    $('#empty').hidden = directoryOpen;
+    $('#empty').hidden = directoryOpen || goalsOpen;
     $('#main').hidden = true;
     return;
   }
   $('#empty').hidden = true;
-  $('#main').hidden = directoryOpen;
+  $('#main').hidden = directoryOpen || goalsOpen;
   if (!S.month || !months.includes(S.month)) S.month = months[0] ?? null;
   const month = S.month;
   if (!month) return;
@@ -595,7 +604,6 @@ function render() {
   renderForecast();
   renderBudgets();
   renderCategories();
-  renderGoals();
   renderPlan();
   renderRecurring();
   renderTx();
@@ -880,8 +888,10 @@ function showRecommendations() {
   if (!S.tx.length) {
     setMobileMenu(false);
     directoryOpen = false;
+    goalsOpen = false;
     if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
     $('#savings-directory').hidden = true;
+    $('#goals').hidden = true;
     $('#empty').hidden = false;
     const uploadCallToAction = $('#marketing-upload');
     uploadCallToAction.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -891,8 +901,10 @@ function showRecommendations() {
   }
   setMobileMenu(false);
   directoryOpen = false;
+  goalsOpen = false;
   if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
   $('#savings-directory').hidden = true;
+  $('#goals').hidden = true;
   $('#main').hidden = false;
   $('#recommendations').hidden = false;
   $$('#main > *').forEach((child) => { if (child.id !== 'months' && child.id !== 'recommendations') child.hidden = true; });
@@ -902,18 +914,41 @@ function showRecommendations() {
 
 function showDashboard() {
   directoryOpen = false;
+  goalsOpen = false;
   if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
   $('#savings-directory').hidden = true;
+  $('#goals').hidden = true;
   $('#recommendations').hidden = true;
   $('#main').hidden = !S.tx.length;
   $('#empty').hidden = Boolean(S.tx.length);
   $$('#main > *').forEach((child) => { if (child.id !== 'months' && child.id !== 'recommendations') child.hidden = false; });
   $('#btn-recommendations').setAttribute('aria-pressed', 'false');
   $('#btn-savings').setAttribute('aria-pressed', 'false');
+  $('#btn-goals').setAttribute('aria-pressed', 'false');
+}
+
+/* Reachable with nothing imported: a household can say what it is saving towards before it
+   has a statement to show, and the screen asks for its own figures anyway. */
+function showGoals() {
+  setMobileMenu(false);
+  directoryOpen = false;
+  goalsOpen = true;
+  history.replaceState(null, '', '#goals');
+  $('#empty').hidden = true;
+  $('#main').hidden = true;
+  $('#savings-directory').hidden = true;
+  $('#goals').hidden = false;
+  $('#btn-goals').setAttribute('aria-pressed', 'true');
+  $('#btn-savings').setAttribute('aria-pressed', 'false');
+  $('#btn-recommendations').setAttribute('aria-pressed', 'false');
+  $('#goals').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function showSavingsDirectory() {
   setMobileMenu(false);
+  goalsOpen = false;
+  $('#goals').hidden = true;
+  $('#btn-goals').setAttribute('aria-pressed', 'false');
   directoryOpen = true;
   history.replaceState(null, '', '#savings-directory');
   $('#empty').hidden = true;
@@ -1926,7 +1961,7 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
   const files = [...fileList];
   if (!files.length) return;
   log.info('report.import.started', { source, files: files.length, ...(cardKind ? { cardKind } : {}), ...(cardBrand ? { cardBrand } : {}) });
-  let added = 0, dup = 0;
+  let added = 0, dup = 0, corrected = 0;
   /* A count of unreadable files leaves the customer with nothing to act on and support
      with nothing to diagnose. Each failure carries its own reason instead. */
   const failures: string[] = [];
@@ -1934,6 +1969,24 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
      rows arrived through the other reader. */
   const reclassified: string[] = [];
   const have = new Set(S.tx.map((t) => t.id));
+  /* A row the statement reader misread — a card report loaded through the bank control,
+     where its one amount column means money arriving — is already saved with the money on
+     the wrong side. The reader now recognises the file, but a second import would add the
+     corrected rows beside the wrong ones rather than replacing them, and a household would
+     have to delete everything it had to get an honest month.
+     The match is deliberately narrow: the same date, the same description and the same
+     amount, on the other side, read by the other reader. A charge and its refund on the
+     same day come from one reader and never meet this test. */
+  const misreadKey = (t: BankTransaction) =>
+    [t.date, t.desc, Math.max(t.out, t.in).toFixed(2)].join('|');
+  const misread = new Map<string, BankTransaction>();
+  for (const t of S.tx) {
+    /* No balance is the tell. A statement row carries the account's running balance; a row
+       saved without one never came from a ledger, which is what a card report loaded
+       through the statement control leaves behind. Without this, a refund the statement
+       itself reported could be replaced by a card charge that happens to match it. */
+    if (t.source !== 'card' && t.in > 0 && t.bal === null) misread.set(misreadKey(t), t);
+  }
   for (const file of files) {
     try {
       const buf = await file.arrayBuffer();
@@ -1973,6 +2026,19 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
       if (account && !S.accounts.includes(account)) S.accounts.push(account);
       for (const t of rows) {
         if (have.has(t.id)) { dup++; continue; }
+        const corrects = t.source === 'card' && t.out > 0 ? misread.get(misreadKey(t)) : undefined;
+        if (corrects) {
+          S.tx = S.tx.filter((item) => item.id !== corrects.id);
+          have.delete(corrects.id);
+          misread.delete(misreadKey(t));
+          /* The category the customer chose belongs to the charge, not to the reading of
+             it, so it moves across to the row that replaces it. */
+          if (corrects.id && S.overrides[corrects.id] && t.id) {
+            S.overrides[t.id] = S.overrides[corrects.id]!;
+            delete S.overrides[corrects.id];
+          }
+          corrected++;
+        }
         /* Which card this came from is the customer's answer, not the file's — no issuer
            export says whether the bank settles it. */
         if (cardKind) t.cardKind = cardKind;
@@ -1987,13 +2053,15 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
     }
   }
   save();
-  log.info('report.import.completed', { source, added, duplicates: dup, failed: failures.length });
+  log.info('report.import.completed', { source, added, duplicates: dup, corrected, failed: failures.length });
   trackMarketingEvent('report_import_completed', { source, added, duplicates: dup, failed: failures.length });
   S.month = null;
   render();
   const parts = [];
   if (added) parts.push(t('transactionsAdded', { count: added }));
   if (dup) parts.push(t('transactionsDuplicated', { count: dup }));
+  /* Counted out loud: rows quietly replaced would look like rows that never existed. */
+  if (corrected) parts.push(t('transactionsCorrected', { count: corrected }));
   if (reclassified.length) parts.push(reclassified.length > 2 ? t('filesReadAsCardReports', { count: reclassified.length }) : reclassified.join(' · '));
   /* One or two failures are worth spelling out; a batch of them would fill the screen. */
   if (failures.length) parts.push(failures.length > 2 ? t('filesUnreadable', { count: failures.length }) : failures.join(' · '));
@@ -2040,6 +2108,8 @@ function wire() {
   $('#btn-recommendations').addEventListener('click', showRecommendations);
   $('#btn-dashboard').addEventListener('click', showDashboard);
   $('#btn-savings').addEventListener('click', showSavingsDirectory);
+  $('#btn-goals').addEventListener('click', () => (goalsOpen ? showDashboard() : showGoals()));
+  $('#btn-goals-back').addEventListener('click', showDashboard);
   $('#btn-directory-back').addEventListener('click', showDashboard);
   const openMarketingUpload = (placement: string) => {
     trackMarketingEvent('marketing_primary_cta_clicked', { locale, placement });
