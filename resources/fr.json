@@ -238,6 +238,7 @@
   "backupLoadedCount": "Sauvegarde importée : {count} opérations",
   "invalidBackup": "Ce fichier n’est pas une sauvegarde valide de Budget du foyer",
   "transactionsAdded": "{count} opérations ajoutées",
+  "transactionsCorrected": "{count} opérations corrigées : elles avaient été lues dans l’autre sens et ont été remplacées.",
   "transactionsDuplicated": "{count} opérations étaient déjà présentes",
   "filesUnreadable": "{count} fichiers n’ont pas pu être lus",
   "fileUnreadable": "Impossible d’ouvrir {file}. Réexportez-le depuis l’émetteur de la carte en Excel ou CSV.",

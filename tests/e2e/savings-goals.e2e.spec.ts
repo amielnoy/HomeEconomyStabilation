@@ -18,6 +18,7 @@ const statement = () => ({
 test.beforeEach(async ({ homePage }) => {
   await homePage.openFresh();
   await homePage.upload.uploadBankReport(statement());
+  await homePage.dashboard.openGoals();
 });
 
 test('says what a goal still needs and what that asks of a month', async ({ homePage }) => {
@@ -92,4 +93,49 @@ test('offers the goals section in every language', async ({ homePage, page }) =>
     await homePage.language.choose(locale);
     await expect(page.getByTestId('goals-h')).toHaveText(heading);
   }
+});
+
+/* The screen stands beside the dashboard rather than inside it: goals are the one thing
+   here not read from a statement, and a household opens them to plan rather than review. */
+test.describe('the goals screen', () => {
+  test('hides the dashboard while it is open and gives it back', async ({ homePage, page }) => {
+    await expect(page.getByTestId('main')).toBeHidden();
+    await expect(homePage.dashboard.goalsButton).toHaveAttribute('aria-pressed', 'true');
+
+    await page.getByTestId('btn-goals-back').click();
+
+    await expect(page.getByTestId('goals')).toBeHidden();
+    await expect(page.getByTestId('main')).toBeVisible();
+    await expect(homePage.dashboard.goalsButton).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  /* A household can name what it is saving towards before it has a statement to show. */
+  test('opens with nothing imported at all', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.dashboard.openGoals();
+
+    await expect(page.getByTestId('goals')).toBeVisible();
+    await expect(page.getByTestId('empty')).toBeHidden();
+    await homePage.dashboard.createGoal({ name: 'קרן חירום', target: 20000, saved: 0 });
+    await expect(homePage.dashboard.goalRows).toHaveCount(1);
+  });
+
+  test('comes back to the goals after a reload', async ({ homePage, page }) => {
+    await homePage.dashboard.createGoal({ name: 'טיול משפחתי', target: 12000, saved: 3000 });
+    await page.reload();
+
+    await expect(page.getByTestId('goals')).toBeVisible();
+    await expect(homePage.dashboard.goalRows).toHaveCount(1);
+  });
+
+  /* Two screens open at once would leave a household reading one and acting on the other. */
+  test('closes when another screen is opened', async ({ homePage, page }) => {
+    const savings = page.getByTestId('btn-savings');
+    if (!await savings.isVisible()) await homePage.mobileMenuToggle.click();
+    await savings.click();
+
+    await expect(page.getByTestId('goals')).toBeHidden();
+    await expect(page.getByTestId('savings-directory')).toBeVisible();
+    await expect(homePage.dashboard.goalsButton).toHaveAttribute('aria-pressed', 'false');
+  });
 });

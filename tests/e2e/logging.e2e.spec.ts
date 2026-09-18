@@ -92,6 +92,9 @@ test('keeps the statement out of the log it asks the customer to send', async ({
        eight, and neither carries an account, a card number or a merchant. */
     'source', 'files', 'cardKind', 'cardBrand', 'format', 'bytes', 'sheets', 'rows',
     'added', 'duplicates', 'failed', 'reason', 'columns', 'error', 'control', 'via',
+    /* A count of rows replaced because an earlier import read them the wrong way round.
+       Like the counts beside it, it says what happened and names nothing that happened to. */
+    'corrected',
   ]);
   expect([...keys].filter((key) => !allowed.has(key)), 'an unapproved field reached the log').toEqual([]);
 });

@@ -34,6 +34,7 @@ export class DashboardComponent {
   readonly categoryTableToggle = this.page.getByTestId('btn-cattbl');
   readonly quickAddButton = this.page.getByTestId('btn-quick-add');
   readonly quickAddDialog = this.page.getByTestId('quick-add');
+  readonly goalsButton = this.page.getByTestId('btn-goals');
   readonly goals = this.page.getByTestId('goals');
   readonly goalRows = this.page.getByTestId('goal-row');
   readonly addGoal = this.page.getByTestId('btn-addgoal');
@@ -111,6 +112,16 @@ export class DashboardComponent {
     await this.page.getByTestId('quick-submit').click();
   }
 
+  /** The goals screen stands beside the dashboard, reached from the header. */
+  @step('Open the savings goals screen')
+  async openGoals(): Promise<void> {
+    /* On a phone the header's second row is behind the overflow toggle, the same way the
+       settings and language controls are. */
+    if (!await this.goalsButton.isVisible()) await this.page.getByTestId('mobile-menu-toggle').click();
+    await this.goalsButton.click();
+    await this.goals.waitFor({ state: 'visible' });
+  }
+
   /** Add a goal and fill it in the way a household would: name it, say what it costs, say
       what is already put aside, and give it a month. The new row is found by the name it
       is created with rather than by position — goals are ordered by what still needs
@@ -165,6 +176,28 @@ export class DashboardComponent {
   @step('Switch the transactions table to every charge')
   async showEveryCharge(): Promise<void> {
     await this.transactionView.selectOption('every-charge');
+  }
+
+  /** The rows a household saved before the reader recognised a card report: the same
+      charges, with the money on the wrong side and the statement reader's own source. */
+  @step('Load card rows saved the wrong way round')
+  async loadMisreadCardRows(): Promise<void> {
+    await this.page.evaluate(() => {
+      const rows = [
+        { date: '2026-09-04', desc: 'פלאפל הקריה', in: 33 },
+        { date: '2026-09-06', desc: 'APPLE.COM/BILL', in: 39.8 },
+      ].map((row, index) => ({
+        date: row.date, vdate: row.date, ref: '', desc: row.desc,
+        out: 0, in: row.in, bal: null, pending: false,
+        source: 'bank', src: 'bank-report', id: `misread-${index}`, cat: 'other', kind: 'expense',
+      }));
+      /* No `cats` key: an empty category list is a state the codec refuses outright, and
+         leaving it out is what a saved state from an earlier version looks like anyway. */
+      window.localStorage.setItem('mazan-habait/v1', JSON.stringify({
+        tx: rows, overrides: {}, rules: [], budgets: {}, goals: [],
+      }));
+    });
+    await this.page.reload();
   }
 
   @step('Load a complete financial-agent example')

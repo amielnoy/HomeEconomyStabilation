@@ -238,6 +238,7 @@
   "backupLoadedCount": "Backup loaded: {count} transactions",
   "invalidBackup": "This file is not a valid Home Economy backup",
   "transactionsAdded": "{count} transactions added",
+  "transactionsCorrected": "{count} transactions corrected: they were read the other way round before and have been replaced.",
   "transactionsDuplicated": "{count} transactions already existed",
   "filesUnreadable": "{count} files could not be read",
   "fileUnreadable": "We could not open {file}. Try exporting it again from the card issuer as Excel or CSV.",

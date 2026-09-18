@@ -238,6 +238,7 @@
   "backupLoadedCount": "ምትኬው ገብቷል፦ {count} ግብይቶች",
   "invalidBackup": "ይህ ፋይል ትክክለኛ የቤት በጀት ምትኬ አይደለም",
   "transactionsAdded": "{count} ግብይቶች ታክለዋል",
+  "transactionsCorrected": "{count} ክንውኖች ተስተካክለዋል፦ ቀደም ሲል በተገላቢጦሽ ተነበው ነበር፤ ተተክተዋል።",
   "transactionsDuplicated": "{count} ግብይቶች ቀድሞ ነበሩ",
   "filesUnreadable": "{count} ፋይሎች ሊነበቡ አልቻሉም",
   "fileUnreadable": "{file}ን መክፈት አልቻልንም። ከካርድ አውጪው በExcel ወይም CSV እንደገና ለማውጣት ይሞክሩ።",
