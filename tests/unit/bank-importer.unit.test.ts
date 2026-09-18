@@ -101,3 +101,44 @@ describe('recognising a card report by its columns', () => {
     expect(new BankImportStrategy().import(workbook, 'f.csv', 'card').rows[0]).toMatchObject({ out: 33, in: 0 });
   });
 });
+
+/* A statement in the layout Israeli banks export: the column naming what happened is
+   `הפעולה`, and the `פרטים` column beside it is empty on most rows. Reading `פרטים` left
+   those rows with no description at all — nothing for a rule to read, and "אחר" against a
+   charge the household would have recognised on sight. Structure only: no account holder,
+   no counterparty, synthetic numbers. */
+describe('a statement that names its operation column הפעולה', () => {
+  const workbook: Workbook = { sheets: [{ name: 'גיליון1', rows: [
+    [{ t: 's', v: 'תנועות בחשבון' }],
+    [{ t: 's', v: 'תאריך' }, { t: 's', v: 'הפעולה' }, { t: 's', v: 'אסמכתא' }, { t: 's', v: 'פרטים' },
+     { t: 's', v: 'חובה' }, { t: 's', v: 'זכות' }, { t: 's', v: 'יתרה בש"ח' }, { t: 's', v: 'תאריך ערך' }],
+    [{ t: 's', v: '15/09/2026' }, { t: 's', v: 'הו"ק הלו\' בית' }, { t: 'n', v: 626 }, null,
+     { t: 'n', v: 565.13 }, null, { t: 'n', v: -25026.99 }, { t: 's', v: '15/09/2026' }],
+    [{ t: 's', v: '10/09/2026' }, { t: 's', v: 'משיכה מבנקט' }, { t: 'n', v: 8677 }, null,
+     { t: 'n', v: 300 }, null, { t: 'n', v: -25326.99 }, { t: 's', v: '10/09/2026' }],
+    [{ t: 's', v: '02/09/2026' }, { t: 's', v: 'העברה מהבנק' }, { t: 'n', v: 10022 }, null,
+     null, { t: 'n', v: 29000 }, { t: 'n', v: 3673.01 }, { t: 's', v: '02/09/2026' }],
+  ] }] };
+
+  it('reads the operation as the description rather than leaving the row blank', () => {
+    const rows = new BankImportStrategy().import(workbook, 'statement.xlsx').rows;
+
+    expect(rows.map((row) => row.desc)).toEqual(['הו"ק הלו\' בית', 'משיכה מבנקט', 'העברה מהבנק']);
+  });
+
+  /* The two money columns are where they always were, and the balance is the account's. */
+  it('keeps debit, credit and the running balance where the statement put them', () => {
+    const rows = new BankImportStrategy().import(workbook, 'statement.xlsx').rows;
+
+    expect(rows[0]).toMatchObject({ out: 565.13, in: 0, bal: -25026.99, date: '2026-09-15' });
+    expect(rows[2]).toMatchObject({ out: 0, in: 29000, bal: 3673.01 });
+  });
+
+  /* A description the rules can read is the whole point: without it every one of these
+     rows fell to "other". */
+  it('gives the categorizer something to read', () => {
+    const rows = new BankImportStrategy().import(workbook, 'statement.xlsx').rows;
+
+    expect(rows.every((row) => row.desc.length > 0)).toBe(true);
+  });
+});

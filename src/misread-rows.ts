@@ -25,6 +25,12 @@ export function findMisreadRows(transactions: readonly BankTransaction[]): BankT
     && !MANUAL_SOURCES.has(transaction.src));
 }
 
+/** The same row with the money on the income side, for a charge the reader filed as
+    spending — a refund, a reimbursement, money a household was sent. */
+export function asIncoming(transaction: BankTransaction): BankTransaction {
+  return { ...transaction, in: transaction.out, out: 0 };
+}
+
 /** The same row with the money on the side it belongs. Nothing else about it changes: the
     date, the description and the amount are what the file said, and only the direction was
     ever in question. */

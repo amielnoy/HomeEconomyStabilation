@@ -81,6 +81,14 @@ The transactions table opens on the account as the bank describes it: statement 
 - Folding changes how a month reads, never what it came to: the totals line counts the charges themselves in both views.
 - Charges are folded only where a statement row stands beside them. A card-only import stays itemised, because there is no settlement line for the summary to be read against.
 
+## Saying a row is spending
+
+Every transaction row carries a quiet control beside its amount that turns that one row round. Which side of a statement a figure belongs on is the reader's judgement about a file, and it is wrong often enough — a card report read as a statement, an issuer that books an insurance premium as a credit — that a household needs a way to say so about a single row without evidence, a file or a bulk rewrite.
+
+- It sits with the amount, because that is the figure it changes, and stays at `opacity: 0` until the row is hovered or the control is focused: a visible control on every row of a long table reads as part of the data. On coarse pointers it is always visible and 44px.
+- Its accessible name carries the row's description, so a reader who cannot see which row the arrow sits in still knows what it is about.
+- Said once it can be said back, and a category the customer chose moves with the row.
+
 ## Correcting a misread import
 
 Where the app can tell that saved rows were read the wrong way round — money arriving, on a row carrying no running balance, from neither the card reader nor a hand-typed entry — it offers to turn them round in the transactions header, where the household is looking at them. The count is on the button, so the offer says how much of the month it is about before it is taken.

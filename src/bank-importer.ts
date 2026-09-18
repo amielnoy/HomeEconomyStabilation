@@ -11,7 +11,13 @@ const HEADERS: Record<HeaderKey, RegExp[]> = {
   date: [/^תאריך$/, /^תאריך\s*פעולה/, /^תאריך\s*עסקה/, /תאריך\s*רכישה/, /מועד\s*עסקה/, /^date$/i, /(transaction|purchase|posting)\s*date/i],
   vdate: [/תאריך\s*ערך/, /value\s*date/i],
   ref: [/אסמכתא/, /מספר\s*אסמכתא/, /reference/i],
-  desc: [/תיאור\s*פעולה/, /^תיאור$/, /פרטים/, /^סוג\s*תנועה/, /שם\s*בית\s*עסק/, /בית\s*עסק/, /שם\s*העסק/, /ספק/, /merchant/i, /business/i, /description/i, /details/i, /payee/i, /narrative/i],
+  /* `הפעולה` is what a Bank Hapoalim-style statement calls the column naming what happened
+     — הו"ק, העברה, שיק, משיכה מבנקט — and it is the wording every default rule matches on.
+     A statement that names it this way also carries a `פרטים` column, which on most rows is
+     empty, so the row arrived with no description at all: nothing for a rule to read, and
+     "אחר" for a charge the household would have recognised instantly. Listed ahead of
+     `פרטים` for the file that has both. */
+  desc: [/תיאור\s*פעולה/, /^תיאור$/, /^הפעולה$/, /^סוג\s*פעולה/, /פרטים/, /^סוג\s*תנועה/, /שם\s*בית\s*עסק/, /בית\s*עסק/, /שם\s*העסק/, /ספק/, /merchant/i, /business/i, /description/i, /details/i, /payee/i, /narrative/i],
   out: [/^חובה/, /^חיוב/, /^יציאה/, /סכום\s*חיוב/, /סכום\s*עסקה/, /^debit$/i, /^charge/i, /^withdrawal/i, /(billing|billed)\s*amount/i],
   in: [/^זכות/, /^זיכוי/, /^כניסה/, /^credit$/i, /^deposit/i],
   amt: [/^סכום/, /^amount/i],
