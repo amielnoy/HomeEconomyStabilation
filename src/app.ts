@@ -14,6 +14,7 @@ import { transactionViewRows, type CardChargeGroup, type TransactionViewMode } f
 import { buildFinancialPlan, type PlanSection } from './financial-plan.js';
 import { goalProgress, orderGoals } from './savings-goals.js';
 import { asIncoming, asOutgoing, findMisreadRows } from './misread-rows.js';
+import { legacyCardCorrections } from './import-corrections.js';
 import { cardStatements, type CardStatement } from './card-statements.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
@@ -2176,7 +2177,31 @@ async function handleFiles(fileList: FileList, source: 'bank' | 'card' = 'bank',
         continue;
       }
       if (account && !S.accounts.includes(account)) S.accounts.push(account);
+      const legacyIds = source === 'card' || asCardReport ? legacyCardCorrections(wb) : new Map<string, string>();
+      const replacements = new Map<string, BankTransaction[]>();
+      for (const old of findMisreadRows(S.tx)) {
+        const replacementId = old.id ? legacyIds.get(old.id) : undefined;
+        if (replacementId === null) {
+          S.tx = S.tx.filter((item) => item.id !== old.id);
+          have.delete(old.id);
+          misread.delete(misreadKey(old));
+          if (old.id) delete S.overrides[old.id];
+          corrected++;
+        }
+        if (replacementId) replacements.set(replacementId, [...(replacements.get(replacementId) ?? []), old]);
+      }
       for (const t of rows) {
+        // Remove the old reading even if the correct row was imported previously.
+        for (const old of replacements.get(t.id ?? '') ?? []) {
+          S.tx = S.tx.filter((item) => item.id !== old.id);
+          have.delete(old.id);
+          misread.delete(misreadKey(old));
+          if (old.id && S.overrides[old.id] && t.id) {
+            S.overrides[t.id] ??= S.overrides[old.id]!;
+            delete S.overrides[old.id];
+          }
+          corrected++;
+        }
         if (have.has(t.id)) { dup++; continue; }
         const corrects = t.source === 'card' && t.out > 0 ? misread.get(misreadKey(t)) : undefined;
         if (corrects) {

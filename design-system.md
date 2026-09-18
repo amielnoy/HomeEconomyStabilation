@@ -113,6 +113,7 @@ Where the app can tell that saved rows were read the wrong way round — money a
 `screen-nav` names every screen that stands beside the dashboard — overview, credit cards, savings goals, recommendations and the savings directory — in one bar below the header. They used to be four buttons among the header actions, which on a phone meant behind the overflow toggle: a household that had not opened that menu did not know the screens existed.
 
 - The bar scrolls sideways rather than wrapping, so it costs the page one line at every width, and it sits outside the header so the header's own height budget is untouched.
+- Below 460px of viewport height — a phone held sideways — the bar gives back its padding and the card around the safe-to-spend headline gives back its own, so that figure stays above the fold. What it never gives back is the tab's height: a control too small to hit is not a saving. The tagline under the product name is hidden there instead, being the one thing on that screen nobody is looking for.
 - The screen in view carries `aria-current="page"` and exactly one tab has it. Colour is not the only marker: the current tab is the one the reader's assistive technology announces as current.
 - Every tab keeps the id and test id it had as a header button, so the screens stay addressable by the same names.
 
