@@ -79,6 +79,15 @@ The transactions table opens on the account as the bank describes it: statement 
 - Folding changes how a month reads, never what it came to: the totals line counts the charges themselves in both views.
 - Charges are folded only where a statement row stands beside them. A card-only import stays itemised, because there is no settlement line for the summary to be read against.
 
+## Correcting a misread import
+
+Where the app can tell that saved rows were read the wrong way round — money arriving, on a row carrying no running balance, from neither the card reader nor a hand-typed entry — it offers to turn them round in the transactions header, where the household is looking at them. The count is on the button, so the offer says how much of the month it is about before it is taken.
+
+- It asks twice, the way deleting everything does: it rewrites rows the customer did not choose one at a time.
+- A category the customer chose moves across to the corrected row; the correction changes the direction of the money and nothing else about the row.
+- The offer disappears once taken rather than sitting there inviting a second run — which is only true because the button recipe now honours `hidden`.
+- A balance is what protects real money: a statement row carries the account's balance after it, so a salary, an allowance or a refund the bank reported is never touched.
+
 ## Quick-add pattern
 
 `btn-quick-add` is a floating action button on every populated dashboard, opening the `quick-add` dialog. It exists for the money a statement will never report — cash, paying a person — which used to cost opening the drawer, finding a section inside it and filling five fields, and so went unrecorded.
