@@ -99,7 +99,8 @@ test('offers the source column and its issuers in every language', async ({ home
   for (const [locale, heading, bank] of names) {
     await homePage.language.choose(locale);
     await expect(homePage.html).toHaveAttribute('lang', locale);
-    await expect(homePage.page.locator('th[data-i18n="transactionSource"]')).toHaveText(heading);
+    /* Scoped to the transactions table: the credit-cards screen names the same column. */
+    await expect(homePage.page.getByTestId('tx').locator('th[data-i18n="transactionSource"]')).toHaveText(heading);
     await expect(homePage.dashboard.transactionSources.first()).toHaveText(bank);
   }
 });
