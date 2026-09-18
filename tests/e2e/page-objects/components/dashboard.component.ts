@@ -39,6 +39,7 @@ export class DashboardComponent {
   readonly planFixed = this.page.getByTestId('plan-section-fixed');
   readonly planVariable = this.page.getByTestId('plan-section-variable');
   readonly planSavings = this.page.getByTestId('plan-section-savings');
+  readonly planSettlement = this.page.getByTestId('plan-section-settlement');
   readonly planSectionTotals = this.page.getByTestId('plan-section-total');
   readonly planLines = this.page.getByTestId('plan-line');
   readonly planSurplus = this.page.getByTestId('plan-surplus');

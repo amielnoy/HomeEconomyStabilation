@@ -507,6 +507,8 @@
   "planFixed": "Fixed spending",
   "planVariable": "Variable spending",
   "planSavings": "Savings & transfers",
+  "planSettlements": "Credit card settlement",
+  "planSettlementsNote": "Not counted in the total: the charges this paid for are already in the spending above.",
   "planSurplus": "Left this month",
   "planDeficit": "Short this month",
   "planLineCount": "{count} transactions",
