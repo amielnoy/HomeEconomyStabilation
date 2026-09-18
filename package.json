@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare": "sh scripts/install-git-hooks.sh",
+    "hooks:install": "sh scripts/install-git-hooks.sh",
     "build": "tsc -p tsconfig.app.json && npm run typecheck:strict && npm run build:api && npm run build:scripts && node dist-scripts/copy-api-docs-assets.js && node dist-scripts/prepare-vercel-output.js",
     "debug": "sh scripts/run-debug.sh",
     "build:docs": "tsc -p tsconfig.docs.json",

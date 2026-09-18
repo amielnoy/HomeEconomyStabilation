@@ -1,0 +1,32 @@
+#!/bin/sh
+# Runs the Vitest leg of the gate before a push leaves the machine.
+#
+# It exists because of a specific, repeating cost: TEST_PLAN.md gains a row per new test
+# file, so two branches that each add a suite conflict on adjacent lines, and a merge that
+# keeps one side drops the other. Nothing about the code is wrong, every browser test
+# still passes, and the failure surfaces three minutes later in CI as one red leg. The
+# same three seconds here says which line went missing.
+#
+# Escape hatch: git push --no-verify.
+set -eu
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+
+# A conflict marker reaching the remote is a merge somebody abandoned halfway. Only the
+# two unambiguous markers are matched: a line of seven equals signs is legal markdown.
+markers=$(git grep -lE '^(<<<<<<<|>>>>>>>) ' -- . ':(exclude).githooks' || true)
+if [ -n "$markers" ]; then
+  printf 'pre-push: unresolved merge markers in:\n%s\n\nResolve them, or push with --no-verify.\n' "$markers" >&2
+  exit 1
+fi
+
+printf 'pre-push: running the Vitest gate…\n' >&2
+output=$(mktemp)
+trap 'rm -f "$output"' EXIT
+if ! npm test >"$output" 2>&1; then
+  cat "$output" >&2
+  printf '\npre-push: the Vitest leg of the gate fails, so CI will too. Push with --no-verify to override.\n' >&2
+  exit 1
+fi
+printf 'pre-push: Vitest gate passed.\n' >&2
