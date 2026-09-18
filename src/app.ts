@@ -1724,6 +1724,10 @@ function cardGroupRow(group: CardChargeGroup): DomElement {
   const brand = group.brand ? t(brandKey) : t('sourceCardUnknown');
   const toggle = el('button', {
     type: 'button', class: 'cardgroup-toggle', 'aria-expanded': String(open),
+    /* The line reads as a total and gives no sign that it opens. `aria-expanded` says so
+       to a screen reader and the caret hints at it; the title is for everyone else, and it
+       says what the click does rather than naming the control. */
+    title: open ? t('collapseCardCharges', { source: brand }) : t('expandCardCharges', { count: group.count, source: brand }),
     'data-testid': 'card-group-toggle',
   }, [
     el('span', { class: 'cardgroup-caret', 'aria-hidden': 'true', text: open ? '▾' : '▸' }),

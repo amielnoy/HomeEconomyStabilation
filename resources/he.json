@@ -458,6 +458,8 @@
   "transactionView": "תצוגת התנועות",
   "viewBankWithCardTotals": "בנק וסיכום כרטיסים",
   "viewEveryCharge": "כל החיובים",
+  "expandCardCharges": "לחיצה תפרוס כאן את כל {count} החיובים של {source}",
+  "collapseCardCharges": "לחיצה תקפל בחזרה את החיובים של {source}",
   "cardChargeSummary": "{source} · {count} חיובים",
   "cardChargeSummaryOne": "{source} · חיוב אחד",
   "sourceManualEntry": "הזנה ידנית",

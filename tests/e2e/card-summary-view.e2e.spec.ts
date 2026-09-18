@@ -125,3 +125,32 @@ test.describe('the classification on a folded card', () => {
       .getByTestId('transaction-category-select')).toHaveValue('leisure');
   });
 });
+
+/* The line reads as a total and gives no sign that it opens: a household looking at
+   "כרטיס אשראי · 22 חיובים" has no way to know the 22 are one click away. The caret hints
+   at it and aria-expanded says so to a screen reader; the tooltip says what the click does
+   for everyone else. */
+test('says what clicking a folded card will do', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport(statement());
+  await homePage.upload.uploadCreditCardReport(cardReport(), 'external', 'isracard');
+
+  const toggle = homePage.dashboard.cardGroupToggles.first();
+  await expect(toggle).toHaveAttribute('title', /תפרוס/);
+  await expect(toggle).toHaveAttribute('title', /2/);
+  await expect(toggle).toHaveAttribute('title', /ישראכרט/);
+
+  await homePage.dashboard.openCardSummaries();
+
+  // Open, it offers the way back rather than repeating the offer to open.
+  await expect(toggle).toHaveAttribute('title', /תקפל/);
+});
+
+test('says it in every language', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport(statement());
+  await homePage.upload.uploadCreditCardReport(cardReport(), 'external', 'isracard');
+
+  for (const [locale, wording] of [['en', /Click to open/], ['fr', /Cliquez pour afficher/]] as const) {
+    await homePage.language.choose(locale);
+    await expect(homePage.dashboard.cardGroupToggles.first()).toHaveAttribute('title', wording);
+  }
+});
