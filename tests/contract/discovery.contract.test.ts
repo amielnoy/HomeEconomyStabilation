@@ -203,6 +203,19 @@ describe('public product guides', () => {
     }
   });
 
+  /* llms.txt is an index; an assistant that follows it to the expansion has to find a
+     file that deploys, says the same things, and does not claim a sync that is off. */
+  it('ships a full reference that agrees with the short one', () => {
+    const full = read('llms-full.txt');
+    expect(llms).toContain(`${ORIGIN}/llms-full.txt`);
+    expect(deployScript).toContain("'llms-full.txt'");
+    for (const fact of ['free', 'ILS', 'Hebrew', `${ORIGIN}/guide-en.html`]) {
+      expect(full, `llms-full.txt omits ${fact}`).toContain(fact);
+    }
+    expect(full).toMatch(/does not activate it|not active in the current interface/);
+    expect(full).not.toMatch(/sync is (enabled|active|on) by default/i);
+  });
+
   it('excludes API routes in both the named and wildcard crawler groups', () => {
     const groups = robots.split(/\n\s*\n/).filter((group) => group.includes('User-agent:'));
     expect(groups.length).toBeGreaterThanOrEqual(2);
