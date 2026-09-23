@@ -17,12 +17,12 @@ behaviour is something a customer sees or does.
 
 | What changed | Layer | Location and name |
 | --- | --- | --- |
-| Pure logic in `src/` (categorizer, agents, importers, codec, privacy) | Unit | `tests/unit/<module>.unit.test.ts` |
+| Pure logic in `fe/src/` (categorizer, agents, importers, codec, privacy) | Unit | `tests/unit/<module>.unit.test.ts` |
 | A module's public shape / facade stays stable | API | `tests/api/<module>.api.test.ts` |
 | Several modules applied to each other (bytes → reader → importer) | Integration | `tests/integration/<topic>.integration.test.ts` |
 | An invariant read from source, markup, resources or docs | Contract | `tests/contract/<topic>.contract.test.ts` |
 | Untrusted input (workbooks, translations, backups) | Security | `tests/security/<topic>.security.test.ts` |
-| Static markup in `mazan-habait.html` (roles, aria, sections) | Component | `tests/component/<area>.component.test.ts` (JSDOM) |
+| Static markup in `fe/mazan-habait.html` (roles, aria, sections) | Component | `tests/component/<area>.component.test.ts` (JSDOM) |
 | FastAPI routes, Pydantic models, guards, repositories | Server | `tests/server/test_<module>.py` |
 | A customer journey in the page | E2E | `tests/e2e/<journey>.e2e.spec.ts` |
 | A must-never-break journey | Sanity | `tests/e2e/<journey>.sanity.e2e.spec.ts` |
@@ -56,11 +56,11 @@ that shows the category in the transaction table.
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { RuleBasedTransactionCategorizer } from '../../src/categorization';
-import type { BankTransaction } from '../../src/domain-model';
+import { RuleBasedTransactionCategorizer } from '../../fe/src/categorization';
+import type { BankTransaction } from '../../fe/src/domain-model';
 ```
 
-- Import from `src/` directly; build fixtures with small factory functions at the top of the
+- Import from `fe/src/` directly; build fixtures with small factory functions at the top of the
   file. Use `it.each` for tables of inputs.
 - Workbook bytes (`.xlsx` zips, SpreadsheetML, HTML-as-.xls): use the builders in
   `tests/helpers/workbook-fixtures.ts` instead of checking in binaries.
@@ -110,7 +110,7 @@ test('files a municipality charge as a household bill', async ({ homePage }) => 
 - Start from a clean state with `homePage.openFresh()` (clears `localStorage`).
 - Drive the real path: card reports go through `upload.uploadCreditCardReport(file, issuer,
   brand)`, which clicks the chooser before the file dialog.
-- API specs use `homeEconomyApi` and `HttpStatus` from `src/http-status` rather than bare numbers.
+- API specs use `homeEconomyApi` and `HttpStatus` from `fe/src/http-status` rather than bare numbers.
 - Web-first assertions only (`await expect(locator).toHaveValue(...)`); no fixed sleeps.
 
 **Adding to the Page Object Model** (`tests/e2e/page-objects/`):
@@ -141,7 +141,7 @@ npx playwright test -g "computing" --project=desktop-chromium               # by
   for lack of DOM APIs — a false regression.
 - Playwright starts its own static server (:8765) and Uvicorn (:8766) and reuses running ones.
   **Browser specs load compiled `dist/`**, so run `npm run build` (or keep `npm run debug`
-  running) after changing `src/` before a Playwright run — otherwise you test stale code.
+  running) after changing `fe/src/` before a Playwright run — otherwise you test stale code.
 - Projects: `desktop-chromium`, `android-chrome` (Pixel 7), `ios-webkit` (iPhone 13),
   `android-landscape` (mobile-usability only), `api` (`*.api.e2e.spec.ts` only).
 - `npm run test:gate` is what CI blocks on (Vitest + Pytest + desktop-chromium + api).

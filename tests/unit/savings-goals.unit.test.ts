@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { goalProgress, orderGoals } from '../../src/savings-goals';
-import type { SavingsGoal } from '../../src/domain-model';
+import { goalProgress, orderGoals } from '../../fe/src/savings-goals';
+import type { SavingsGoal } from '../../fe/src/domain-model';
 
 /* A goal carries two figures the household typed and one date. Everything the screen adds
    is arithmetic on those three — and the arithmetic is where a budgeting screen usually

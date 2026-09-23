@@ -6,7 +6,7 @@ import {
   getLocaleConfig,
   isSupportedLocale,
   resolveLocale,
-} from '../../src/localization';
+} from '../../fe/src/localization';
 
 describe('localization utilities', () => {
   it('accepts only the four supported locale identifiers', () => {

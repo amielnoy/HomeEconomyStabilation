@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { step } from '../step';
 
 export class DashboardComponent {
@@ -326,6 +326,20 @@ export class DashboardComponent {
   async openRecommendations(): Promise<void> {
     if (!await this.recommendationButton.isVisible()) await this.page.getByTestId('mobile-menu-toggle').click();
     await this.recommendationButton.click();
+  }
+
+  /* A heading is emphasised for the eye, not for the markup, so a test asks the browser
+     how it is actually set rather than which class it carries. */
+  @step('Measure how a plan section heading is set')
+  async planHeadingStyle(section: Locator): Promise<{ size: number; weight: number; color: string }> {
+    return section.locator('.plan-title').evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        size: Number.parseFloat(style.fontSize),
+        weight: Number.parseInt(style.fontWeight, 10),
+        color: style.color,
+      };
+    });
   }
 
   @step('Read the generated dashboard messages')

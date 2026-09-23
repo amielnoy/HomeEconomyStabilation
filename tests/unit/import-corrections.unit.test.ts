@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { bankImporter } from '../../src/bank-importer';
-import { creditCardImporter, type Workbook } from '../../src/credit-card-importer';
-import { legacyCardCorrections } from '../../src/import-corrections';
+import { bankImporter } from '../../fe/src/bank-importer';
+import { creditCardImporter, type Workbook } from '../../fe/src/credit-card-importer';
+import { legacyCardCorrections } from '../../fe/src/import-corrections';
 
 const cells = (...values: Array<string | number | Date>) => values.map(v => ({ t: typeof v === 'number' ? 'n' : 's', v }));
 const domestic = cells('שם כרטיס', 'חיוב לתאריך', 'תאריך', 'שם בית עסק', "סכום חיוב בש''ח", 'סכום קנייה', 'אסמכתא');

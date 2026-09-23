@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOUD_CONSENT_KEY, CLOUD_CONSENT_VERSION, LocalConsentRepository } from '../../src/consent';
+import { CLOUD_CONSENT_KEY, CLOUD_CONSENT_VERSION, LocalConsentRepository } from '../../fe/src/consent';
 
 const storage = () => {
   const values = new Map<string, string>();

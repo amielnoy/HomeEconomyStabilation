@@ -10,11 +10,11 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../fe');
 const HOST = 'home-economy-stabilation.vercel.app';
 
 const keyFile = readdirSync(root).find((name) => /^[0-9a-f]{32}\.txt$/.test(name));
-if (!keyFile) throw new Error('no IndexNow key file at the repository root');
+if (!keyFile) throw new Error('no IndexNow key file at the fe directory');
 const key = keyFile.replace(/\.txt$/, '');
 
 const sitemap = readFileSync(resolve(root, 'sitemap.xml'), 'utf8');

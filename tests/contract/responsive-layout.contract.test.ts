@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest';
    silently. Neither is visible in a component test — both are properties of the sheet. */
 
 const root = resolve(__dirname, '../..');
-const page = readFileSync(resolve(root, 'mazan-habait.html'), 'utf8');
-const designSystem = readFileSync(resolve(root, 'design-system.css'), 'utf8');
+const page = readFileSync(resolve(root, 'fe/mazan-habait.html'), 'utf8');
+const designSystem = readFileSync(resolve(root, 'fe/design-system.css'), 'utf8');
 const styles = page.slice(page.indexOf('<style'), page.indexOf('</style>'));
 
 const indexOfMedia = (query: string): number => styles.indexOf(`@media ${query}`);

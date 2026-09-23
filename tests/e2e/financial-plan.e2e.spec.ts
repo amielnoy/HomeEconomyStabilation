@@ -161,3 +161,18 @@ test('heads an empty spending section with a plain zero', async ({ homePage }) =
   await expect(homePage.dashboard.planFixed).toContainText('0.00');
   await expect(homePage.dashboard.planFixed).not.toContainText('+0.00');
 });
+
+/* What leaves is what a household opens the plan for. The two spending headings are set
+   apart from the rest of it — larger, heavier and in the colour this app already spends in
+   — while the words themselves still carry the meaning for anyone who cannot see colour. */
+test('sets the two spending headings apart from the rest of the plan', async ({ homePage }) => {
+  await homePage.upload.uploadBankReport(twoMonths());
+
+  const income = await homePage.dashboard.planHeadingStyle(homePage.dashboard.planIncome);
+  for (const section of [homePage.dashboard.planFixed, homePage.dashboard.planVariable]) {
+    const spending = await homePage.dashboard.planHeadingStyle(section);
+    expect(spending.size).toBeGreaterThan(income.size);
+    expect(spending.weight).toBeGreaterThan(income.weight);
+    expect(spending.color).not.toBe(income.color);
+  }
+});

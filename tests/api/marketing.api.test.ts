@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captureMarketingAttribution, readAttribution, trackMarketingEvent } from '../../src/marketing';
+import { captureMarketingAttribution, readAttribution, trackMarketingEvent } from '../../fe/src/marketing';
 
 describe('marketing public API', () => {
   it('returns a predictable attribution payload for analytics adapters', () => {

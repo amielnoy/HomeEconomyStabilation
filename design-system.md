@@ -1,6 +1,6 @@
 # Home Economy Design System
 
-The system is implemented in `design-system.css` and is intentionally small enough to use in the standalone HTML app.
+The system is implemented in `fe/design-system.css` and is intentionally small enough to use in the standalone HTML app.
 
 ## Foundations
 
@@ -27,7 +27,7 @@ The system is implemented in `design-system.css` and is intentionally small enou
 - `.ds-focus`: focus ring utility for custom interactive controls.
 - `.locale-picker`: accessible language selector with a leading globe icon.
 
-All interactive recipes define hover, active, disabled and keyboard-focus states. They respect increased-contrast, forced-colors and reduced-motion preferences. Reusable visual recipes live only in `design-system.css`; the page stylesheet owns composition and responsive layout.
+All interactive recipes define hover, active, disabled and keyboard-focus states. They respect increased-contrast, forced-colors and reduced-motion preferences. Reusable visual recipes live only in `fe/design-system.css`; the page stylesheet owns composition and responsive layout.
 
 ## Financial agent pattern
 
@@ -232,3 +232,7 @@ The directory links to official pension-adviser and investment-adviser registrie
 9. On mobile, keep every visible approval control at least 44×44 CSS pixels and preserve a single-column reading order for agent cards.
 10. Dynamic financial sentences use translation keys with named parameters; merchant names and amounts remain user data and must be inserted as text, never executable markup.
 11. Every new user journey or component must be reflected in `TEST_PLAN.md`; contract coverage verifies that every test suite remains listed.
+
+## Public guides
+
+`fe/guide.html` and `fe/guide-en.html` are static, script-free help pages. `fe/guide.css` owns their reading layout and light/dark palette while reusing design-system typography, spacing, buttons and focus tokens. Language links are reciprocal; controls keep 48px targets. Public content remains available without JavaScript in RTL and LTR.

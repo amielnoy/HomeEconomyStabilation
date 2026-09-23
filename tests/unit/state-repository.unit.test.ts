@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AppStateCodec, LocalStorageStateRepository } from '../../src/state-repository';
+import { AppStateCodec, LocalStorageStateRepository } from '../../fe/src/state-repository';
 
 const defaults = {
   rules: [{ id: 'default-transfer', match: 'העברה בנקאית', cat: 'savings' }],

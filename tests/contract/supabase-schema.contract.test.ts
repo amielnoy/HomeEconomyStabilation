@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { CLOUD_SNAPSHOT_SCHEMA_VERSION } from '../../src/cloud-sync';
+import { CLOUD_SNAPSHOT_SCHEMA_VERSION } from '../../fe/src/cloud-sync';
 
 const root = resolve(__dirname, '../..');
 const migration = readFileSync(resolve(root, 'supabase/migrations/202608230001_create_app_snapshots.sql'), 'utf8');

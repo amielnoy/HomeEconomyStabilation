@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 type ParsedRule = { match: string; cat: string; when?: string; line: number };
 
 function defaultRules(): ParsedRule[] {
-  const source = readFileSync(resolve(__dirname, '../../src/app.ts'), 'utf8');
+  const source = readFileSync(resolve(__dirname, '../../fe/src/app.ts'), 'utf8');
   const block = source.split('const DEFAULT_RULES = [')[1]?.split('].map(')[0];
   expect(block, 'DEFAULT_RULES is no longer a literal array').toBeTruthy();
 

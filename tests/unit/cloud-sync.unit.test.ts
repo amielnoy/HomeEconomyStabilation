@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   CloudSyncError, SupabaseSnapshotRepository, isCloudStatePayload, type CloudStatePayload,
-} from '../../src/cloud-sync';
+} from '../../fe/src/cloud-sync';
 
 const payload = (): CloudStatePayload => ({
   tx: [], overrides: {}, rules: [], cats: [], budgets: {},

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mazan Habait — Israeli household budgeting from bank statements</title>
+<meta name="description" content="A practical guide to Mazan Habait: import Israeli bank and credit-card exports, review categories, plan budgets and understand local browser storage. Free, no registration.">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<link rel="canonical" href="https://home-economy-stabilation.vercel.app/guide-en.html">
+<link rel="alternate" hreflang="he" href="https://home-economy-stabilation.vercel.app/guide.html">
+<link rel="alternate" hreflang="en" href="https://home-economy-stabilation.vercel.app/guide-en.html">
+<link rel="alternate" hreflang="x-default" href="https://home-economy-stabilation.vercel.app/guide.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mazan Habait — Israeli household budgeting from bank statements">
+<meta property="og:description" content="A practical guide to Mazan Habait: import Israeli bank and credit-card exports, review categories, plan budgets and understand local browser storage. Free, no registration.">
+<meta property="og:url" content="https://home-economy-stabilation.vercel.app/guide-en.html">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="design-system.css">
+<link rel="stylesheet" href="guide.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "@id": "https://home-economy-stabilation.vercel.app/guide-en.html#page", "url": "https://home-economy-stabilation.vercel.app/guide-en.html", "name": "Mazan Habait — Israeli household budgeting from bank statements", "description": "A practical guide to Mazan Habait: import Israeli bank and credit-card exports, review categories, plan budgets and understand local browser storage. Free, no registration.", "inLanguage": "en", "dateModified": "2026-09-23", "about": {"@type": "WebApplication", "name": "Mazan Habait", "url": "https://home-economy-stabilation.vercel.app/"}}</script>
+</head>
+<body>
+<main>
+<nav aria-label="Guides"><a href="guide.html" lang="he" hreflang="he">עברית</a><a href="guide-en.html" lang="en" hreflang="en">English</a></nav>
+<header><p class="updated"><time datetime="2026-09-23">Updated September 23, 2026</time></p><h1>Mazan Habait — Israeli household budgeting from bank statements</h1><p>Mazan Habait (מאזן הבית) is a free household budgeting tool for Israeli bank and credit-card statement exports. Review imported transactions and categories, set budgets, and explore spending and cash-flow estimates in Israeli shekels.</p><a class="ds-button" data-variant="primary" href="/">Open Mazan Habait</a></header>
+<section id="start"><h2>How do I start with a bank statement?</h2><p>Export your transactions from your bank and select the file in Mazan Habait. The reader supports XLS, XLSX and CSV, including some HTML-table exports saved with an XLS extension. After importing, compare dates, amounts and income or expense direction with the original statement. Compatibility with every export format from every bank is not guaranteed.</p></section>
+<section id="cards"><h2>How do I combine bank and credit-card statements?</h2><p>Import the credit-card statement separately. The tool reconciles card transactions against the aggregate bank settlement to avoid counting spending twice. Review the match and billing period, especially when the purchase and settlement fall in different months.</p></section>
+<section id="budget"><h2>How do I build a monthly budget?</h2><p>Review categories and correct incorrectly assigned transactions. Set a budget for each category and compare it with imported spending. Suggested categorization rules and budgets require approval before being saved. Cash-flow and safe-to-spend estimates depend on your inputs and available history; they do not guarantee a future balance.</p></section>
+<section id="privacy"><h2>Do I need an account or a bank connection?</h2><p>No registration, bank password or direct bank connection is needed. The file is processed in your browser. Minimized transactions, categories, rules and budgets are stored locally; account and card numbers, CVV, references and filenames are excluded from persisted application data. Clearing browser data can remove your local records, so save and protect a backup.</p></section>
+<section id="cloud"><h2>Are my finances sent to the cloud?</h2><p>The current application interface stores data in the browser and does not run cloud synchronization. The project includes backend infrastructure for future sync requiring sign-in and explicit consent. Accepting the consent in the current interface only records it locally; it does not start synchronization.</p></section>
+<section id="agents"><h2>What are the financial agents?</h2><p>They are local computations over transaction history: anomalies, missing charges, duplicates, subscriptions, budget suggestions and savings opportunities. They are not an LLM chat and do not send statements to an external language model. Review findings against your original records.</p></section>
+<section id="languages"><h2>Which languages and currencies are supported?</h2><p>The interface offers Hebrew, English, Amharic and French through its language selector. The currency is ILS. The tool is free to use in a modern browser with JavaScript; no installation is required.</p></section>
+<footer><h2>Documentation and source</h2><ul>
+<li><a href="Architecture.html">System architecture</a></li>
+<li><a href="https://github.com/amielnoy/HomeEconomyStabilation/blob/main/PRIVACY.md">Privacy documentation</a></li>
+<li><a href="https://github.com/amielnoy/HomeEconomyStabilation">Source code and issue reporting</a></li>
+</ul></footer>
+</main>
+</body>
+</html>

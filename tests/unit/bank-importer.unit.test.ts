@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BankImportStrategy, readsAsCardReport } from '../../src/bank-importer';
-import type { Workbook } from '../../src/credit-card-importer';
+import { BankImportStrategy, readsAsCardReport } from '../../fe/src/bank-importer';
+import type { Workbook } from '../../fe/src/credit-card-importer';
 
 describe('bank import strategy', () => {
   it('extracts the account only for the active session and returns typed transactions', () => {

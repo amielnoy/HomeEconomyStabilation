@@ -1,4 +1,5 @@
 import { test as base, expect } from '@playwright/test';
+import { GuidePage } from './page-objects/guide.page';
 import { ArchitecturePage } from './page-objects/architecture.page';
 import { ApiDocsPage } from './page-objects/api-docs.page';
 import { ScalarDocsPage } from './page-objects/scalar-docs.page';
@@ -12,6 +13,7 @@ import { HomePage } from './page-objects/home.page';
 import { HomeEconomyApi } from './api-objects/home-economy.api';
 
 interface PageFixtures {
+  guidePage: GuidePage;
   languagePicker: LanguagePickerComponent;
   uploadComponent: UploadComponent;
   marketingComponent: MarketingComponent;
@@ -26,6 +28,7 @@ interface PageFixtures {
 }
 
 export const test = base.extend<PageFixtures>({
+  guidePage: async ({ page }, use) => { await use(new GuidePage(page)); },
   languagePicker: async ({ page }, use) => {
     await use(new LanguagePickerComponent(page));
   },

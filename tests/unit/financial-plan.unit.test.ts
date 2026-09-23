@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildFinancialPlan } from '../../src/financial-plan';
-import type { BankTransaction } from '../../src/domain-model';
+import { buildFinancialPlan } from '../../fe/src/financial-plan';
+import type { BankTransaction } from '../../fe/src/domain-model';
 
 /* The plan is the household's month in the shape a מיפוי worksheet asks for, filled from
    the statements already imported. Nothing on it may be a number nobody can trace back to

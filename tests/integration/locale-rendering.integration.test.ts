@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
-import { formatMessage, getLocaleConfig, resolveLocale, SUPPORTED_LOCALES } from '../../src/localization';
+import { formatMessage, getLocaleConfig, resolveLocale, SUPPORTED_LOCALES } from '../../fe/src/localization';
 
 /* The markup declares which nodes are translated, the resource files hold the strings and
    the localization module joins them. Each has its own tests; what none of them covers is
@@ -10,10 +10,10 @@ import { formatMessage, getLocaleConfig, resolveLocale, SUPPORTED_LOCALES } from
    translator never reaches, shows up only when the two are applied to each other. */
 
 const root = resolve(__dirname, '../..');
-const html = readFileSync(resolve(root, 'mazan-habait.html'), 'utf8');
+const html = readFileSync(resolve(root, 'fe/mazan-habait.html'), 'utf8');
 const resources = Object.fromEntries(SUPPORTED_LOCALES.map((locale) => [
   locale,
-  JSON.parse(readFileSync(resolve(root, `resources/${locale}.json`), 'utf8')) as Record<string, string>,
+  JSON.parse(readFileSync(resolve(root, `fe/resources/${locale}.json`), 'utf8')) as Record<string, string>,
 ]));
 
 /* The same substitution the application performs when it applies a locale. */

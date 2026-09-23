@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LOG_KEY_PREFIX, Logger, resolveLevel, type LogRecord, type LogStorage } from '../../src/logging';
+import { LOG_KEY_PREFIX, Logger, resolveLevel, type LogRecord, type LogStorage } from '../../fe/src/logging';
 
 /* A stand-in for localStorage that can also be made to run out of room, which is the case
    that decides whether the log or the customer's financial state survives. */

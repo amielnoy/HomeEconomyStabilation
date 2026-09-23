@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { cardStatements } from '../../src/card-statements';
-import type { BankTransaction } from '../../src/domain-model';
+import { cardStatements } from '../../fe/src/card-statements';
+import type { BankTransaction } from '../../fe/src/domain-model';
 
 /* What is on each card, gathered the way an issuer gathers it: the question asked when a
    bill arrives and has to be recognised before it is paid. */

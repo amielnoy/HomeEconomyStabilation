@@ -5,7 +5,7 @@ description: Improve or extend the Home Economy product design system, shared UI
 
 # Home Economy Design System
 
-Treat `design-system.css` as the source of truth for tokens and reusable visual recipes. Read `design-system.md` before changing it. Keep page composition and feature-specific layout in `mazan-habait.html`.
+Treat `fe/design-system.css` as the source of truth for tokens and reusable visual recipes. Read `design-system.md` before changing it. Keep page composition and feature-specific layout in `fe/mazan-habait.html`.
 
 Preserve the public `.btn` and `.card` migration aliases until their callers are deliberately migrated. New reusable actions and fields should use `.ds-button` and `.ds-field`; use semantic variants and tones instead of inline colors. Keep light, dark, increased-contrast, forced-colors, reduced-motion, RTL/LTR, French and Amharic behavior aligned.
 

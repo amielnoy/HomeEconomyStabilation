@@ -28,7 +28,7 @@
 7. **סוכן הזדמנויות לחיסכון** — מאחד מנויים לבדיקה, התייקרויות חוזרות, עמלות וכפילויות להזדמנויות מדידות. הוא מפריד בין פוטנציאל שנתי לחד־פעמי, מציג את מספר תנועות הראיה ואת ביטחון הזיהוי, ואינו מבטל שירות או מבטיח שהחיסכון יתממש.
 8. **סוכן עד המשכורת הבאה** — מזהה את ההכנסה החודשית הקבועה הגדולה ביותר, מפחית מהיתרה את החיובים הקבועים הצפויים לפניה, ומציג את הסכום הפנוי. „מצפן ההוצאה” מתרגם אותו גם ליעד שבועי ויומי ומציג תחשיב נפתח; כשאין יתרה או הכנסה מזוהה הוא אומר זאת במפורש ואינו ממציא תחזית. יום הכנסה או חיוב שאינו קיים בחודש קצר, למשל 31 בפברואר, מוצמד ליום האחרון שקיים באותו חודש ואינו גולש לחודש הבא.
 
-האלגוריתמים הטהורים והטיפוסים שלהם נמצאים ב־`src/financial-agents.ts`. כל מנוע מממש `FinancialAgentStrategy`, והמחלקה `FinancialAgentsOrchestrator` מקבלת את האסטרטגיות ב־dependency injection ומחזירה תוצאה טיפוסית אחת; `runFinancialAgents` הוא Facade תואם לשכבת התצוגה. `RuleBasedTransactionCategorizer` מרכז את סדר הקדימויות: שיוך ידני, כלל מאושר, זיהוי הכנסה ולבסוף „אחר”. העברות בין חשבונות ומשיכה לחשבון מסווגות כ״חיסכון והעברות״, ומזונות היוצאים מסווגים בקטגוריה משלהם; מזונות שנכנסים הם הכנסה; תיאור לא מספק אינו מסווג בניחוש. שכבת התצוגה והאישור נמצאת ב־`src/app.ts`. כלל שנלמד נשמר במערך `rules`; תקרת תקציב שאושרה נשמרת ב־`budgets`. הממצאים והזדמנויות החיסכון נגזרים מחדש ואינם נשמרים כמצב נוסף.
+האלגוריתמים הטהורים והטיפוסים שלהם נמצאים ב־`fe/src/financial-agents.ts`. כל מנוע מממש `FinancialAgentStrategy`, והמחלקה `FinancialAgentsOrchestrator` מקבלת את האסטרטגיות ב־dependency injection ומחזירה תוצאה טיפוסית אחת; `runFinancialAgents` הוא Facade תואם לשכבת התצוגה. `RuleBasedTransactionCategorizer` מרכז את סדר הקדימויות: שיוך ידני, כלל מאושר, זיהוי הכנסה ולבסוף „אחר”. העברות בין חשבונות ומשיכה לחשבון מסווגות כ״חיסכון והעברות״, ומזונות היוצאים מסווגים בקטגוריה משלהם; מזונות שנכנסים הם הכנסה; תיאור לא מספק אינו מסווג בניחוש. שכבת התצוגה והאישור נמצאת ב־`fe/src/app.ts`. כלל שנלמד נשמר במערך `rules`; תקרת תקציב שאושרה נשמרת ב־`budgets`. הממצאים והזדמנויות החיסכון נגזרים מחדש ואינם נשמרים כמצב נוסף.
 
 ## הפעלה מקומית
 
@@ -59,9 +59,9 @@ npm run debug
 
 הפקודה מריצה את המהדר במצב `--watch` עם source maps ומעלה שרת סטטי על פורט `8765` (אם כבר רץ שרת על הפורט — למשל זה שנשאר מבדיקות הדפדפן — היא משתמשת בו במקום לנסות להאזין שוב). אפשר לשנות פורט באמצעות `APP_PORT`.
 
-ה־source maps הם העיקר: בלעדיהם הדפדפן מציג את ה־JavaScript המהודר שב־`dist/`, ואי אפשר לשים breakpoint בקוד ה־TypeScript שנכתב בפועל. מכיוון שהשרת מגיש את שורש הפרויקט, `dist/app.js.map` מפנה אל `src/app.ts` והדפדפן טוען את המקור המקורי — ב־DevTools ‏→ Sources ‏→ `127.0.0.1:8765` ‏→ `src/`. שמירה של קובץ מהדרת מחדש; מספיק לרענן את הדף.
+ה־source maps הם העיקר: בלעדיהם הדפדפן מציג את ה־JavaScript המהודר שב־`dist/`, ואי אפשר לשים breakpoint בקוד ה־TypeScript שנכתב בפועל. מכיוון שהשרת מגיש את שורש הפרויקט, `dist/app.js.map` מפנה אל `fe/src/app.ts` והדפדפן טוען את המקור המקורי — ב־DevTools ‏→ Sources ‏→ `127.0.0.1:8765` ‏→ `fe/src/`. שמירה של קובץ מהדרת מחדש; מספיק לרענן את הדף.
 
-נקודות עצירה שימושיות לייבוא דוחות: `handleFiles` ב־`src/app.ts` לבדיקת הקובץ שנבחר, `readWorkbook` ב־`src/spreadsheet-reader.ts` כדי לראות לאיזה פורמט הקובץ נותב, ו־`headerMap` ב־`src/credit-card-importer.ts` כדי לראות אילו עמודות זוהו.
+נקודות עצירה שימושיות לייבוא דוחות: `handleFiles` ב־`fe/src/app.ts` לבדיקת הקובץ שנבחר, `readWorkbook` ב־`fe/src/spreadsheet-reader.ts` כדי לראות לאיזה פורמט הקובץ נותב, ו־`headerMap` ב־`fe/src/credit-card-importer.ts` כדי לראות אילו עמודות זוהו.
 
 קובצי ה־`.map` נשארים ב־`dist/` בלבד, ש־gitignore מתעלם ממנו, ו־`prepare-vercel-output` מסנן אותם בעת ההעתקה ל־`public/` כדי שקוד המקור לא ייארז לפריסה. הסינון מתבצע בהעתקה ולא במחיקה מ־`dist/`, כדי ש־`npm run build` לא ישבור סשן ניפוי שגיאות שרץ במקביל. עם זאת `npm run build` מהדר בלי source maps ולכן מסיר את הפניות ה־`sourceMappingURL`; כדי לחזור לנפות שגיאות מריצים שוב `npm run debug`.
 
@@ -115,7 +115,7 @@ __log.setLevel('debug')
 | `Debug app (Chrome)` | מריצה את המשימה `app: watch and serve` (כלומר `npm run debug`), ואז פותחת את הדף ב־Chrome מחובר לדיבאגר |
 | `Debug app (server already running)` | מתחברת בלבד, כאשר `npm run debug` כבר פועל בטרמינל או ששרת מבדיקות הדפדפן נשאר פעיל |
 
-נקודות עצירה נקבעות ישירות בקבצי `src/*.ts`. ההגדרה `webRoot` ממפה את הכתובות המוגשות אל תיקיית הפרויקט, ולכן הדיבאגר מציג את קוד ה־TypeScript המקורי ולא את הפלט המהודר. הקבצים נמצאים ב־`.vscode/launch.json` וב־`.vscode/tasks.json`.
+נקודות עצירה נקבעות ישירות בקבצי `fe/src/*.ts`. ההגדרה `webRoot` ממפה את הכתובות המוגשות אל תיקיית הפרויקט, ולכן הדיבאגר מציג את קוד ה־TypeScript המקורי ולא את הפלט המהודר. הקבצים נמצאים ב־`.vscode/launch.json` וב־`.vscode/tasks.json`.
 
 גרסת ה־Production זמינה ב־[home-economy-stabilation.vercel.app](https://home-economy-stabilation.vercel.app/mazan-habait.html), ומסמך הארכיטקטורה החי זמין ב־[Architecture.html](https://home-economy-stabilation.vercel.app/Architecture.html).
 
@@ -261,27 +261,27 @@ Vitest בודק לוגיקת דפדפן וחוזים במהירות. Pytest בו
 ## מבנה הפרויקט
 
 ```text
-mazan-habait.html        הממשק והעיצוב הראשי
-design-system.css       רכיבי וטוקני מערכת העיצוב
+fe/mazan-habait.html        הממשק והעיצוב הראשי
+fe/design-system.css       רכיבי וטוקני מערכת העיצוב
 design-system.md        כללי שימוש, נגישות וסלקטורים של מערכת העיצוב
 PRIVACY.md              גבול התמדה, צמצום מזהים והיקף GDPR/HIPAA
 .codex/skills/          Skills גרסתיים לתחזוקת הפרויקט
-Architecture.html       מפת המערכת, גבולות האמון, הנתונים והבדיקות
+fe/Architecture.html       מפת המערכת, גבולות האמון, הנתונים והבדיקות
 TODO.md                 שערי ההפעלה לפריסה אוטומטית ולפרויקט Supabase
-src/financial-agents.ts שמונת מנועי הסוכנים, Strategies וה־Orchestrator
-src/domain-model.ts      טיפוסי הדומיין המשותפים
-src/bank-importer.ts     Strategy לייבוא דוחות בנק
-src/categorization.ts    מדיניות סיווג תנועות ובכורת שיוך ידני
-src/state-repository.ts  Codec קשיח ו־Repository ל־localStorage/גיבוי
-src/cloud-sync.ts       חוזה סנכרון ו־SupabaseSnapshotRepository
-src/cloud-metadata.ts   מאגרי Supabase לפרופיל ולהסכמה
-src/consent.ts          הסכמה גרסתית וביטולה
-src/{architecture,api-docs,scalar-docs}.ts התנהגות TypeScript למסמכי המערכת וה־API
+fe/src/financial-agents.ts שמונת מנועי הסוכנים, Strategies וה־Orchestrator
+fe/src/domain-model.ts      טיפוסי הדומיין המשותפים
+fe/src/bank-importer.ts     Strategy לייבוא דוחות בנק
+fe/src/categorization.ts    מדיניות סיווג תנועות ובכורת שיוך ידני
+fe/src/state-repository.ts  Codec קשיח ו־Repository ל־localStorage/גיבוי
+fe/src/cloud-sync.ts       חוזה סנכרון ו־SupabaseSnapshotRepository
+fe/src/cloud-metadata.ts   מאגרי Supabase לפרופיל ולהסכמה
+fe/src/consent.ts          הסכמה גרסתית וביטולה
+fe/src/{architecture,api-docs,scalar-docs}.ts התנהגות TypeScript למסמכי המערכת וה־API
 server/                 FastAPI, validation ומאגרי Supabase
 api/index.py            נקודת הכניסה של Vercel לשרת Python
 supabase/migrations/    סכמת מסד הנתונים ומדיניות ההרשאות
-src/                    לוגיקת היישום, מנועי הסוכנים, ייבוא, תרגום ושיווק
-resources/              משאבי ארבע השפות
+fe/src/                    לוגיקת היישום, מנועי הסוכנים, ייבוא, תרגום ושיווק
+fe/resources/              משאבי ארבע השפות
 tests/e2e/page-objects/ עמודי בסיס ורכיבי Page Object לבדיקות הדפדפן
 tests/                  בדיקות יחידה, חוזה, רכיבים ו־E2E
 Dockerfile.web          image של שרת היישום ו־Swagger
@@ -301,3 +301,20 @@ scripts/*.sh            הרצת בדיקות, יצירת Allure וסביבת Co
 ## פרטיות והבהרה פיננסית
 
 היישום נועד להצגת מידע ולסיוע בהתארגנות בלבד ואינו ייעוץ פיננסי, פנסיוני, השקעות, מס או משפטי. ממצאי הסוכנים מבוססים על היוריסטיקות ועל איכות והיקף הדוחות שיובאו; הם עשויים להחמיץ אירוע או לסמן אירוע תקין. יש לאמת חיוב חריג, חסר או כפול מול הבנק או חברת האשראי לפני פעולה. רשימת החברות אינה דירוג או המלצה; יש להשוות תשואות, דמי ניהול, סיכון ושירות בכלים הרשמיים ולשקול ייעוץ מבעל רישיון. הצהרת ההסכמה מספקת יידוע ותיעוד בחירה, אך אינה כתב חסינות, אינה מבטלת אחריות לפי דין ואינה תחליף לבדיקת עורך דין לפני הפעלת מאגר מידע אמיתי.
+
+## Repository layout
+
+- `fe/`: frontend TypeScript (`src/`), HTML pages, styles, fonts, translations, and static assets. Compiled browser modules go to `fe/dist/`.
+- `server/`: Python backend application, authentication, configuration, and data access.
+- `api/index.py`: Vercel entry point that imports the application from `server`.
+- `tests/`, `scripts/`, and root configuration files: shared testing and build tooling.
+
+Run the existing npm commands from the repository root. `npm run build` assembles deployable frontend files in `public/`; `npm run debug` serves `fe/` locally.
+
+### AI and search discovery
+
+The public Hebrew (`/guide.html`) and English (`/guide-en.html`) guides explain the actual product without requiring JavaScript, with reciprocal language alternates, canonical URLs and visible facts matching their structured data. They are linked from the application, sitemap and supplementary `llms.txt`. Named crawler groups retain access to public content and exclude API routes; robots.txt is not an access-control mechanism.
+
+After publishing, verify the sitemap in Google Search Console and Bing Webmaster Tools under an account that owns the site. Run `npm run submit:indexnow` after the new URLs are live to notify participating search engines. In hosting/firewall settings, ensure verified search crawlers are not challenged or blocked; a user-agent string alone does not verify a bot. Monitor indexing, actual citations and referrals rather than assuming a ranking improvement.
+
+OpenAI documents [OAI-SearchBot separately from training access](https://developers.openai.com/api/docs/bots). Google's [AI search guidance](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide) prioritizes useful, crawlable content and says `llms.txt` is not used by Google Search. These changes improve discoverability; they cannot guarantee inclusion or recommendations in any assistant.

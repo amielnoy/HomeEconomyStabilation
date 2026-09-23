@@ -1,0 +1,31 @@
+/* Public guides reuse product typography and controls; this file owns layout. */
+:root {
+  color-scheme: light dark;
+  --page: #edf1f1; --surface: #fff; --ink: #0c1719; --ink-2: #4a5a5d;
+  --muted: #56676a; --line: #dde4e4; --line-2: #c6d0d1;
+  --accent: #0d6473; --accent-ink: #fff; --accent-soft: #e0eef0; --accent-line: #9dc6cd;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #080e10; --surface: #111a1d; --ink: #e9f1f2; --ink-2: #a8b8ba;
+    --muted: #a8b8ba; --line: #334549; --line-2: #334549;
+    --accent: #57b6c5; --accent-ink: #04171b; --accent-soft: #122a2f; --accent-line: #2c5c65;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ds-bg); color: var(--ds-text); font-size: var(--ds-text-lg); line-height: 1.7; }
+main { max-inline-size: 52rem; margin-inline: auto; padding: var(--ds-space-6); }
+nav { display: flex; flex-wrap: wrap; gap: var(--ds-space-6); }
+header { padding-block: var(--ds-space-7); }
+h1, h2 { font-family: var(--ds-font-display); line-height: var(--ds-leading-tight); text-wrap: balance; }
+h1 { font-size: clamp(2rem, 6vw, 3rem); }
+h2 { font-size: var(--ds-text-xl); }
+section, footer { border-block-start: 1px solid var(--ds-border); padding-block: var(--ds-space-5); }
+a { color: var(--ds-action); text-underline-offset: .2em; }
+nav a, footer a { display: inline-flex; align-items: center; min-block-size: var(--ds-control-touch); min-inline-size: var(--ds-control-touch); }
+.ds-button { min-block-size: var(--ds-control-touch); min-inline-size: var(--ds-control-touch); }
+a:focus-visible { outline: 3px solid var(--ds-focus); outline-offset: 4px; }
+.updated { color: var(--ds-text-secondary); font-size: var(--ds-text-md); }
+p { max-inline-size: 70ch; }
+@media (max-width: 420px) { main { padding: var(--ds-space-4); } }
+@media (forced-colors: active) { a:focus-visible { outline-color: Highlight; } }

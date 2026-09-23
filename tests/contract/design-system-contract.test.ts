@@ -3,8 +3,8 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const root = resolve(__dirname, '../..');
-const css = readFileSync(resolve(root, 'design-system.css'), 'utf8');
-const page = readFileSync(resolve(root, 'mazan-habait.html'), 'utf8');
+const css = readFileSync(resolve(root, 'fe/design-system.css'), 'utf8');
+const page = readFileSync(resolve(root, 'fe/mazan-habait.html'), 'utf8');
 
 describe('design system contract', () => {
   it.each([
@@ -29,6 +29,14 @@ describe('design system contract', () => {
   it('gives the card summary line a focus ring and a touch-sized target', () => {
     expect(page).toMatch(/\.cardgroup-toggle:focus-visible\s*\{/);
     expect(page).toMatch(/@media \(pointer: coarse\)\{[\s\S]*?\.cardgroup-toggle,[\s\S]*?min-height:48px/);
+  });
+
+  /* A household comes to the plan to see what leaves. The emphasis sits on the heading
+     alone: a section total of zero painted in the spending colour would say something
+     about the month that the month does not say. */
+  it('emphasises the spending headings without colouring their totals', () => {
+    expect(page).toMatch(/\.plan-section-spending \.plan-head \.plan-title\{[\s\S]*?color:var\(--crit-text\)/);
+    expect(page).not.toMatch(/\.plan-section-spending \.plan-head\{/);
   });
 
   /* The button recipe sets `display`, which outranks the user agent's rule for `[hidden]`.
@@ -73,5 +81,17 @@ describe('design system contract', () => {
     expect(css).toContain('Noto Sans Ethiopic');
     expect(css).toContain('html[dir="ltr"] .drawer');
     expect(css).toContain('html[dir="rtl"] .drawer');
+  });
+});
+
+describe('public guide design', () => {
+  it('reuses shared controls and preserves a static language switch', () => {
+    for (const file of ['guide.html', 'guide-en.html']) {
+      const guide = readFileSync(resolve(root, 'fe', file), 'utf8');
+      expect(guide).toContain('href="design-system.css"');
+      expect(guide).toContain('class="ds-button"');
+      expect(guide).toContain('lang="he" hreflang="he"');
+      expect(guide).toContain('lang="en" hreflang="en"');
+    }
   });
 });

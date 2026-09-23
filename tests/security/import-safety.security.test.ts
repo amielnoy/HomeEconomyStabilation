@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { creditCardImporter, describeColumns } from '../../src/credit-card-importer';
-import { readWorkbook } from '../../src/spreadsheet-reader';
+import { creditCardImporter, describeColumns } from '../../fe/src/credit-card-importer';
+import { readWorkbook } from '../../fe/src/spreadsheet-reader';
 import { spreadsheetMl, toArrayBuffer, xlsxWorkbook } from '../helpers/workbook-fixtures';
 
 /* An imported report is attacker-influenced input: the customer downloads it from a site,

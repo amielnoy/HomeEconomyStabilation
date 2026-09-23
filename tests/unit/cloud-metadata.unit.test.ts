@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SupabaseConsentRepository, SupabaseProfileRepository } from '../../src/cloud-metadata';
-import { CLOUD_CONSENT_VERSION } from '../../src/consent';
+import { SupabaseConsentRepository, SupabaseProfileRepository } from '../../fe/src/cloud-metadata';
+import { CLOUD_CONSENT_VERSION } from '../../fe/src/consent';
 
 const token = async () => 'user.jwt.token';
 

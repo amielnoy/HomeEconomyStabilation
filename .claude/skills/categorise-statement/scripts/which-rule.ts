@@ -17,7 +17,7 @@ const args = process.argv.slice(2);
 const direction: Direction = args.includes('--in') ? 'in' : 'out';
 const positional = args.filter((arg) => !arg.startsWith('--'));
 const describe = (rule: SourceRule): string =>
-  `src/app.ts:${rule.line}  '${rule.match}' → ${rule.cat}${rule.when ? ` (${rule.when} only)` : ''}`;
+  `fe/src/app.ts:${rule.line}  '${rule.match}' → ${rule.cat}${rule.when ? ` (${rule.when} only)` : ''}`;
 
 if (args.includes('--cats')) {
   for (const category of defaultCategories()) {
@@ -52,11 +52,11 @@ if (args.includes('--cats')) {
     console.log('  ✗ no position satisfies both — choose a longer or different match text, or leave the rule out');
     process.exitCode = 1;
   } else {
-    const after = lowest ? `after '${lowest.match}' (src/app.ts:${lowest.line})` : 'anywhere from the top';
-    const before = highest ? ` and before '${highest.match}' (src/app.ts:${highest.line})` : '';
+    const after = lowest ? `after '${lowest.match}' (fe/src/app.ts:${lowest.line})` : 'anywhere from the top';
+    const before = highest ? ` and before '${highest.match}' (fe/src/app.ts:${highest.line})` : '';
     console.log(`  ✓ ${after}${before}`);
   }
-  if (own.length) console.log(`  the ${category} rules sit at src/app.ts:${own[0]!.line}–${own.at(-1)!.line}`);
+  if (own.length) console.log(`  the ${category} rules sit at fe/src/app.ts:${own[0]!.line}–${own.at(-1)!.line}`);
 } else if (positional.length) {
   const rules = defaultRules();
   const categorizer = await realCategorizer();
@@ -67,7 +67,7 @@ if (args.includes('--cats')) {
     console.log(`"${description}" (${direction}) → ${answer}${hits.length ? '' : '  — no rule matches'}`);
     hits.forEach((rule, index) => console.log(`  ${index === 0 ? 'wins    ' : 'shadowed'}  ${describe(rule)}`));
     if (hits[0] && hits[0].cat !== answer) {
-      console.warn(`  ! the app answered ${answer}, not ${hits[0].cat}: this script has drifted from src/categorization.ts`);
+      console.warn(`  ! the app answered ${answer}, not ${hits[0].cat}: this script has drifted from fe/src/categorization.ts`);
       process.exitCode = 1;
     }
   }

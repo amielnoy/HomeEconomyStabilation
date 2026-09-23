@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { creditCardImporter, describeColumns, type Workbook } from '../../src/credit-card-importer';
+import { creditCardImporter, describeColumns, type Workbook } from '../../fe/src/credit-card-importer';
 
 const workbook: Workbook = {
   sheets: [{

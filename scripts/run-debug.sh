@@ -30,16 +30,16 @@ tsc_pid=$!
 if curl -fsS -o /dev/null "http://127.0.0.1:${APP_PORT}/mazan-habait.html" 2>/dev/null; then
   echo "Reusing the static server already listening on ${APP_PORT}"
 else
-  # Served from the project root rather than public/, so that dist/*.js.map resolves
+  # Served from fe/ rather than public/, so that dist/*.js.map resolves
   # src/*.ts and the debugger has the original source to show.
-  python3 -m http.server "$APP_PORT" --bind 127.0.0.1 >/dev/null 2>&1 &
+  python3 -m http.server "$APP_PORT" --directory fe --bind 127.0.0.1 >/dev/null 2>&1 &
   server_pid=$!
 fi
 
 echo ""
 echo "Application:  http://127.0.0.1:${APP_PORT}/mazan-habait.html"
 echo "Breakpoints:  DevTools → Sources → top → 127.0.0.1:${APP_PORT} → src/"
-echo "Watching:     src/**/*.ts — save and refresh, no restart needed"
+echo "Watching:     fe/src/**/*.ts — save and refresh, no restart needed"
 echo "Stop:         Ctrl-C"
 echo ""
 

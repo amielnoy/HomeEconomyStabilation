@@ -3,10 +3,10 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const root = resolve(__dirname, '../..');
-const appSource = readFileSync(resolve(root, 'src/app.ts'), 'utf8');
-const html = readFileSync(resolve(root, 'mazan-habait.html'), 'utf8');
-const apiDocs = readFileSync(resolve(root, 'api-docs.html'), 'utf8');
-const scalarDocs = readFileSync(resolve(root, 'scalar-docs.html'), 'utf8');
+const appSource = readFileSync(resolve(root, 'fe/src/app.ts'), 'utf8');
+const html = readFileSync(resolve(root, 'fe/mazan-habait.html'), 'utf8');
+const apiDocs = readFileSync(resolve(root, 'fe/api-docs.html'), 'utf8');
+const scalarDocs = readFileSync(resolve(root, 'fe/scalar-docs.html'), 'utf8');
 
 describe('security sanity contract', () => {
   it('does not use executable HTML or JavaScript string sinks in application code', () => {

@@ -9,7 +9,7 @@
       "type": "chrome",
       "request": "launch",
       "url": "http://127.0.0.1:8765/mazan-habait.html",
-      "webRoot": "${workspaceFolder}",
+      "webRoot": "${workspaceFolder}/fe",
       "sourceMaps": true,
       "preLaunchTask": "app: watch and serve",
       // The report importer runs entirely in the page, so there is nothing to skip into.
@@ -22,7 +22,7 @@
       "type": "chrome",
       "request": "launch",
       "url": "http://127.0.0.1:8765/mazan-habait.html",
-      "webRoot": "${workspaceFolder}",
+      "webRoot": "${workspaceFolder}/fe",
       "sourceMaps": true,
       "skipFiles": ["<node_internals>/**"]
     }

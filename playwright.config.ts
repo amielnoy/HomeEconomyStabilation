@@ -4,7 +4,7 @@ const webBaseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8765';
 const apiBaseURL = process.env.PLAYWRIGHT_API_BASE_URL || process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8766';
 const webServers = process.env.PLAYWRIGHT_BASE_URL ? undefined : [
   {
-    command: 'python3 -m http.server 8765',
+    command: 'python3 -m http.server 8765 --directory fe',
     url: 'http://127.0.0.1:8765/mazan-habait.html',
     reuseExistingServer: true,
     stdout: 'ignore' as const,

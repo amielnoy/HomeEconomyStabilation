@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { formatMessage, SUPPORTED_LOCALES } from '../../src/localization';
+import { formatMessage, SUPPORTED_LOCALES } from '../../fe/src/localization';
 
 /* Resource files are the one place where text authored outside the application is written
    straight into the page, and a translation arrives through a pull request like any other
@@ -11,7 +11,7 @@ import { formatMessage, SUPPORTED_LOCALES } from '../../src/localization';
 
 const root = resolve(__dirname, '../..');
 const entries = SUPPORTED_LOCALES.flatMap((locale) => {
-  const raw = readFileSync(resolve(root, `resources/${locale}.json`), 'utf8');
+  const raw = readFileSync(resolve(root, `fe/resources/${locale}.json`), 'utf8');
   const parsed = JSON.parse(raw) as Record<string, unknown>;
   const flatten = (value: unknown, path: string): Array<[string, string]> => {
     if (typeof value === 'string') return [[`${locale}.${path}`, value]];
@@ -46,7 +46,7 @@ describe('localization safety', () => {
   it('declares no prototype-polluting keys in any resource file', () => {
     const dangerous = ['__proto__', 'constructor', 'prototype'];
     for (const locale of SUPPORTED_LOCALES) {
-      const raw = readFileSync(resolve(root, `resources/${locale}.json`), 'utf8');
+      const raw = readFileSync(resolve(root, `fe/resources/${locale}.json`), 'utf8');
 
       for (const key of dangerous) {
         expect(raw, `${locale} declares ${key}`).not.toContain(`"${key}"`);

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { LOG_LEVELS, Logger } from '../../src/logging';
+import { LOG_LEVELS, Logger } from '../../fe/src/logging';
 
 /* The browser and the API write the same record so that a log downloaded from a tab and a
    log pulled off the server can be concatenated, sorted by `ts` and read as one story.
@@ -70,7 +70,7 @@ describe('logging format contract', () => {
   });
 
   it('lets the level be raised without a rebuild on either side', () => {
-    expect(readFileSync(resolve(root, 'src/logging.ts'), 'utf8')).toContain('resolveLevel');
+    expect(readFileSync(resolve(root, 'fe/src/logging.ts'), 'utf8')).toContain('resolveLevel');
     expect(pythonSource).toContain('LOG_LEVEL');
     expect(pythonSource).toContain('LOG_FILE');
   });

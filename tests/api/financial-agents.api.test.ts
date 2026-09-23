@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runFinancialAgents } from '../../src/financial-agents';
+import { runFinancialAgents } from '../../fe/src/financial-agents';
 
 describe('financial agents API', () => {
   it('returns one stable result slot for every independent agent', () => {

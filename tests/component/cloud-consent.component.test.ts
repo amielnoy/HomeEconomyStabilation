@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('cloud consent component', () => {
   it('requires an unselected explicit choice and explains data, voluntariness, limits and rights', () => {
-    const html = readFileSync(resolve(__dirname, '../../mazan-habait.html'), 'utf8');
+    const html = readFileSync(resolve(__dirname, '../../fe/mazan-habait.html'), 'utf8');
     const document = new JSDOM(html).window.document;
     const root = document.querySelector('[data-testid="cloud-consent"]')!;
     const checkbox = root.querySelector<HTMLInputElement>('[data-testid="cloud-consent-check"]')!;

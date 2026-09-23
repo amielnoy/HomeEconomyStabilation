@@ -20,16 +20,16 @@ const unquote = (value: string): string => value
   .replace(/\\'/g, "'");
 
 function block(marker: string, terminator: string): { body: string; firstLine: number } {
-  const text = readFileSync(resolve(repoRoot, 'src/app.ts'), 'utf8');
+  const text = readFileSync(resolve(repoRoot, 'fe/src/app.ts'), 'utf8');
   const start = text.indexOf(marker);
   const end = text.indexOf(terminator, start);
-  if (start < 0 || end < 0) throw new Error(`${marker.trim()} is no longer a literal array in src/app.ts`);
+  if (start < 0 || end < 0) throw new Error(`${marker.trim()} is no longer a literal array in fe/src/app.ts`);
   return { body: text.slice(start + marker.length, end), firstLine: text.slice(0, start).split('\n').length };
 }
 
-/* Parsed from src/app.ts with the same pattern tests/contract/default-rules.contract.test.ts
+/* Parsed from fe/src/app.ts with the same pattern tests/contract/default-rules.contract.test.ts
    uses, so this script and the contract agree on the list. Read from source rather than
-   dist/ so an edit counts without a rebuild. */
+   fe/dist/ so an edit counts without a rebuild. */
 export function defaultRules(): SourceRule[] {
   const { body, firstLine } = block('const DEFAULT_RULES = [', '].map(');
   const rules: SourceRule[] = [];
@@ -65,8 +65,8 @@ export function matchingRules(description: string, direction: Direction, rules: 
 }
 
 export async function fromDist<T>(module: string): Promise<T> {
-  const file = resolve(repoRoot, 'dist', `${module}.js`);
-  if (!existsSync(file)) throw new Error(`dist/${module}.js is missing — run: npx tsc -p tsconfig.app.json`);
+  const file = resolve(repoRoot, 'fe/dist', `${module}.js`);
+  if (!existsSync(file)) throw new Error(`fe/dist/${module}.js is missing — run: npx tsc -p tsconfig.app.json`);
   return import(pathToFileURL(file).href) as Promise<T>;
 }
 

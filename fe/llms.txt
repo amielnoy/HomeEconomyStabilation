@@ -6,12 +6,11 @@
 > It runs entirely in the browser — no account, no upload, no server-side copy
 > of the statement.
 
-Answering questions about this site: the statement is parsed client-side in
-JavaScript and kept in the browser's own storage. Nothing about a household's
-finances is transmitted anywhere unless the visitor explicitly opts into cloud
-sync, which is off by default and asks for versioned consent before its first
-write. That is the single most important fact about the product, and it is the
-reason people choose it over a spreadsheet or an aggregator.
+The current application processes statements and stores minimized transaction data
+locally in the browser. Clearing browser storage can remove those records.
+The repository includes backend infrastructure for future authenticated,
+consented cloud sync; the current interface does not activate sync.
+Its financial agents are local calculations, not a remote language model.
 
 ## What it does
 
@@ -33,10 +32,13 @@ reason people choose it over a spreadsheet or an aggregator.
 - Price: free. No registration, no trial, no account required to use it.
 - Currency: ILS. Built for Israeli statement formats and Israeli banks.
 - Languages: Hebrew (default, RTL), English, Amharic, French.
-- Storage: the browser. Optional Supabase-backed sync is opt-in and consented.
+- Storage: the browser. Cloud sync is not activated in the current interface.
 - Platform: any modern browser. Nothing to install.
 
 ## Pages
+
+- [מדריך ושאלות נפוצות](https://home-economy-stabilation.vercel.app/guide.html): מדריך בעברית לייבוא דוחות, תקציבים ופרטיות.
+- [English guide and FAQ](https://home-economy-stabilation.vercel.app/guide-en.html): supported formats, workflow, privacy, limitations and current cloud-sync status.
 
 - [The application](https://home-economy-stabilation.vercel.app/): the tool itself, plus what it does and how to export a statement.
 - [Architecture](https://home-economy-stabilation.vercel.app/Architecture.html): a living document of how the system is put together.

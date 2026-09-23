@@ -1,14 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { HttpStatus } from '../../src/http-status';
+import { HttpStatus } from '../../fe/src/http-status';
 
 const root = resolve(__dirname, '../..');
-const spec = JSON.parse(readFileSync(resolve(root, 'openapi.json'), 'utf8'));
-const docs = readFileSync(resolve(root, 'api-docs.html'), 'utf8');
-const scalarDocs = readFileSync(resolve(root, 'scalar-docs.html'), 'utf8');
-const docsSource = readFileSync(resolve(root, 'src/api-docs.ts'), 'utf8');
-const scalarSource = readFileSync(resolve(root, 'src/scalar-docs.ts'), 'utf8');
+const spec = JSON.parse(readFileSync(resolve(root, 'fe/openapi.json'), 'utf8'));
+const docs = readFileSync(resolve(root, 'fe/api-docs.html'), 'utf8');
+const scalarDocs = readFileSync(resolve(root, 'fe/scalar-docs.html'), 'utf8');
+const docsSource = readFileSync(resolve(root, 'fe/src/api-docs.ts'), 'utf8');
+const scalarSource = readFileSync(resolve(root, 'fe/src/scalar-docs.ts'), 'utf8');
 
 describe('Swagger/OpenAPI contract', () => {
   it('documents the public Vercel health operation without authentication', () => {

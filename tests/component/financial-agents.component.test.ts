@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('financial agents component', () => {
   it('publishes an accessible translated host for eight independent agents', () => {
-    const html = readFileSync(resolve(__dirname, '../../mazan-habait.html'), 'utf8');
+    const html = readFileSync(resolve(__dirname, '../../fe/mazan-habait.html'), 'utf8');
     const document = new JSDOM(html).window.document;
     const root = document.querySelector('[data-testid="agents"]');
 
@@ -16,7 +16,7 @@ describe('financial agents component', () => {
   });
 
   it('puts one transparent safe-to-spend number before the detailed dashboard', () => {
-    const html = readFileSync(resolve(__dirname, '../../mazan-habait.html'), 'utf8');
+    const html = readFileSync(resolve(__dirname, '../../fe/mazan-habait.html'), 'utf8');
     const document = new JSDOM(html).window.document;
     const guide = document.querySelector('[data-testid="spending-guide"]');
     const dashboard = document.querySelector('[data-testid="hero-h"]')?.closest('section');
