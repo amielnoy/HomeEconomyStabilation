@@ -1720,16 +1720,9 @@ function renderPlan() {
     ...(plan.settlements.lines.length ? [plan.settlements] : [])];
   for (const section of sections) {
     const incoming = section.kind === 'income';
-    /* What leaves is what a household came to the plan to see, so the two spending
-       sections are marked here rather than styled through their test id: the class is the
-       page's hook and the test id stays the test's. */
-    const spending = section.kind === 'fixed' || section.kind === 'variable';
-    const box = el('div', {
-      class: 'plan-section' + (spending ? ' plan-section-spending' : ''),
-      'data-testid': PLAN_SECTION_TESTID[section.kind],
-    });
+    const box = el('div', { class: 'plan-section', 'data-testid': PLAN_SECTION_TESTID[section.kind] });
     box.append(el('div', { class: 'plan-head' }, [
-      el('span', { class: 'plan-title', text: planSectionLabel(section) }),
+      el('span', { text: planSectionLabel(section) }),
       /* A section that stayed empty shows a plain zero. money2S signs everything it is
          given, and "+0.00 ₪" at the head of an expense section reads as money arriving. */
       el('span', {

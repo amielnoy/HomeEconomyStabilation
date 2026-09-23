@@ -31,14 +31,6 @@ describe('design system contract', () => {
     expect(page).toMatch(/@media \(pointer: coarse\)\{[\s\S]*?\.cardgroup-toggle,[\s\S]*?min-height:48px/);
   });
 
-  /* A household comes to the plan to see what leaves. The emphasis sits on the heading
-     alone: a section total of zero painted in the spending colour would say something
-     about the month that the month does not say. */
-  it('emphasises the spending headings without colouring their totals', () => {
-    expect(page).toMatch(/\.plan-section-spending \.plan-head \.plan-title\{[\s\S]*?color:var\(--crit-text\)/);
-    expect(page).not.toMatch(/\.plan-section-spending \.plan-head\{/);
-  });
-
   /* The button recipe sets `display`, which outranks the user agent's rule for `[hidden]`.
      Without this, every `hidden` button in the app is still on the screen. */
   it('hides a button the code has hidden', () => {

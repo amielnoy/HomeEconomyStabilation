@@ -541,14 +541,6 @@ tr:hover .flipdir, .flipdir:focus-visible{ opacity:1; }
 .plan-section:first-child{ padding-block-start:2px; }
 .plan-head{ display:flex; align-items:baseline; gap:10px; font-weight:700; font-size:14px; }
 .plan-head .plan-total{ margin-inline-start:auto; font-variant-numeric:tabular-nums; }
-/* The fixed and the variable spending are what the month is usually opened for, so their
-   headings are a step larger, heavier, and in the same colour their totals already carry
-   — the section is named in words as well, so the colour adds emphasis and never meaning.
-   The total keeps the head's own size and colour: a zero total says nothing about
-   spending and should not be painted as if it did. */
-.plan-section-spending .plan-head .plan-title{
-  font-size:17px; font-weight:800; letter-spacing:-.01em; color:var(--crit-text);
-}
 .plan-line{ display:flex; align-items:baseline; gap:10px; font-size:13.5px; padding:4px 0 0; color:var(--ink); }
 .plan-line .plan-name{ color:var(--muted); }
 .plan-line .plan-count{ color:var(--muted); font-size:12px; }
