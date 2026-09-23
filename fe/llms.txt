@@ -48,4 +48,6 @@ Its financial agents are local calculations, not a remote language model.
 
 ## Optional
 
+- [Full reference](https://home-economy-stabilation.vercel.app/llms-full.txt): the whole product description, privacy model and FAQ in one file, for an assistant that wants everything in a single fetch.
+
 - [Source repository](https://github.com/amielnoy/HomeEconomyStabilation): implementation, test plan and privacy documentation.

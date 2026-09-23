@@ -107,6 +107,22 @@ export function transactionId(transaction: Pick<BankTransaction, 'date' | 'ref' 
 
 export interface BankImportResult { rows: BankTransaction[]; account: string | null }
 
+/* Which end of the file holds the newest row is the bank's choice, and nothing in a row
+   says which choice it made — a short export often arrives newest-first and a long one
+   oldest-first. Everything downstream reads a day's closing balance off the first row it
+   sees for that date, so a file that arrived the other way up reported the balance the day
+   opened on as the balance it closed on. Resolving the direction once, here, is what lets
+   every later reader keep taking the first row it sees; the importer is also the last place
+   that still knows, since rows from several files are merged and re-sorted by date after
+   this. Applied only to a sheet carrying a running balance: that is where the assumption
+   lives, and a card report's order is its own business. */
+function orientNewestFirst(rows: BankTransaction[]): BankTransaction[] {
+  const first = rows[0];
+  const last = rows[rows.length - 1];
+  if (!first || !last || first.date === last.date) return rows;
+  return first.date > last.date ? rows : [...rows].reverse();
+}
+
 export class BankImportStrategy {
   import(workbook: Workbook, filename: string, source: 'bank' | 'card' = 'bank'): BankImportResult {
     const found: BankTransaction[] = [];
@@ -126,6 +142,7 @@ export class BankImportStrategy {
       const header = findHeader(rows);
       if (!header) continue;
       const pending = /המתנה|זמני/.test(cleanTransactionText(sheet.name));
+      const fromSheet: BankTransaction[] = [];
       for (const row of rows.slice(header.row + 1)) {
         /* A reader that ever hands back a hole must cost a skipped row, not the file. */
         if (!row) continue;
@@ -159,8 +176,9 @@ export class BankImportStrategy {
           src: filename,
         };
         transaction.id = transactionId(transaction);
-        found.push(transaction);
+        fromSheet.push(transaction);
       }
+      found.push(...(header.map.bal === undefined ? fromSheet : orientNewestFirst(fromSheet)));
     }
     return { rows: found, account };
   }

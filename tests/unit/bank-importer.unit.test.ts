@@ -27,10 +27,14 @@ describe('bank import strategy', () => {
     ] }] };
 
     const result = new BankImportStrategy().import(workbook, 'statement.xlsx');
+    const row = (desc: string) => result.rows.find((candidate) => candidate.desc === desc);
 
     expect(result.rows).toHaveLength(2);
-    expect(result.rows[0]).toMatchObject({ desc: 'SUPERMARKET', out: 431, in: 0, bal: 5000 });
-    expect(result.rows[1]).toMatchObject({ desc: 'SALARY', out: 0, in: 17400 });
+    /* By description, not by position: what this covers is the English headings being
+       read, and the importer hands a statement back newest-first whatever order the
+       file used. */
+    expect(row('SUPERMARKET')).toMatchObject({ out: 431, in: 0, bal: 5000 });
+    expect(row('SALARY')).toMatchObject({ out: 0, in: 17400 });
   });
 
   /* The card path shares this reader as a fallback, and there a single signed column is
@@ -140,5 +144,41 @@ describe('a statement that names its operation column הפעולה', () => {
     const rows = new BankImportStrategy().import(workbook, 'statement.xlsx').rows;
 
     expect(rows.every((row) => row.desc.length > 0)).toBe(true);
+  });
+});
+
+/* Which end of the file holds the newest row is the bank's choice, and nothing in a row
+   says which choice it made. The display layer reads a day's closing balance off the first
+   row it sees for that date, so a statement that arrived oldest-first handed it the balance
+   the day opened on — a current balance short by the rest of that day's movements. Settling
+   the direction here, once, is what keeps that assumption true for every file. Structure
+   only: synthetic amounts, no account holder. */
+describe('the order a statement arrives in', () => {
+  const HEADER = [{ t: 's' as const, v: 'תאריך' }, { t: 's' as const, v: 'תיאור פעולה' },
+    { t: 's' as const, v: 'חובה' }, { t: 's' as const, v: 'יתרה' }];
+  const row = (date: string, desc: string, out: number, bal: number) =>
+    [{ t: 's' as const, v: date }, { t: 's' as const, v: desc }, { t: 'n' as const, v: out }, { t: 'n' as const, v: bal }];
+
+  /* One account, one week, two movements on the closing day. Oldest-first. */
+  const oldestFirst = [
+    row('13/08/2026', 'משיכה מבנקט', 100, 1676.02),
+    row('16/08/2026', 'משיכה מבנקט', 200, 1476.02),
+    row('18/08/2026', 'משיכת מזומן', 40.42, 1435.60),
+    row('19/08/2026', 'ישראכרט', 12, 1423.60),
+    row('19/08/2026', 'משיכה מבנקט', 100, 1323.60),
+  ];
+  const statement = (rows: typeof oldestFirst): Workbook =>
+    ({ sheets: [{ name: 'תנועות עו"ש', rows: [HEADER, ...rows] }] });
+
+  it('hands back the closing balance of the newest day when the file is oldest-first', () => {
+    const rows = new BankImportStrategy().import(statement(oldestFirst), 'statement.xls').rows;
+
+    expect(rows[0]).toMatchObject({ date: '2026-08-19', bal: 1323.60 });
+  });
+
+  it('hands back the closing balance of the newest day when the file is newest-first', () => {
+    const rows = new BankImportStrategy().import(statement([...oldestFirst].reverse()), 'statement.xls').rows;
+
+    expect(rows[0]).toMatchObject({ date: '2026-08-19', bal: 1323.60 });
   });
 });

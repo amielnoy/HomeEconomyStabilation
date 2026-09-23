@@ -20,6 +20,7 @@ interface PageFixtures {
   dashboardComponent: DashboardComponent;
   settingsDrawer: SettingsDrawerComponent;
   savingsDirectory: SavingsDirectoryComponent;
+  guidePage: GuidePage;
   homePage: HomePage;
   architecturePage: ArchitecturePage;
   apiDocsPage: ApiDocsPage;
@@ -47,6 +48,7 @@ export const test = base.extend<PageFixtures>({
   savingsDirectory: async ({ page }, use) => {
     await use(new SavingsDirectoryComponent(page));
   },
+  guidePage: async ({ page }, use) => { await use(new GuidePage(page)); },
   homePage: async ({
     page,
     languagePicker,

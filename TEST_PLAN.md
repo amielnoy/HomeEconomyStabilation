@@ -111,7 +111,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | --- | --- |
 | `tests/contract/git-hooks.contract.test.ts` | The pre-push gate's wiring: both scripts staying executable, the hooks path installed from `npm install` rather than from a paragraph in a readme, a checkout that is not a git repository left alone, and the hook running the Vitest gate, refusing merge markers and naming its own escape hatch |
 | `tests/contract/design-system-contract.test.ts` | Semantic tokens, recipe ownership, variants, disabled/focus states, contrast preferences, touch targets, the card summary line's focus ring and touch target, typography and directional drawers, and a button the code has hidden actually leaving the screen |
-| `tests/contract/discovery.contract.test.ts` | Assistant-crawler allowlist, canonical URL and duplicate suppression, sitemap and llms.txt link resolution, structured-data graph integrity, IndexNow key ownership, variable-font face declarations and deployment of every discovery file |
+| `tests/contract/discovery.contract.test.ts` | Assistant-crawler allowlist, canonical URL and duplicate suppression, sitemap and llms.txt link resolution, structured-data graph integrity, IndexNow key ownership, variable-font face declarations, deployment of every discovery file, FAQ structured data that matches the questions and answers on each guide, and a full assistant reference that agrees with the short one |
 | `tests/contract/documentation-contract.test.ts` | README, architecture, design system, privacy, Supabase, TODO, monitoring and this test plan stay synchronized |
 | `tests/contract/default-rules.contract.test.ts` | No default rule left unreachable behind an earlier rule of another category, no exact duplicates, and the national-insurance allowance filed as income rather than as an insurance expense |
 | `tests/contract/control-labels.contract.test.ts` | Header action labels present, distinguishable and short enough to fit in every locale, and every data-i18n and translated aria-label key resolving |
@@ -145,6 +145,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | File | Coverage |
 | --- | --- |
 | `tests/e2e/accessibility.e2e.spec.ts` | axe WCAG A/AA checks for empty, populated, settings, agents and directory states |
+| `tests/e2e/discovery.e2e.spec.ts` | The Hebrew and English guides read with JavaScript disabled, in RTL and LTR, at desktop and phone widths, with 48px controls and WCAG checks in light and dark |
 | `tests/e2e/chart-accessibility.e2e.spec.ts` | Both charts publish their figures as data tables, with row headers and the projection range |
 | `tests/e2e/api-docs.e2e.spec.ts` | Self-hosted Swagger and Scalar loading the same specification and every health, snapshot, profile and consent operation |
 | `tests/e2e/architecture.e2e.spec.ts` | Architecture content, responsive layout and accessibility |
