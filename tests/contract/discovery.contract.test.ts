@@ -155,3 +155,38 @@ describe('assistant and search discovery contract', () => {
     }
   });
 });
+
+// Public guides must remain directly crawlable and consistent across languages.
+describe('public product guides', () => {
+  it('links both translations and exposes product facts without executable scripts', () => {
+    for (const [file, language] of [['guide.html', 'he'], ['guide-en.html', 'en']]) {
+      const page = read(file);
+      expect(html).toContain(`href="${file}"`);
+      expect(sitemap).toContain(`${ORIGIN}/${file}`);
+      expect(llms).toContain(`${ORIGIN}/${file}`);
+      expect(deployScript).toContain(`'${file}'`);
+      expect(page).toContain(`<html lang="${language}"`);
+      expect(page).toContain(`rel="canonical" href="${ORIGIN}/${file}"`);
+      for (const [lang, target] of [['he', 'guide.html'], ['en', 'guide-en.html']]) {
+        expect(page).toContain(`hreflang="${lang}" href="${ORIGIN}/${target}"`);
+      }
+      expect(page).not.toMatch(/<script(?![^>]*type="application\/ld\+json")/);
+      const data = JSON.parse(page.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);
+      expect(data.url).toBe(`${ORIGIN}/${file}`);
+      expect(data.inLanguage).toBe(language);
+      expect(page).toContain(`<h1>${data.name}</h1>`);
+      expect(page).toContain('id="privacy"');
+      expect(page).toContain('id="cloud"');
+    }
+  });
+
+  it('excludes API routes in both the named and wildcard crawler groups', () => {
+    const groups = robots.split(/\n\s*\n/).filter((group) => group.includes('User-agent:'));
+    expect(groups.length).toBeGreaterThanOrEqual(2);
+    for (const group of groups) {
+      expect(group).toContain('Allow: /');
+      expect(group).toContain('Disallow: /api/');
+      expect(group).toContain('Disallow: /api$');
+    }
+  });
+});

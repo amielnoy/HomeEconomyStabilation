@@ -31,6 +31,8 @@ User-agent: cohere-ai
 User-agent: Diffbot
 User-agent: omgili
 Allow: /
+Disallow: /api/
+Disallow: /api$
 
 # --- Everyone else ------------------------------------------------------------
 User-agent: *
@@ -38,5 +40,6 @@ Allow: /
 # The JSON API needs a bearer token and returns nothing useful to a crawler.
 # The documentation *pages* for it are indexable and listed in the sitemap.
 Disallow: /api/
+Disallow: /api$
 
 Sitemap: https://home-economy-stabilation.vercel.app/sitemap.xml
