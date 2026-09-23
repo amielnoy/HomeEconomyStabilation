@@ -180,6 +180,29 @@ describe('public product guides', () => {
     }
   });
 
+  /* An assistant answering "does this upload my statement?" quotes whichever answer it
+     can parse, and a FAQPage whose answer text has drifted from the page teaches it
+     something the page no longer says. Both halves are asserted against each other so
+     neither can be edited alone. */
+  it('answers the same questions in its structured data as on the page', () => {
+    for (const [file, language] of [['guide.html', 'he'], ['guide-en.html', 'en']]) {
+      const page = read(file);
+      const blocks = [...page.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+      const faq = blocks.map((block) => JSON.parse(block[1])).find((data) => data['@type'] === 'FAQPage');
+      expect(faq, `${file} publishes no FAQPage`).toBeDefined();
+      expect(faq.inLanguage).toBe(language);
+      expect(faq['@id']).toBe(`${ORIGIN}/${file}#faq`);
+      expect(faq.mainEntity.length).toBeGreaterThanOrEqual(5);
+
+      /* The page as a reader meets it: tags out, whitespace collapsed. */
+      const visible = page.replace(/<script[\s\S]*?<\/script>/g, ' ')
+        .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      const missing = faq.mainEntity.filter((question: { name: string; acceptedAnswer: { text: string } }) =>
+        !page.includes(`<h2>${question.name}</h2>`) || !visible.includes(question.acceptedAnswer.text));
+      expect(missing.map((question: { name: string }) => question.name), `${file}: not on the page`).toEqual([]);
+    }
+  });
+
   it('excludes API routes in both the named and wildcard crawler groups', () => {
     const groups = robots.split(/\n\s*\n/).filter((group) => group.includes('User-agent:'));
     expect(groups.length).toBeGreaterThanOrEqual(2);
