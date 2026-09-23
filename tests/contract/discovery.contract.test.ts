@@ -155,3 +155,74 @@ describe('assistant and search discovery contract', () => {
     }
   });
 });
+
+// Public guides must remain directly crawlable and consistent across languages.
+describe('public product guides', () => {
+  it('links both translations and exposes product facts without executable scripts', () => {
+    for (const [file, language] of [['guide.html', 'he'], ['guide-en.html', 'en']]) {
+      const page = read(file);
+      expect(html).toContain(`href="${file}"`);
+      expect(sitemap).toContain(`${ORIGIN}/${file}`);
+      expect(llms).toContain(`${ORIGIN}/${file}`);
+      expect(deployScript).toContain(`'${file}'`);
+      expect(page).toContain(`<html lang="${language}"`);
+      expect(page).toContain(`rel="canonical" href="${ORIGIN}/${file}"`);
+      for (const [lang, target] of [['he', 'guide.html'], ['en', 'guide-en.html']]) {
+        expect(page).toContain(`hreflang="${lang}" href="${ORIGIN}/${target}"`);
+      }
+      expect(page).not.toMatch(/<script(?![^>]*type="application\/ld\+json")/);
+      const data = JSON.parse(page.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);
+      expect(data.url).toBe(`${ORIGIN}/${file}`);
+      expect(data.inLanguage).toBe(language);
+      expect(page).toContain(`<h1>${data.name}</h1>`);
+      expect(page).toContain('id="privacy"');
+      expect(page).toContain('id="cloud"');
+    }
+  });
+
+  /* An assistant answering "does this upload my statement?" quotes whichever answer it
+     can parse, and a FAQPage whose answer text has drifted from the page teaches it
+     something the page no longer says. Both halves are asserted against each other so
+     neither can be edited alone. */
+  it('answers the same questions in its structured data as on the page', () => {
+    for (const [file, language] of [['guide.html', 'he'], ['guide-en.html', 'en']]) {
+      const page = read(file);
+      const blocks = [...page.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+      const faq = blocks.map((block) => JSON.parse(block[1])).find((data) => data['@type'] === 'FAQPage');
+      expect(faq, `${file} publishes no FAQPage`).toBeDefined();
+      expect(faq.inLanguage).toBe(language);
+      expect(faq['@id']).toBe(`${ORIGIN}/${file}#faq`);
+      expect(faq.mainEntity.length).toBeGreaterThanOrEqual(5);
+
+      /* The page as a reader meets it: tags out, whitespace collapsed. */
+      const visible = page.replace(/<script[\s\S]*?<\/script>/g, ' ')
+        .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      const missing = faq.mainEntity.filter((question: { name: string; acceptedAnswer: { text: string } }) =>
+        !page.includes(`<h2>${question.name}</h2>`) || !visible.includes(question.acceptedAnswer.text));
+      expect(missing.map((question: { name: string }) => question.name), `${file}: not on the page`).toEqual([]);
+    }
+  });
+
+  /* llms.txt is an index; an assistant that follows it to the expansion has to find a
+     file that deploys, says the same things, and does not claim a sync that is off. */
+  it('ships a full reference that agrees with the short one', () => {
+    const full = read('llms-full.txt');
+    expect(llms).toContain(`${ORIGIN}/llms-full.txt`);
+    expect(deployScript).toContain("'llms-full.txt'");
+    for (const fact of ['free', 'ILS', 'Hebrew', `${ORIGIN}/guide-en.html`]) {
+      expect(full, `llms-full.txt omits ${fact}`).toContain(fact);
+    }
+    expect(full).toMatch(/does not activate it|not active in the current interface/);
+    expect(full).not.toMatch(/sync is (enabled|active|on) by default/i);
+  });
+
+  it('excludes API routes in both the named and wildcard crawler groups', () => {
+    const groups = robots.split(/\n\s*\n/).filter((group) => group.includes('User-agent:'));
+    expect(groups.length).toBeGreaterThanOrEqual(2);
+    for (const group of groups) {
+      expect(group).toContain('Allow: /');
+      expect(group).toContain('Disallow: /api/');
+      expect(group).toContain('Disallow: /api$');
+    }
+  });
+});
