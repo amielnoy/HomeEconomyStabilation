@@ -33,6 +33,7 @@ describe('automation test-id contract', () => {
       'card-group-row', 'card-group-category',
       'goal-row', 'goal-name-input', 'goal-target-input', 'goal-saved-input', 'goal-due-input', 'goal-remove',
       'plan-line', 'plan-line-amount', 'plan-surplus',
+      'bill-toggle', 'bill-unexplained',
       'transaction-balance', 'transaction-category-select', 'budget-limit-input',
       'rule-match-input', 'rule-category-select', 'category-name-input', 'category-type-select',
       'approve-learning-rule', 'apply-budget-suggestion',

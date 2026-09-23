@@ -16,6 +16,7 @@ import { goalProgress, orderGoals } from './savings-goals.js';
 import { asIncoming, asOutgoing, findMisreadRows } from './misread-rows.js';
 import { legacyCardCorrections } from './import-corrections.js';
 import { cardStatements, type CardStatement } from './card-statements.js';
+import { settlementBills } from './settlement-bills.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
 interface DomElement extends HTMLElement { value: string; files: FileList | null; reset(): void; }
@@ -1820,11 +1821,23 @@ function renderRecurring() {
 /* Which cards the reader has opened in the summary view. Held in memory rather than
    saved: it is where someone is looking right now, not a fact about their household. */
 const openCardGroups = new Set<string>();
+/* A settlement the household has opened, by the row's own id. Kept beside the opened
+   cards rather than among them: a card is opened from the card's side, a bill from the
+   statement's. */
+const openBills = new Set<string>();
 
 /* `nested` marks a charge shown underneath the card it belongs to, so the indent says
    what the row is part of. The row is otherwise the same row — the category can still be
    corrected from inside an opened card. */
-function transactionRow(transaction: BankTransaction, nested: boolean): DomElement {
+/* `bill` is the charges a settlement line paid for, when the app can prove which they
+   were, or null for a settlement whose detail it cannot account for; absent on every
+   other row. A settlement is the one line on a statement that stands for money the
+   household can already see itemised somewhere else, and the only one worth opening. */
+function transactionRow(
+  transaction: BankTransaction,
+  nested: boolean,
+  bill?: readonly BankTransaction[] | null,
+): DomElement {
   const sel = el('select', { class: 'catsel', 'aria-label': t('categoryForTransaction', { description: transaction.desc }), 'data-testid': 'transaction-category-select' });
   for (const c of S.cats) sel.append(el('option', { value: c.id, text: catById(c.id).name, selected: c.id === transaction.cat }));
   sel.addEventListener('change', () => {
@@ -1864,7 +1877,8 @@ function transactionRow(transaction: BankTransaction, nested: boolean): DomEleme
   const outgoing = transaction.in === 0 && transaction.kind !== 'neutral';
   return el('tr', { class: [nested ? 'cardcharge' : '', outgoing ? 'outgoing' : ''].filter(Boolean).join(' ') || null, 'data-testid': 'transaction-row' }, [
     el('td', { class: 'n', 'data-label': t('date'), text: DDMMYY.format(dOf(transaction.date)) }),
-    el('td', { class: 'desc', 'data-label': t('description'), text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') }),
+    el('td', { class: 'desc', 'data-label': t('description') }, billToggle(transaction, bill)
+      ?? el('span', { text: transaction.desc + (transaction.pending ? ' · ' + t('pending') : '') })),
     el('td', { class: 'catcell', 'data-label': t('category') }, [el('span', { class: 'dot', style: `background:${flowColor(transaction)}`, 'data-testid': 'transaction-flow-dot' }), sel]),
     el('td', { class: 'srccell', 'data-label': t('transactionSource'), text: sourceLabel(transaction), 'data-testid': 'transaction-source' }),
     el('td', { class: 'amountcell n ' + (transaction.in > 0 ? 'pos' : 'neg'), 'data-label': t('amount') }, [
@@ -1874,6 +1888,35 @@ function transactionRow(transaction: BankTransaction, nested: boolean): DomEleme
     el('td', { class: 'n', 'data-label': t('balance'), text: transaction.bal != null ? money2(transaction.bal) : '', 'data-testid': 'transaction-balance' }),
     el('td', { class: 'refcell n', 'data-label': t('reference'), text: transaction.ref }),
   ]);
+}
+
+/* The statement's side of the same folding the card line does. A settlement is a figure
+   with nothing behind it until the household opens it, and the charges it paid for are
+   usually in another month — so they are shown, never counted: the totals line above sums
+   the month the filters chose, and a bill's detail belongs to the bill. A settlement the
+   app cannot account for opens onto one line that says so, because a row that refuses to
+   open explains nothing and looks broken. */
+function billToggle(
+  transaction: BankTransaction,
+  bill: readonly BankTransaction[] | null | undefined,
+): DomElement | null {
+  if (bill === undefined || !transaction.id) return null;
+  const id = transaction.id;
+  const open = openBills.has(id);
+  const label = transaction.desc + (transaction.pending ? ' · ' + t('pending') : '');
+  const button = el('button', {
+    type: 'button', class: 'cardgroup-toggle', 'aria-expanded': String(open),
+    title: open ? t('collapseBill') : bill ? t('expandBill', { count: bill.length }) : t('expandBillUnknown'),
+    'data-testid': 'bill-toggle',
+  }, [
+    el('span', { class: 'cardgroup-caret', 'aria-hidden': 'true', text: open ? '▾' : '▸' }),
+    el('span', { text: label }),
+  ]);
+  button.addEventListener('click', () => {
+    if (open) openBills.delete(id); else openBills.add(id);
+    renderTx();
+  });
+  return button;
 }
 
 /* One line for a card, carrying the sum it was charged — what the statement's own
@@ -1984,9 +2027,34 @@ function renderTx() {
     body.append(el('tr', {}, el('td', { colspan: 7, class: 'empty-row', text: t('noMatchingTransactions') })));
     return;
   }
+  /* Read over everything rather than the filtered list: a September settlement pays for
+     August, and a bill the month filter cut in half is not the bill the household was
+     charged. */
+  const bills = settlementBills(S.tx);
+  const hasCardDetail = S.tx.some((transaction) => transaction.source === 'card');
+  /* Only a card settlement opens, and only once there is card detail in the app at all —
+     a household that never imported a card report would otherwise find a caret on every
+     card bill that opens onto an apology. */
+  const billOf = (transaction: BankTransaction): readonly BankTransaction[] | null | undefined => (
+    hasCardDetail && transaction.source !== 'card' && transaction.cat === 'credit' && transaction.out > 0
+      ? bills.get(transaction.id ?? '') ?? null
+      : undefined
+  );
+
   const rows = transactionViewRows(list, view);
   for (const row of rows.slice(0, 400)) {
-    if (row.kind === 'transaction') { body.append(transactionRow(row.transaction, false)); continue; }
+    if (row.kind === 'transaction') {
+      const transaction = row.transaction;
+      const bill = billOf(transaction);
+      body.append(transactionRow(transaction, false, bill));
+      if (bill !== undefined && transaction.id && openBills.has(transaction.id)) {
+        if (bill) for (const charge of bill.slice(0, 400)) body.append(transactionRow(charge, true));
+        else body.append(el('tr', { class: 'cardcharge' }, el('td', {
+          colspan: 7, class: 'empty-row', text: t('billNotImported'), 'data-testid': 'bill-unexplained',
+        })));
+      }
+      continue;
+    }
     body.append(cardGroupRow(row));
     if (openCardGroups.has(row.key)) {
       for (const charge of row.charges.slice(0, 400)) body.append(transactionRow(charge, true));
