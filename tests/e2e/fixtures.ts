@@ -13,6 +13,7 @@ import { HomePage } from './page-objects/home.page';
 import { HomeEconomyApi } from './api-objects/home-economy.api';
 
 interface PageFixtures {
+  guidePage: GuidePage;
   languagePicker: LanguagePickerComponent;
   uploadComponent: UploadComponent;
   marketingComponent: MarketingComponent;
@@ -28,6 +29,7 @@ interface PageFixtures {
 }
 
 export const test = base.extend<PageFixtures>({
+  guidePage: async ({ page }, use) => { await use(new GuidePage(page)); },
   languagePicker: async ({ page }, use) => {
     await use(new LanguagePickerComponent(page));
   },

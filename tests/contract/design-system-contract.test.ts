@@ -3,8 +3,8 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const root = resolve(__dirname, '../..');
-const css = readFileSync(resolve(root, 'design-system.css'), 'utf8');
-const page = readFileSync(resolve(root, 'mazan-habait.html'), 'utf8');
+const css = readFileSync(resolve(root, 'fe/design-system.css'), 'utf8');
+const page = readFileSync(resolve(root, 'fe/mazan-habait.html'), 'utf8');
 
 describe('design system contract', () => {
   it.each([
@@ -73,5 +73,17 @@ describe('design system contract', () => {
     expect(css).toContain('Noto Sans Ethiopic');
     expect(css).toContain('html[dir="ltr"] .drawer');
     expect(css).toContain('html[dir="rtl"] .drawer');
+  });
+});
+
+describe('public guide design', () => {
+  it('reuses shared controls and preserves a static language switch', () => {
+    for (const file of ['guide.html', 'guide-en.html']) {
+      const guide = readFileSync(resolve(root, 'fe', file), 'utf8');
+      expect(guide).toContain('href="design-system.css"');
+      expect(guide).toContain('class="ds-button"');
+      expect(guide).toContain('lang="he" hreflang="he"');
+      expect(guide).toContain('lang="en" hreflang="en"');
+    }
   });
 });

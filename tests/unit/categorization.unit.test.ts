@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { RuleBasedTransactionCategorizer } from '../../src/categorization';
-import type { BankTransaction, Rule } from '../../src/domain-model';
+import { RuleBasedTransactionCategorizer } from '../../fe/src/categorization';
+import type { BankTransaction, Rule } from '../../fe/src/domain-model';
 
 const transaction = (desc: string, incoming = 0): BankTransaction => ({
   date: '2026-08-09', vdate: '2026-08-09', ref: '', desc, out: incoming ? 0 : 100,

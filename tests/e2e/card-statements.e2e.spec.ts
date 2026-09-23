@@ -98,3 +98,81 @@ test('offers the screen in every language', async ({ homePage, page }) => {
     await expect(page.getByTestId('cards-h')).toHaveText(heading);
   }
 });
+
+/* A household holding two cards from one issuer had them gathered under one heading, at a
+   total neither card was ever charged. No export says which Visa is which — the issuer
+   names the company, not the card — so the customer is asked for the four digits their own
+   receipts print, once, at import. */
+test.describe('two cards from one issuer', () => {
+  const second = () => ({
+    name: 'visa-2.csv', mimeType: 'text/csv',
+    buffer: Buffer.from(['תאריך העסקה,שם בית העסק,סכום החיוב', '06/09/2026,מוסך הכרמל,900.00'].join('\n')),
+  });
+
+  test('lists each card on its own in the chooser', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(statement());
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa', '1234');
+    await homePage.upload.uploadCreditCardReport(second(), 'external', 'visa', '5678');
+    await homePage.dashboard.openCards();
+
+    await expect(page.getByTestId('f-card').locator('option'))
+      .toHaveText(['כל הכרטיסים', 'ויזה ••1234', 'ויזה ••5678']);
+  });
+
+  test('shows only that card when one of them is chosen', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(statement());
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa', '1234');
+    await homePage.upload.uploadCreditCardReport(second(), 'external', 'visa', '5678');
+    await homePage.dashboard.openCards();
+
+    await page.getByTestId('f-card').selectOption({ label: 'ויזה ••5678' });
+
+    await expect(homePage.dashboard.cardChargeRows).toHaveCount(1);
+    await expect(homePage.dashboard.cardChargeRows.first()).toContainText('מוסך הכרמל');
+  });
+
+  /* And the folded line in the transactions table folds the same way. */
+  test('folds each card into a line of its own in the transactions table', async ({ homePage }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(statement());
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa', '1234');
+    await homePage.upload.uploadCreditCardReport(second(), 'external', 'visa', '5678');
+
+    await expect(homePage.dashboard.cardGroupRows).toHaveCount(2);
+    await expect(homePage.dashboard.cardGroupRows.filter({ hasText: 'ויזה ••1234' })).toHaveCount(1);
+  });
+
+  /* A card nobody identified is known by its issuer, exactly as before. */
+  test('leaves a card nobody identified known by its issuer', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadBankReport(statement());
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa');
+    await homePage.dashboard.openCards();
+
+    await expect(page.getByTestId('f-card').locator('option')).toHaveText(['כל הכרטיסים', 'ויזה']);
+  });
+
+  /* The field takes four digits and nothing else. A full card number pasted into it is not
+     trimmed into something that looks like an answer — it is not carried at all. */
+  test('keeps nothing at all when a card number is pasted in', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa', '4580123456789012');
+
+    const stored = await page.evaluate(() => window.localStorage.getItem('mazan-habait/v1') ?? '');
+    expect(stored).not.toContain('4580');
+    expect(stored).not.toContain('cardLast4');
+    // And the import happened anyway: losing a statement over an optional label is worse.
+    await expect(homePage.dashboard.transactionRows).toHaveCount(2);
+    await expect(homePage.toast).toContainText('לא נשמר');
+  });
+
+  test('carries the four digits onto the card it names', async ({ homePage, page }) => {
+    await homePage.openFresh();
+    await homePage.upload.uploadCreditCardReport(visa(), 'external', 'visa', '1234');
+    await homePage.dashboard.openCards();
+
+    await expect(page.getByTestId('f-card').locator('option')).toHaveText(['כל הכרטיסים', 'ויזה ••1234']);
+  });
+});

@@ -22,7 +22,7 @@ describe('project documentation contract', () => {
   });
 
   it('keeps the architecture aligned with the independent agent module and local trust boundary', () => {
-    const architecture = read('Architecture.html');
+    const architecture = read('fe/Architecture.html');
     expect(architecture).toContain('src/financial-agents.ts');
     expect(architecture).toContain('eight independent financial agents');
     expect(architecture).toContain('no remote model call');
@@ -64,7 +64,7 @@ describe('project documentation contract', () => {
   it('documents the isolated Docker services and privacy-safe monitoring boundary', () => {
     const readme = read('README.md');
     const monitoring = read('MONITORING.md');
-    const architecture = read('Architecture.html');
+    const architecture = read('fe/Architecture.html');
     for (const requirement of ['web', 'api', 'tests', 'Prometheus', 'Grafana', 'Allure', 'npm run stack:start']) {
       expect(readme).toContain(requirement);
     }
@@ -102,6 +102,6 @@ describe('project documentation contract', () => {
     for (const guide of ['README.md', 'design-system.md', 'PRIVACY.md', 'SUPABASE.md', 'MONITORING.md', 'TODO.md']) {
       expect(read(guide), `${guide} does not reference the test plan`).toContain('TEST_PLAN.md');
     }
-    expect(read('Architecture.html')).toContain('TEST_PLAN.md');
+    expect(read('fe/Architecture.html')).toContain('TEST_PLAN.md');
   });
 });

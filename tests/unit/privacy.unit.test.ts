@@ -4,7 +4,7 @@ import {
   isPrivacySafeTransaction,
   redactFinancialIdentifiers,
   sanitizeTransaction,
-} from '../../src/privacy';
+} from '../../fe/src/privacy';
 
 describe('privacy-safe persistence', () => {
   it.each([

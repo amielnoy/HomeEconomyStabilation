@@ -121,23 +121,23 @@
 <div class="scroll" tabindex="0">
 <table><thead><tr><th>Artifact</th><th>Responsibility</th><th>May depend on</th><th>Must not own</th></tr></thead><tbody>
   <tr><td><code>mazan-habait.html</code></td><td>Semantic structure, page-specific CSS and static copy hooks.</td><td><code>design-system.css</code>, compiled scripts</td><td>Financial parsing rules</td></tr>
-  <tr><td><code>src/app.ts</code></td><td>Composition root, workbook parsing, analysis, rendering and interaction orchestration.</td><td>Typed domain services and browser adapters</td><td>Persistence validation or institution-specific ingestion</td></tr>
-  <tr><td><code>src/bank-importer.ts</code></td><td>Typed bank import Strategy and normalized transaction IDs.</td><td>Workbook contract</td><td>Rendering or persistence</td></tr>
-  <tr><td><code>src/categorization.ts</code></td><td>Rule-based categorization with explicit override precedence and honest fallback.</td><td>Transactions and approved rules</td><td>DOM or storage</td></tr>
-  <tr><td><code>src/state-repository.ts</code></td><td>Runtime codec and local-storage Repository for untrusted persisted state.</td><td>Privacy allowlist and domain model</td><td>UI rendering</td></tr>
-  <tr><td><code>src/financial-agents.ts</code></td><td>Eight pure engines behind Strategy objects, composed by <code>FinancialAgentsOrchestrator</code> and exposed through a stable Facade.</td><td>Normalized transaction and category values</td><td>DOM, translations or persistence</td></tr>
-  <tr><td><code>src/credit-card-importer.ts</code></td><td>Recognize and normalize credit-card workbook variants.</td><td>Workbook interfaces</td><td>DOM rendering</td></tr>
-  <tr><td><code>src/localization.ts</code></td><td>Locale validation, direction, formatters and named-parameter interpolation.</td><td>Browser Intl APIs</td><td>Translated copy</td></tr>
+  <tr><td><code>fe/src/app.ts</code></td><td>Composition root, workbook parsing, analysis, rendering and interaction orchestration.</td><td>Typed domain services and browser adapters</td><td>Persistence validation or institution-specific ingestion</td></tr>
+  <tr><td><code>fe/src/bank-importer.ts</code></td><td>Typed bank import Strategy and normalized transaction IDs.</td><td>Workbook contract</td><td>Rendering or persistence</td></tr>
+  <tr><td><code>fe/src/categorization.ts</code></td><td>Rule-based categorization with explicit override precedence and honest fallback.</td><td>Transactions and approved rules</td><td>DOM or storage</td></tr>
+  <tr><td><code>fe/src/state-repository.ts</code></td><td>Runtime codec and local-storage Repository for untrusted persisted state.</td><td>Privacy allowlist and domain model</td><td>UI rendering</td></tr>
+  <tr><td><code>fe/src/financial-agents.ts</code></td><td>Eight pure engines behind Strategy objects, composed by <code>FinancialAgentsOrchestrator</code> and exposed through a stable Facade.</td><td>Normalized transaction and category values</td><td>DOM, translations or persistence</td></tr>
+  <tr><td><code>fe/src/credit-card-importer.ts</code></td><td>Recognize and normalize credit-card workbook variants.</td><td>Workbook interfaces</td><td>DOM rendering</td></tr>
+  <tr><td><code>fe/src/localization.ts</code></td><td>Locale validation, direction, formatters and named-parameter interpolation.</td><td>Browser Intl APIs</td><td>Translated copy</td></tr>
   <tr><td><code>resources/*.json</code></td><td>Translated text and locale-specific sentence order.</td><td>Canonical key contract</td><td>Executable logic</td></tr>
-  <tr><td><code>src/marketing.ts</code></td><td>Capture campaign attribution and local product events.</td><td>Session/local storage</td><td>Financial report content</td></tr>
-  <tr><td><code>src/cloud-sync.ts</code></td><td>Bounded cloud contract and <code>SupabaseSnapshotRepository</code>.</td><td>First-party API and access-token callback</td><td>Token persistence or consent UI</td></tr>
-  <tr><td><code>src/cloud-metadata.ts</code></td><td>Validated <code>SupabaseProfileRepository</code> and <code>SupabaseConsentRepository</code> clients.</td><td>Authenticated profile and consent API routes</td><td>Session ownership or financial state</td></tr>
-  <tr><td><code>src/consent.ts</code></td><td>Versioned local consent acceptance and withdrawal.</td><td>Minimal storage port</td><td>Financial state or immunity claims</td></tr>
+  <tr><td><code>fe/src/marketing.ts</code></td><td>Capture campaign attribution and local product events.</td><td>Session/local storage</td><td>Financial report content</td></tr>
+  <tr><td><code>fe/src/cloud-sync.ts</code></td><td>Bounded cloud contract and <code>SupabaseSnapshotRepository</code>.</td><td>First-party API and access-token callback</td><td>Token persistence or consent UI</td></tr>
+  <tr><td><code>fe/src/cloud-metadata.ts</code></td><td>Validated <code>SupabaseProfileRepository</code> and <code>SupabaseConsentRepository</code> clients.</td><td>Authenticated profile and consent API routes</td><td>Session ownership or financial state</td></tr>
+  <tr><td><code>fe/src/consent.ts</code></td><td>Versioned local consent acceptance and withdrawal.</td><td>Minimal storage port</td><td>Financial state or immunity claims</td></tr>
   <tr><td><code>server/</code> + <code>api/index.py</code></td><td>FastAPI boundary, Pydantic allowlist, profile/consent CRUD and consent-gated snapshot writes through RLS.</td><td>Supabase publishable key and user JWT</td><td>Database passwords or service-role keys</td></tr>
-  <tr><td><code>openapi.json</code> + <code>src/*-docs.ts</code></td><td>One API contract rendered by self-hosted Swagger and Scalar through compiled TypeScript modules.</td><td>Documented first-party routes</td><td>Runtime credentials, inline JavaScript or duplicated schemas</td></tr>
+  <tr><td><code>openapi.json</code> + <code>fe/src/*-docs.ts</code></td><td>One API contract rendered by self-hosted Swagger and Scalar through compiled TypeScript modules.</td><td>Documented first-party routes</td><td>Runtime credentials, inline JavaScript or duplicated schemas</td></tr>
   <tr><td><code>server/auth_flow.py</code></td><td>Google sign-in primitives: PKCE challenge, authorize URL, redirect allow-list and session parsing.</td><td>Provider contract and this deployment's own origins</td><td>Browser credentials, cookies or financial state</td></tr>
-  <tr><td><code>src/logging.ts</code></td><td>Bounded in-memory record ring with a dated daily copy, redacting every value it stores.</td><td>Its own record shape and a storage port</td><td>Financial values, file names or the network</td></tr>
-  <tr><td><code>src/http-status.ts</code></td><td>Single static vocabulary for REST response codes.</td><td>HTTP semantics</td><td>Response bodies or routing</td></tr>
+  <tr><td><code>fe/src/logging.ts</code></td><td>Bounded in-memory record ring with a dated daily copy, redacting every value it stores.</td><td>Its own record shape and a storage port</td><td>Financial values, file names or the network</td></tr>
+  <tr><td><code>fe/src/http-status.ts</code></td><td>Single static vocabulary for REST response codes.</td><td>HTTP semantics</td><td>Response bodies or routing</td></tr>
   <tr><td><code>docker-compose.yml</code></td><td>Isolate web, API, Scalar, tests and monitoring services on one local network.</td><td>Health checks and runtime environment</td><td>Production secrets</td></tr>
   <tr><td><code>monitoring/</code></td><td>Provision Prometheus collection and Grafana application/database health dashboards.</td><td>Internal metadata-only <code>/metrics</code></td><td>Database passwords, financial payloads or JWTs</td></tr>
   <tr><td><code>supabase/migrations/*.sql</code></td><td>Tables, grants, constraints and owner-only RLS.</td><td>Supabase Auth identity</td><td>Application rendering</td></tr>
@@ -223,7 +223,7 @@ npm run stack:start # application + Prometheus + Grafana</code></pre>
 <p class="small"><b>Activation status:</b> the linked Supabase project has the three migrations plus authenticated profile/consent routes and server-side consent enforcement. Auth UI, two-user RLS integration and user-facing cloud journeys remain tracked in <code>TODO.md</code>. “Supabase-ready” does not mean cloud storage is enabled for users.</p>
 </main>
 
-<footer>Home Economy architecture · generated from the current repository structure · <a href="https://github.com/amielnoy/HomeEconomyStabilation#readme" target="_blank" rel="noopener noreferrer">README source ↗</a></footer>
+<footer><a href="guide.html">מדריך בעברית</a> · <a href="guide-en.html">English product guide</a> · Home Economy architecture · generated from the current repository structure · <a href="https://github.com/amielnoy/HomeEconomyStabilation#readme" target="_blank" rel="noopener noreferrer">README source ↗</a></footer>
 </div>
 <script type="module" src="dist/architecture.js"></script>
 </body>

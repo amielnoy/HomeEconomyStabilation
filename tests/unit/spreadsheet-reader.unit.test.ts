@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseCSV, readWorkbook } from '../../src/spreadsheet-reader';
+import { parseCSV, readWorkbook } from '../../fe/src/spreadsheet-reader';
 import { Blob as NodeBlob } from 'node:buffer';
 import { spreadsheetMl, toArrayBuffer, xlsxWorkbook } from '../helpers/workbook-fixtures';
 

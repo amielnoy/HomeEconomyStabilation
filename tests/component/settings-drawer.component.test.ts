@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 
 describe('settings drawer component', () => {
-  const html = readFileSync(resolve(__dirname, '../../mazan-habait.html'), 'utf8');
+  const html = readFileSync(resolve(__dirname, '../../fe/mazan-habait.html'), 'utf8');
   const document = new JSDOM(html).window.document;
 
   it('starts outside the accessibility tree and exposes modal relationships', () => {

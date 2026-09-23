@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 const root = resolve(__dirname, '../..');
 const locales = ['he', 'en', 'am', 'fr'] as const;
 const readLocale = (locale: string) => JSON.parse(
-  readFileSync(resolve(root, `resources/${locale}.json`), 'utf8'),
+  readFileSync(resolve(root, `fe/resources/${locale}.json`), 'utf8'),
 ) as Record<string, unknown>;
 
 const decode = (value: string) => value
@@ -49,7 +49,7 @@ describe('localization contract', () => {
   });
 
   it('defines every translation key used by page text and accessible attributes', () => {
-    const html = readFileSync(resolve(root, 'mazan-habait.html'), 'utf8');
+    const html = readFileSync(resolve(root, 'fe/mazan-habait.html'), 'utf8');
     const usedKeys = [...html.matchAll(/data-i18n(?:-placeholder|-aria-label)?="([^"]+)"/g)]
       .map((match) => match[1]);
 
@@ -60,7 +60,7 @@ describe('localization contract', () => {
   });
 
   it('defines every literal translation key requested by runtime code', () => {
-    const source = readFileSync(resolve(root, 'src/app.ts'), 'utf8');
+    const source = readFileSync(resolve(root, 'fe/src/app.ts'), 'utf8');
     const usedKeys = [...source.matchAll(/\bt\('([^']+)'/g)].map((match) => match[1]);
 
     for (const locale of locales) {
@@ -70,7 +70,7 @@ describe('localization contract', () => {
   });
 
   it('exposes every supported locale in the language picker using native names', () => {
-    const html = readFileSync(resolve(root, 'mazan-habait.html'), 'utf8');
+    const html = readFileSync(resolve(root, 'fe/mazan-habait.html'), 'utf8');
 
     expect(html).toContain('<option value="he">עברית</option>');
     expect(html).toContain('<option value="en">English</option>');
@@ -104,7 +104,7 @@ describe('localization contract', () => {
      before a locale is applied. An edit to one and not the other is invisible — the page
      looks right the moment it is translated — so the two are pinned to each other here. */
   it('keeps the Hebrew text in the page identical to the Hebrew resource', () => {
-    const html = readFileSync(resolve(root, 'mazan-habait.html'), 'utf8');
+    const html = readFileSync(resolve(root, 'fe/mazan-habait.html'), 'utf8');
     const hebrew = readLocale('he');
     /* Two entries drifted before this test existed and are quarantined rather than
        silently corrected: which side is right is a copy decision, not a test's to make. */
@@ -123,7 +123,7 @@ describe('localization contract', () => {
   });
 
   it('keeps the household currency in ILS for every language', () => {
-    const source = readFileSync(resolve(root, 'src/localization.ts'), 'utf8');
+    const source = readFileSync(resolve(root, 'fe/src/localization.ts'), 'utf8');
 
     expect(source).not.toContain("'USD'");
     expect(source.match(/currency: 'ILS'/g)?.length).toBeGreaterThanOrEqual(4);

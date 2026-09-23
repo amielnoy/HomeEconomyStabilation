@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const root = resolve(__dirname, '../..');
+const root = resolve(__dirname, '../../fe');
 const read = (file: string) => readFileSync(resolve(root, file), 'utf8');
 
 const ORIGIN = 'https://home-economy-stabilation.vercel.app';
@@ -10,7 +10,7 @@ const robots = read('robots.txt');
 const sitemap = read('sitemap.xml');
 const llms = read('llms.txt');
 const html = read('mazan-habait.html');
-const deployScript = read('scripts/prepare-vercel-output.ts');
+const deployScript = read('../scripts/prepare-vercel-output.ts');
 
 /* `/` is a Vercel rewrite onto mazan-habait.html rather than a file of its own. */
 const servedBy = (path: string) => (path === '/' ? 'mazan-habait.html' : path.replace(/^\//, ''));
@@ -39,7 +39,7 @@ describe('assistant and search discovery contract', () => {
     // Matched by pattern in the deploy script rather than named, so key rotation
     // cannot leave the published keyLocation pointing at a file that is not there.
     expect(deployScript).toContain('[0-9a-f]{32}\\.txt');
-    expect(read('scripts/submit-indexnow.ts')).toContain('api.indexnow.org/IndexNow');
+    expect(read('../scripts/submit-indexnow.ts')).toContain('api.indexnow.org/IndexNow');
   });
 
   it('names the assistant crawlers explicitly rather than relying on the wildcard', () => {

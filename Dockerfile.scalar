@@ -4,7 +4,7 @@ WORKDIR /workspace
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY tsconfig.json tsconfig.docs.json tsconfig.scripts.json ./
-COPY src/api-docs.ts src/scalar-docs.ts ./src/
+COPY fe/src/api-docs.ts fe/src/scalar-docs.ts ./fe/src/
 COPY scripts/copy-api-docs-assets.ts scripts/prepare-vercel-output.ts ./scripts/
 RUN npm run build:docs \
   && npm run build:scripts \
@@ -13,13 +13,13 @@ RUN npm run build:docs \
 FROM nginx:1.29-alpine
 
 COPY docker/nginx.scalar.conf /etc/nginx/conf.d/default.conf
-COPY scalar-docs.html /usr/share/nginx/html/scalar-docs.html
-COPY api-docs.html /usr/share/nginx/html/api-docs.html
-COPY openapi.json /usr/share/nginx/html/openapi.json
-COPY --from=build /workspace/dist/scalar /usr/share/nginx/html/dist/scalar
-COPY --from=build /workspace/dist/swagger-ui /usr/share/nginx/html/dist/swagger-ui
-COPY --from=build /workspace/dist/api-docs.js /usr/share/nginx/html/dist/api-docs.js
-COPY --from=build /workspace/dist/scalar-docs.js /usr/share/nginx/html/dist/scalar-docs.js
+COPY fe/scalar-docs.html /usr/share/nginx/html/scalar-docs.html
+COPY fe/api-docs.html /usr/share/nginx/html/api-docs.html
+COPY fe/openapi.json /usr/share/nginx/html/openapi.json
+COPY --from=build /workspace/fe/dist/scalar /usr/share/nginx/html/dist/scalar
+COPY --from=build /workspace/fe/dist/swagger-ui /usr/share/nginx/html/dist/swagger-ui
+COPY --from=build /workspace/fe/dist/api-docs.js /usr/share/nginx/html/dist/api-docs.js
+COPY --from=build /workspace/fe/dist/scalar-docs.js /usr/share/nginx/html/dist/scalar-docs.js
 
 EXPOSE 80
 

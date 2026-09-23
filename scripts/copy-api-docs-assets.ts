@@ -12,12 +12,12 @@ async function copyFiles(sourceRoot: string, targetRoot: string, files: readonly
 await Promise.all([
   copyFiles(
     resolve(projectRoot, 'node_modules/swagger-ui-dist'),
-    resolve(projectRoot, 'dist/swagger-ui'),
+    resolve(projectRoot, 'fe/dist/swagger-ui'),
     ['swagger-ui.css', 'swagger-ui-bundle.js', 'swagger-ui-standalone-preset.js'],
   ),
   copyFiles(
     resolve(projectRoot, 'node_modules/@scalar/api-reference/dist/browser'),
-    resolve(projectRoot, 'dist/scalar'),
+    resolve(projectRoot, 'fe/dist/scalar'),
     ['standalone.js'],
   ),
 ]);

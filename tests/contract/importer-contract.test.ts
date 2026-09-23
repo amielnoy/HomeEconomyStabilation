@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { creditCardImporter, type TransactionRecord, type Workbook } from '../../src/credit-card-importer';
-import { readWorkbook } from '../../src/spreadsheet-reader';
+import { creditCardImporter, type TransactionRecord, type Workbook } from '../../fe/src/credit-card-importer';
+import { readWorkbook } from '../../fe/src/spreadsheet-reader';
 import { spreadsheetMl, toArrayBuffer, xlsxWorkbook } from '../helpers/workbook-fixtures';
 
 const root = resolve(__dirname, '../..');
@@ -97,8 +97,8 @@ describe('importer transaction contract', () => {
   /* A message key that reaches the customer as its own name is a broken screen, and the
      import failures are the ones nobody sees until a file fails. */
   it('resolves every message the import flow asks for', () => {
-    const source = readFileSync(resolve(root, 'src/app.ts'), 'utf8');
-    const resources = JSON.parse(readFileSync(resolve(root, 'resources/he.json'), 'utf8')) as Record<string, unknown>;
+    const source = readFileSync(resolve(root, 'fe/src/app.ts'), 'utf8');
+    const resources = JSON.parse(readFileSync(resolve(root, 'fe/resources/he.json'), 'utf8')) as Record<string, unknown>;
     const requested = [...source.matchAll(/\bt\('([A-Za-z0-9_]+)'/g)].map((match) => match[1]!);
 
     expect(requested).toContain('fileColumnsUnrecognized');

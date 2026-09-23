@@ -2,9 +2,9 @@ import { Blob as NodeBlob } from 'node:buffer';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { bankImporter } from '../../src/bank-importer';
-import { creditCardImporter, describeColumns } from '../../src/credit-card-importer';
-import { readWorkbook } from '../../src/spreadsheet-reader';
+import { bankImporter } from '../../fe/src/bank-importer';
+import { creditCardImporter, describeColumns } from '../../fe/src/credit-card-importer';
+import { readWorkbook } from '../../fe/src/spreadsheet-reader';
 import { spreadsheetMl, toArrayBuffer, xlsxWorkbook } from '../helpers/workbook-fixtures';
 
 /* The unit tests hand the importers a workbook that was never read from a file, and the

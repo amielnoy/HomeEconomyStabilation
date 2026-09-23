@@ -5,7 +5,7 @@ import {
   formatMessage,
   getLocaleConfig,
   resolveLocale,
-} from '../../src/localization';
+} from '../../fe/src/localization';
 
 describe('localization public API', () => {
   it('exposes stable config for every advertised locale', () => {

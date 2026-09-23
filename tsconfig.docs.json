@@ -1,10 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
+    "outDir": "fe/dist",
+    "rootDir": "fe/src",
     "strict": true,
     "noEmitOnError": true
   },
-  "include": ["src/api-docs.ts", "src/scalar-docs.ts"]
+  "include": ["fe/src/api-docs.ts", "fe/src/scalar-docs.ts"]
 }

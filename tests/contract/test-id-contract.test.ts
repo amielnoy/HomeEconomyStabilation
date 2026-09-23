@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 
 const root = resolve(__dirname, '../..');
-const html = readFileSync(resolve(root, 'mazan-habait.html'), 'utf8');
+const html = readFileSync(resolve(root, 'fe/mazan-habait.html'), 'utf8');
 const document = new JSDOM(html).window.document;
 
 describe('automation test-id contract', () => {
@@ -25,7 +25,7 @@ describe('automation test-id contract', () => {
   });
 
   it('publishes test ids for dynamic collections and their actions', () => {
-    const source = readFileSync(resolve(root, 'src/app.ts'), 'utf8');
+    const source = readFileSync(resolve(root, 'fe/src/app.ts'), 'utf8');
     for (const testId of [
       'month-chip', 'attention-item', 'recommendation-card', 'recommendation-action',
       'budget-row', 'category-row', 'category-amount', 'category-table-amount',

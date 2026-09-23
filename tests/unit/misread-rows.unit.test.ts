@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { asOutgoing, findMisreadRows } from '../../src/misread-rows';
-import type { BankTransaction } from '../../src/domain-model';
+import { asOutgoing, findMisreadRows } from '../../fe/src/misread-rows';
+import type { BankTransaction } from '../../fe/src/domain-model';
 
 /* A card report loaded through the statement control was read the wrong way round, and the
    rows it wrote are still in a household's browser: merchant after merchant in green with

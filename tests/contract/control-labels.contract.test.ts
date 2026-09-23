@@ -13,10 +13,10 @@ const root = resolve(__dirname, '../..');
 const locales = ['he', 'en', 'am', 'fr'] as const;
 const resources = Object.fromEntries(locales.map((locale) => [
   locale,
-  JSON.parse(readFileSync(resolve(root, `resources/${locale}.json`), 'utf8')) as Record<string, string>,
+  JSON.parse(readFileSync(resolve(root, `fe/resources/${locale}.json`), 'utf8')) as Record<string, string>,
 ])) as Record<typeof locales[number], Record<string, string>>;
 
-const document = new JSDOM(readFileSync(resolve(root, 'mazan-habait.html'), 'utf8')).window.document;
+const document = new JSDOM(readFileSync(resolve(root, 'fe/mazan-habait.html'), 'utf8')).window.document;
 
 /* The controls that share the top bar with the overflow toggle, where the width is
    divided rather than given. */

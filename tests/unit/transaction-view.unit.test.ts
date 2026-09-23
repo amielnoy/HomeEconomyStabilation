@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { transactionViewRows, type TransactionViewRow } from '../../src/transaction-view';
-import type { BankTransaction, CardBrand } from '../../src/domain-model';
+import { transactionViewRows, type TransactionViewRow } from '../../fe/src/transaction-view';
+import type { BankTransaction, CardBrand } from '../../fe/src/domain-model';
 
 /* The transactions table opens on the account as the bank describes it: the statement
    lines the household recognises, and one line per card carrying the full sum charged.

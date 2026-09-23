@@ -1,4 +1,4 @@
-import { HttpStatus } from '../../src/http-status';
+import { HttpStatus } from '../../fe/src/http-status';
 import { expect, test } from './fixtures';
 
 test('keeps profile and consent metadata closed to anonymous callers', async ({ homeEconomyApi }) => {

@@ -5,8 +5,8 @@ description: Fix how the Home Economy (מאזן הבית) default rules categori
 
 # Categorise a statement
 
-The categorizer (`src/categorization.ts`) gives the transaction to the **first** rule in
-`DEFAULT_RULES` (`src/app.ts`) whose text the description contains, case-insensitively. So
+The categorizer (`fe/src/categorization.ts`) gives the transaction to the **first** rule in
+`DEFAULT_RULES` (`fe/src/app.ts`) whose text the description contains, case-insensitively. So
 a rule's position is part of its meaning, and a rule in the wrong place compiles, reads as
 intent, and decides nothing. Everything below exists to prevent that.
 
@@ -27,8 +27,8 @@ For a brand-new category, also follow "Adding a category" in `CLAUDE.md`.
 ## Tools
 
 Both scripts run as plain TypeScript on Node 23.6+ (the repo uses 26). They read rules
-live from `src/app.ts`, so an edit counts immediately; the reader, importers and
-categorizer come from `dist/`. If `dist/` is missing or older than `src/`, run
+live from `fe/src/app.ts`, so an edit counts immediately; the reader, importers and
+categorizer come from `fe/dist/`. If `fe/dist/` is missing or older than `fe/src/`, run
 `npx tsc -p tsconfig.app.json` first.
 
 ```bash

@@ -16,7 +16,7 @@ _FINANCIAL_IDENTIFIERS = (
     re.compile(r"\b(?:cvv|cvc|security\s*code)\s*[:#-]?\s*\d{3,4}\b", re.IGNORECASE),
     re.compile(r"\b(?:\d[ -]?){12,18}\d\b"),
     re.compile(r"\b\d{1,3}[- ]\d{1,4}[- ]\d{4,10}\b"),
-    # Mirrors redactFinancialIdentifiers in src/privacy.ts: a digit run introduced by
+    # Mirrors redactFinancialIdentifiers in fe/src/privacy.ts: a digit run introduced by
     # an account, branch or card word is an identifier, not an amount. Python's \b is
     # Unicode-aware, so it works beside Hebrew where the JS equivalent needs lookarounds.
     re.compile(
@@ -55,6 +55,12 @@ class Transaction(BaseModel):
     id: str | None = Field(default=None, max_length=200)
     cat: str | None = Field(default=None, max_length=100)
     kind: CategoryKind | None = None
+
+    # The last four digits of the card, as the customer typed them at import. Two Visas
+    # are two cards and no export says which is which; four digits are what every receipt
+    # prints. The shape is the protection: exactly four digits and nothing else can be
+    # stored here, so the field cannot hold a card number, an account number or an IBAN.
+    cardLast4: str | None = Field(default=None, pattern=r"^\d{4}$")
 
     @field_validator("desc")
     @classmethod

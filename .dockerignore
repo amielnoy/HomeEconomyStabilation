@@ -20,3 +20,5 @@ allure-report
 .env.*
 !.env.example
 *.legacy-backup.html
+
+fe/dist

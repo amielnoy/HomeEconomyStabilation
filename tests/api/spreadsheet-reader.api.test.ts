@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readWorkbook } from '../../src/spreadsheet-reader';
+import { readWorkbook } from '../../fe/src/spreadsheet-reader';
 import { spreadsheetMl, toArrayBuffer, xlsxWorkbook } from '../helpers/workbook-fixtures';
 
 /* readWorkbook is the reader's whole public surface: every caller hands it bytes and a

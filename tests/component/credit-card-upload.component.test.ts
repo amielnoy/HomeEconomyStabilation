@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, beforeEach } from 'vitest';
 
-const pageMarkup = readFileSync(resolve(__dirname, '../../mazan-habait.html'), 'utf8');
+const pageMarkup = readFileSync(resolve(__dirname, '../../fe/mazan-habait.html'), 'utf8');
 
 describe('credit-card upload component', () => {
   beforeEach(() => {

@@ -1,6 +1,6 @@
 # Home Economy Design System
 
-The system is implemented in `design-system.css` and is intentionally small enough to use in the standalone HTML app.
+The system is implemented in `fe/design-system.css` and is intentionally small enough to use in the standalone HTML app.
 
 ## Foundations
 
@@ -27,7 +27,7 @@ The system is implemented in `design-system.css` and is intentionally small enou
 - `.ds-focus`: focus ring utility for custom interactive controls.
 - `.locale-picker`: accessible language selector with a leading globe icon.
 
-All interactive recipes define hover, active, disabled and keyboard-focus states. They respect increased-contrast, forced-colors and reduced-motion preferences. Reusable visual recipes live only in `design-system.css`; the page stylesheet owns composition and responsive layout.
+All interactive recipes define hover, active, disabled and keyboard-focus states. They respect increased-contrast, forced-colors and reduced-motion preferences. Reusable visual recipes live only in `fe/design-system.css`; the page stylesheet owns composition and responsive layout.
 
 ## Financial agent pattern
 
@@ -70,6 +70,14 @@ Each transaction row uses the native `.ds-field`-compatible category select iden
 - `cards` is a screen of its own: what is on each card, one card at a time, newest first, the way an issuer prints it. The combo box names the cards in the reader's own language, sorted, with every card first. It answers the question a bill asks — recognise these charges before paying them — which is not the question the dashboard's table answers.
 - Every figure that stands for money is written with its sign and coloured by direction: `--crit-text` when it leaves, `--good-text` when it arrives. That covers the rows that carry money — a transaction, a card summary line, a recurring charge — and the spending breakdown and its table, where every figure is a charge and none of them used to say so. The dot beside the category on a money row carries the same direction: `--crit` for spending, `--good` for money arriving, the neutral for a transfer between the household's own accounts. The categorical slot hues stay in the charts and category lists, where telling one category from another is the job. Beside an amount they misread: the third slot is a green close to the income green, and every category past the eighth shares the grey that also stands for `other`.
 - Existing persisted rule sets are merged with new safe defaults by match/category identity, preserving user rules and manual overrides.
+
+## Naming a card at import
+
+The card-source question asks who issued the card and, optionally, its last four digits. Two cards from one issuer are two cards and no export says which is which — the issuer names the company, not the card — so the four digits are what separate them in the chooser, in the folded line and in every total.
+
+- The field carries neither `maxlength` nor `pattern`, both deliberately. `maxlength` would truncate a pasted card number to its **first** four digits and keep those; `pattern` would refuse to submit, losing the household its statement over an optional label. What is not exactly four digits is carried as nothing at all, and the import says so.
+- A card nobody identified is known by its issuer exactly as before.
+- The label reads `ויזה ••1234` — the issuer names the company and the digits name the card, the way the household's own receipts write it.
 
 ## Card summary line
 
@@ -224,3 +232,7 @@ The directory links to official pension-adviser and investment-adviser registrie
 9. On mobile, keep every visible approval control at least 44×44 CSS pixels and preserve a single-column reading order for agent cards.
 10. Dynamic financial sentences use translation keys with named parameters; merchant names and amounts remain user data and must be inserted as text, never executable markup.
 11. Every new user journey or component must be reflected in `TEST_PLAN.md`; contract coverage verifies that every test suite remains listed.
+
+## Public guides
+
+`fe/guide.html` and `fe/guide-en.html` are static, script-free help pages. `fe/guide.css` owns their reading layout and light/dark palette while reusing design-system typography, spacing, buttons and focus tokens. Language links are reciprocal; controls keep 48px targets. Public content remains available without JavaScript in RTL and LTR.

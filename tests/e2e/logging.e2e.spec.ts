@@ -95,6 +95,9 @@ test('keeps the statement out of the log it asks the customer to send', async ({
     /* A count of rows replaced because an earlier import read them the wrong way round.
        Like the counts beside it, it says what happened and names nothing that happened to. */
     'corrected',
+    /* Whether the customer named the card, not what they called it. The name is their own
+       text and never reaches a log line. */
+    'named',
   ]);
   expect([...keys].filter((key) => !allowed.has(key)), 'an unapproved field reached the log').toEqual([]);
 });

@@ -3,7 +3,7 @@ import {
   anomalyAgent, budgetAgent, duplicateAgent, learningAgent, missingChargeAgent,
   FinancialAgentsOrchestrator, paydayAgent, savingsOpportunityAgent, subscriptionAgent,
   type AgentTransaction, type FinancialAgentContext, type FinancialAgentStrategy,
-} from '../../src/financial-agents';
+} from '../../fe/src/financial-agents';
 
 const tx = (date: string, desc: string, amount: number, options: Partial<AgentTransaction> = {}): AgentTransaction => ({
   id: `${date}-${desc}-${amount}`, date, desc, out: amount, in: 0, bal: null, cat: 'home', ...options,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CreditCardImportStrategy, type Workbook } from '../../src/credit-card-importer';
+import { CreditCardImportStrategy, type Workbook } from '../../fe/src/credit-card-importer';
 
 const cell = (value: string | number) => ({ t: typeof value === 'number' ? 'n' : 's', v: value });
 const workbook = (rows: Workbook['sheets'][number]['rows']): Workbook => ({ sheets: [{ name: 'כרטיס', rows }] });

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-const pageMarkup = readFileSync(resolve(__dirname, '../../mazan-habait.html'), 'utf8');
+const pageMarkup = readFileSync(resolve(__dirname, '../../fe/mazan-habait.html'), 'utf8');
 
 describe('language picker component', () => {
   beforeEach(() => {

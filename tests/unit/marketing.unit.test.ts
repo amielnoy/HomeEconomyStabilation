@@ -5,7 +5,7 @@ import {
   captureMarketingAttribution,
   readAttribution,
   trackMarketingEvent,
-} from '../../src/marketing';
+} from '../../fe/src/marketing';
 
 const memoryStorage = () => {
   const values = new Map<string, string>();

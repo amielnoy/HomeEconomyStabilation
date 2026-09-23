@@ -4,7 +4,7 @@
     {
       // Delegates to the same script `npm run debug` uses, so the editor and the terminal
       // start the application exactly the same way: compiler in watch mode with source
-      // maps, and a static server on the project root that reuses one already listening.
+      // maps, and a static server on fe/ that reuses one already listening.
       "label": "app: watch and serve",
       "type": "shell",
       "command": "npm run debug",
