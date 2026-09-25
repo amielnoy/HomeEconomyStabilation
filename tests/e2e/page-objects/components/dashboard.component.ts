@@ -13,6 +13,8 @@ export class DashboardComponent {
   readonly transactionView = this.page.getByTestId('f-view');
   readonly cardGroupRows = this.page.getByTestId('card-group-row');
   readonly cardGroupToggles = this.page.getByTestId('card-group-toggle');
+  readonly billToggles = this.page.getByTestId('bill-toggle');
+  readonly billUnexplained = this.page.getByTestId('bill-unexplained');
   readonly cardGroupSources = this.page.getByTestId('card-group-source');
   readonly cardGroupCategory = this.page.getByTestId('card-group-category');
   readonly cardGroupAmounts = this.page.getByTestId('card-group-amount');
