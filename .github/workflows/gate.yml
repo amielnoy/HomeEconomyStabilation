@@ -114,7 +114,39 @@ jobs:
             exit 1
           fi
 
+      # The CLI prints progress on stderr and the deployment URL as its last line of
+      # stdout. Keeping it lets the summary name the exact deployment this run made,
+      # not just the alias it will answer on.
       - name: Deploy to Vercel production
+        id: deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: npx --yes vercel@59.5.0 deploy . --prod --yes
+        run: |
+          set -o pipefail
+          deployment="$(npx --yes vercel@59.5.0 deploy . --prod --yes | tail -n 1)"
+          echo "url=$deployment" >> "$GITHUB_OUTPUT"
+
+      # Where the run ends, say where it landed. A green tick tells nobody which site
+      # to open; the run summary is the one place everyone already looks.
+      - name: Say where it landed
+        if: ${{ !cancelled() }}
+        env:
+          SITE_URL: https://home-economy-stabilation.vercel.app
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          {
+            if [ -n "$DEPLOYMENT_URL" ]; then
+              echo "## Deployed"
+              echo
+              echo "| | |"
+              echo "| --- | --- |"
+              echo "| Site | $SITE_URL |"
+              echo "| This deployment | $DEPLOYMENT_URL |"
+              echo "| Guide | $SITE_URL/guide.html |"
+              echo "| Commit | \`${GITHUB_SHA:0:7}\` |"
+            else
+              echo "## Not deployed"
+              echo
+              echo "The deploy step produced no URL, so $SITE_URL still serves the previous revision."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
