@@ -18,6 +18,24 @@ describe('open banking connect panel', () => {
     expect(trigger.parentElement).toBe(cardTrigger.parentElement);
   });
 
+  /* Dark by default: with no sources configured (today's production state) the trigger
+     would be a dead button, so the markup ships it hidden and app.ts reveals it only once
+     /api/open-banking/sources has returned at least one source. Hidden in the markup,
+     not merely by script, so it never flashes on while that request is in flight and
+     stays hidden if the request fails. */
+  it('starts with the Connect a bank trigger hidden until a source is configured', () => {
+    const html = readFileSync(resolve(__dirname, '../../fe/mazan-habait.html'), 'utf8');
+    const document = new JSDOM(html).window.document;
+
+    const trigger = document.querySelector<HTMLButtonElement>('[data-testid="open-banking-trigger"]')!;
+
+    expect(trigger.hidden).toBe(true);
+    // `.btn` sets its own display, which would beat the user agent's `[hidden]` rule;
+    // the design system must restore it or the attribute would be cosmetic.
+    const designSystem = readFileSync(resolve(__dirname, '../../fe/design-system.css'), 'utf8');
+    expect(designSystem).toMatch(/\.btn\[hidden\][^{]*\{\s*display:\s*none;?\s*\}/);
+  });
+
   it('starts with the connections panel hidden and empty', () => {
     const html = readFileSync(resolve(__dirname, '../../fe/mazan-habait.html'), 'utf8');
     const document = new JSDOM(html).window.document;

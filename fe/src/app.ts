@@ -1843,6 +1843,9 @@ let openBankingConnections: OpenBankingConnectionInfo[] = [];
 async function renderOpenBankingPanel() {
   const panel = $('#open-banking-panel');
   panel.textContent = '';
+  /* The trigger ships hidden in the markup and is revealed only while at least one source
+     is configured: with none (the dark-by-default state) it would be a dead button. */
+  $('#btn-open-banking').hidden = !openBankingSources.length;
   if (!openBankingSources.length) { panel.hidden = true; return; }
   panel.hidden = false;
   for (const source of openBankingSources) {
