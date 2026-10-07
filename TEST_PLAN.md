@@ -138,6 +138,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/component/financial-agents.component.test.ts` | Accessible eight-agent host and prominent safe-to-spend result |
 | `tests/component/language-picker.component.test.ts` | Native language names, accessible field and keyboard semantics |
 | `tests/component/marketing-landing.component.test.ts` | Conversion path, concrete benefits, privacy and claim discipline |
+| `tests/component/open-banking-panel.component.test.ts` | Connect-a-bank trigger beside the existing import buttons and an initially hidden, empty connections panel |
 | `tests/component/savings-directory.component.test.ts` | Official tools and adviser registries, independence checks, the requested advisor listing carrying its role and its not-an-endorsement notice, Paamonim, Mekimi, commercial providers and safe links |
 | `tests/component/settings-drawer.component.test.ts` | Modal semantics, initial inert state and four collapsible settings groups |
 

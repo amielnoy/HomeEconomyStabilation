@@ -17,6 +17,8 @@ import { asIncoming, asOutgoing, findMisreadRows } from './misread-rows.js';
 import { legacyCardCorrections } from './import-corrections.js';
 import { cardStatements, type CardStatement } from './card-statements.js';
 import { settlementBills } from './settlement-bills.js';
+import { OpenBankingClient, type OpenBankingConnectionInfo, type OpenBankingSourceInfo } from './open-banking.js';
+import { mergeSyncedTransactions } from './open-banking-sync.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
 interface DomElement extends HTMLElement { value: string; files: FileList | null; reset(): void; }
@@ -1826,6 +1828,69 @@ const openCardGroups = new Set<string>();
    statement's. */
 const openBills = new Set<string>();
 
+/* No sign-in flow is wired into the browser app yet (cloud-sync.ts's Supabase
+   repository is implemented but not yet constructed anywhere here — see its
+   "once wired" note in consent.ts). Until that lands, there is no real session to
+   read a token from, so this stands in for it: it resolves to null, which the open
+   banking client treats the same way it would treat a signed-out session. */
+async function currentAccessToken(): Promise<string | null> {
+  return null;
+}
+const openBankingClient = new OpenBankingClient({ accessToken: () => currentAccessToken() });
+let openBankingSources: OpenBankingSourceInfo[] = [];
+let openBankingConnections: OpenBankingConnectionInfo[] = [];
+
+async function renderOpenBankingPanel() {
+  const panel = $('#open-banking-panel');
+  panel.textContent = '';
+  if (!openBankingSources.length) { panel.hidden = true; return; }
+  panel.hidden = false;
+  for (const source of openBankingSources) {
+    const connection = openBankingConnections.find((c) => c.sourceId === source.id && c.status === 'active');
+    const row = el('div', { class: 'open-banking-row' }, [
+      el('span', { text: source.name }),
+      source.mode === 'sandbox' ? el('span', { class: 'badge', text: t('openBankingSandboxLabel') }) : null,
+    ].filter(Boolean) as DomElement[]);
+    if (connection) {
+      const syncBtn = el('button', { type: 'button', text: t('openBankingSyncNow'), 'data-testid': 'open-banking-sync' });
+      syncBtn.addEventListener('click', () => void syncOpenBankingConnection(connection.id));
+      const disconnectBtn = el('button', { type: 'button', text: t('openBankingDisconnect'), 'data-testid': 'open-banking-disconnect' });
+      disconnectBtn.addEventListener('click', () => void disconnectOpenBanking(connection.id));
+      row.append(syncBtn, disconnectBtn);
+    } else {
+      const connectLink = el('a', { href: openBankingClient.connectHref(source.id), text: t('openBankingConnect') });
+      row.append(connectLink);
+    }
+    panel.append(row);
+  }
+}
+
+async function syncOpenBankingConnection(connectionId: string) {
+  try {
+    const rows = await openBankingClient.sync(connectionId);
+    const { merged, added, duplicates } = mergeSyncedTransactions(S.tx, rows);
+    S.tx = merged;
+    save();
+    S.month = null;
+    render();
+    toast(t('openBankingSyncResult', { added, duplicates }));
+  } catch (cause) {
+    toast(cause instanceof Error ? cause.message : t('openBankingSyncResult', { added: 0, duplicates: 0 }));
+  }
+}
+
+async function disconnectOpenBanking(connectionId: string) {
+  await openBankingClient.disconnect(connectionId);
+  openBankingConnections = await openBankingClient.listConnections();
+  await renderOpenBankingPanel();
+}
+
+async function loadOpenBankingPanel() {
+  openBankingSources = await openBankingClient.listSources().catch(() => []);
+  openBankingConnections = await openBankingClient.listConnections().catch(() => []);
+  await renderOpenBankingPanel();
+}
+
 /* `nested` marks a charge shown underneath the card it belongs to, so the indent says
    what the row is part of. The row is otherwise the same row — the category can still be
    corrected from inside an opened card. */
@@ -2539,6 +2604,10 @@ function wire() {
   $('#file').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files) handleFiles(input.files); input.value = ''; });
   $('#btn-card-import').addEventListener('click', openCardSource);
   $('#card-source').addEventListener('close', onCardSourceClosed);
+  $('#btn-open-banking').addEventListener('click', () => {
+    const panel = $('#open-banking-panel');
+    panel.hidden = !panel.hidden;
+  });
   $('#card-file').addEventListener('change', (e) => {
     const input = e.currentTarget as HTMLInputElement;
     if (input.files) handleFiles(input.files, 'card', pendingCardKind ?? undefined, pendingCardBrand, pendingCardLast4);
@@ -2809,6 +2878,7 @@ async function loadResources() {
 load();
 captureMarketingAttribution(window.location.search);
 wire();
+void loadOpenBankingPanel();
 loadResources().then(() => { render(); });
 
 })();
