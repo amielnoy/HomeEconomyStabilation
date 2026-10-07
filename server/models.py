@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 Locale = Literal["he", "en", "am", "fr"]
 CategoryKind = Literal["expense", "income", "neutral"]
-SnapshotSource = Literal["bank-report", "card-report", "manual-entry"]
+SnapshotSource = Literal["bank-report", "card-report", "manual-entry", "open-banking"]
 
 _RESERVED_KEYS = {"__proto__", "prototype", "constructor"}
 _FINANCIAL_IDENTIFIERS = (
@@ -162,7 +162,7 @@ class UserProfile(BaseModel):
 
 class ConsentAcceptance(BaseModel):
     user_id: str
-    purpose: Literal["cloud_sync"]
+    purpose: Literal["cloud_sync", "open_banking"]
     statement_version: str = Field(max_length=80)
     locale: Locale
     accepted_at: datetime

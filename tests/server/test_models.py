@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from server.models import CategoryRule, SnapshotInput, Transaction
+from server.models import CategoryRule, ConsentAcceptance, SnapshotInput, Transaction
 
 
 def valid_snapshot() -> dict[str, object]:
@@ -140,3 +140,20 @@ def test_transaction_refuses_anything_that_is_not_four_digits(value: str) -> Non
     }
     with pytest.raises(ValidationError):
         Transaction.model_validate(payload)
+
+
+def test_a_transaction_accepts_the_open_banking_provenance() -> None:
+    transaction = Transaction.model_validate({
+        "date": "2026-10-04", "vdate": "2026-10-04", "ref": "", "desc": "Groceries",
+        "out": 42.0, "in": 0.0, "bal": None, "pending": False, "source": "bank",
+        "src": "open-banking",
+    })
+    assert transaction.src == "open-banking"
+
+
+def test_an_open_banking_consent_acceptance_validates() -> None:
+    acceptance = ConsentAcceptance.model_validate({
+        "user_id": "user-1", "purpose": "open_banking", "statement_version": "v1",
+        "locale": "he", "accepted_at": "2026-10-07T00:00:00Z", "withdrawn_at": None,
+    })
+    assert acceptance.purpose == "open_banking"
