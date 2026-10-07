@@ -7,7 +7,7 @@ from starlette.concurrency import run_in_threadpool
 from .auth_flow import create_challenge
 from .config import bearer_token
 from .open_banking_config import client_id_for, licence_id, read_sources, sandbox_enabled
-from .open_banking_flow import authorize_url, exchange_code, refresh_tokens
+from .open_banking_flow import OpenBankingRefreshRefused, authorize_url, exchange_code, refresh_tokens
 from .open_banking_store import OpenBankingRepository
 from .open_banking_sync import pull_transactions
 from .supabase_store import ConsentRepository, SupabaseDataError
@@ -184,12 +184,18 @@ async def sync(connection_id: str, request: Request) -> Response:
         stored_refresh_token = await run_in_threadpool(repository.read_refresh_token, connection_id)
         if not stored_refresh_token:
             return _error(502, "open_banking_token_missing")
-        pair = await run_in_threadpool(refresh_tokens, source, client_id, stored_refresh_token)
-        if pair is None:
-            # The bank refusing the refresh is exactly what "consent expired or withdrawn"
-            # looks like from this app's side: revoke immediately rather than leaving a
-            # connection that looks active but can never sync again.
+        try:
+            pair = await run_in_threadpool(refresh_tokens, source, client_id, stored_refresh_token)
+        except OpenBankingRefreshRefused:
+            # The bank definitively refusing the refresh (400/401) is exactly what "consent
+            # expired or withdrawn" looks like from this app's side: revoke immediately
+            # rather than leaving a connection that looks active but can never sync again.
             await run_in_threadpool(repository.revoke, connection_id)
+            return _error(502, "open_banking_refresh_failed")
+        if pair is None:
+            # A transient failure (network error, timeout, 5xx, malformed body) is not a
+            # revocation: the connection stays active so the next sync can simply retry,
+            # rather than forcing the user to re-consent at the bank after a network blip.
             return _error(502, "open_banking_refresh_failed")
         await run_in_threadpool(repository.replace_refresh_token, connection_id, pair.refresh_token)
     except SupabaseDataError:

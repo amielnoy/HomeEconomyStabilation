@@ -1,3 +1,5 @@
+import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 import server.app as app_module
@@ -249,43 +251,88 @@ def test_sync_refuses_a_non_sandbox_connection_without_a_licence_even_with_conse
     assert response.json() == {"code": "open_banking_not_configured"}
 
 
-def test_sync_revokes_the_connection_when_the_refresh_is_refused(monkeypatch) -> None:
-    # Finding 3: a refused refresh looks exactly like "consent expired or withdrawn" from
-    # this app's side, so the connection must be revoked immediately, not just reported as
-    # a failed sync.
+def _sync_against_a_bank_token_endpoint(monkeypatch, fake_post):
+    """Runs sync with the *real* refresh_tokens, faking only the bank's HTTP answer, and
+    reports what the route did to the connection."""
     authenticate(monkeypatch)
     monkeypatch.setattr(routes_module, "read_sources", lambda: [SOURCE])
     monkeypatch.setattr(routes_module, "sandbox_enabled", lambda: True)
     monkeypatch.setattr(routes_module, "licence_id", lambda: None)
-    monkeypatch.setattr(
-        routes_module, "ConsentRepository",
-        lambda client, user_id, purpose="cloud_sync": type("C", (), {
-            "read": lambda self, version: type("A", (), {"withdrawn_at": None})(),
-        })(),
-    )
+    grant_open_banking_consent(monkeypatch)
 
-    revoked = {}
+    effects: dict[str, object] = {"status": "active"}
 
     class FakeRepository:
         def list_connections(self):
-            return [OpenBankingConnection(id="conn-1", source_id="hapoalim", status="active", created_at="2026-10-07T00:00:00Z")]
+            return [OpenBankingConnection(id="conn-1", source_id="hapoalim", status=effects["status"], created_at="2026-10-07T00:00:00Z")]
 
         def read_refresh_token(self, connection_id: str) -> str:
             return "stored-refresh-token"
 
+        def replace_refresh_token(self, connection_id: str, refresh_token: str) -> None:
+            effects["replaced"] = refresh_token
+
         def revoke(self, connection_id: str) -> None:
-            revoked.setdefault("id", connection_id)
+            effects["revoked"] = connection_id
+            effects["status"] = "revoked"
 
     monkeypatch.setattr(routes_module, "OpenBankingRepository", lambda client, user_id, env=None: FakeRepository())
     monkeypatch.setattr(routes_module, "client_id_for", lambda source_id: "client-abc")
-    monkeypatch.setattr(routes_module, "refresh_tokens", lambda source, client_id, refresh_token: None)
+    monkeypatch.setattr(routes_module, "pull_transactions", lambda source, access_token: [])
+    monkeypatch.setattr(httpx, "post", fake_post)
 
     response = client.post(
         "/api/open-banking/sync/conn-1", headers={"Authorization": "Bearer user.jwt.token"},
     )
+    return response, effects
+
+
+@pytest.mark.parametrize("status, body", [(400, {"error": "invalid_grant"}), (401, {"error": "invalid_client"})])
+def test_sync_revokes_the_connection_when_the_bank_definitively_refuses_the_refresh(monkeypatch, status, body) -> None:
+    # A 400/401 refusal looks exactly like "consent expired or withdrawn" from this app's
+    # side, so the connection must be revoked immediately, not just reported as a failed sync.
+    response, effects = _sync_against_a_bank_token_endpoint(
+        monkeypatch, lambda *a, **k: httpx.Response(status, json=body),
+    )
     assert response.status_code == 502
     assert response.json() == {"code": "open_banking_refresh_failed"}
-    assert revoked == {"id": "conn-1"}
+    assert effects["revoked"] == "conn-1"
+    assert effects["status"] == "revoked"
+
+
+def _raise(error: Exception):
+    def raiser(*a, **k):
+        raise error
+    return raiser
+
+
+@pytest.mark.parametrize("fake_post", [
+    _raise(httpx.ConnectError("boom")),
+    _raise(httpx.ReadTimeout("slow")),
+    lambda *a, **k: httpx.Response(500, json={"error": "server_error"}),
+    lambda *a, **k: httpx.Response(503, text="Service Unavailable"),
+    lambda *a, **k: httpx.Response(200, text="<!DOCTYPE html><html>Internal error</html>"),
+    lambda *a, **k: httpx.Response(200, json={"unexpected": "shape"}),
+], ids=["network-error", "timeout", "500", "503", "non-json-200", "malformed-json-200"])
+def test_sync_leaves_the_connection_active_on_a_transient_refresh_failure(monkeypatch, fake_post) -> None:
+    # The spec: "a transient failure is not a revocation" — the user must not have to
+    # re-consent at the bank after a network blip.
+    response, effects = _sync_against_a_bank_token_endpoint(monkeypatch, fake_post)
+    assert response.status_code == 502
+    assert response.json() == {"code": "open_banking_refresh_failed"}
+    assert "revoked" not in effects
+    assert "replaced" not in effects
+    assert effects["status"] == "active"
+
+
+def test_sync_rotates_the_stored_token_on_a_successful_refresh(monkeypatch) -> None:
+    response, effects = _sync_against_a_bank_token_endpoint(
+        monkeypatch,
+        lambda *a, **k: httpx.Response(200, json={"access_token": "a2", "refresh_token": "r2", "expires_in": 1800}),
+    )
+    assert response.status_code == 200
+    assert effects["replaced"] == "r2"
+    assert "revoked" not in effects
 
 
 def test_revoke_calls_the_repository_and_returns_no_content(monkeypatch) -> None:

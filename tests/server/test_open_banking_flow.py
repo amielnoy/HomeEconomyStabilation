@@ -5,7 +5,9 @@ import pytest
 
 from server.auth_flow import create_challenge
 from server.open_banking_config import OpenBankingSource
-from server.open_banking_flow import TokenPair, authorize_url, exchange_code, parse_token_response, refresh_tokens
+from server.open_banking_flow import (
+    OpenBankingRefreshRefused, TokenPair, authorize_url, exchange_code, parse_token_response, refresh_tokens,
+)
 
 SOURCE = OpenBankingSource(
     id="hapoalim", kind="bank", name="בנק הפועלים",
@@ -91,6 +93,49 @@ def test_refresh_tokens_returns_none_on_malformed_json_response(monkeypatch) -> 
 
     monkeypatch.setattr(httpx, "post", fake_post_malformed)
     assert refresh_tokens(SOURCE, "client-abc", "old-refresh-token") is None
+
+
+@pytest.mark.parametrize("status, body", [
+    (400, {"error": "invalid_grant"}),
+    (401, {"error": "invalid_client"}),
+    (400, None),  # a definitive refusal is the status, whatever (or no) body comes with it
+])
+def test_refresh_tokens_raises_refused_on_a_definitive_bank_refusal(monkeypatch, status, body) -> None:
+    response = httpx.Response(status, json=body) if body is not None else httpx.Response(status, text="")
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: response)
+
+    with pytest.raises(OpenBankingRefreshRefused) as exc_info:
+        refresh_tokens(SOURCE, "client-abc", "old-refresh-token")
+
+    assert exc_info.value.status_code == status
+
+
+def _raise(error: Exception):
+    def raiser(*a, **k):
+        raise error
+    return raiser
+
+
+@pytest.mark.parametrize("fake_post", [
+    _raise(httpx.ConnectError("boom")),
+    _raise(httpx.ReadTimeout("slow")),
+    lambda *a, **k: httpx.Response(500, json={"error": "server_error"}),
+    lambda *a, **k: httpx.Response(502, text="Bad Gateway"),
+    lambda *a, **k: httpx.Response(503, text=""),
+    lambda *a, **k: httpx.Response(200, text="<!DOCTYPE html><html>Internal error</html>"),
+    lambda *a, **k: httpx.Response(200, json=["not", "a", "mapping"]),
+    lambda *a, **k: httpx.Response(200, json={"access_token": "a", "expires_in": 3600}),
+], ids=["network-error", "timeout", "500", "502", "503", "non-json-200", "json-array-200", "missing-refresh-200"])
+def test_refresh_tokens_treats_a_transient_failure_as_none_not_a_refusal(monkeypatch, fake_post) -> None:
+    monkeypatch.setattr(httpx, "post", fake_post)
+    assert refresh_tokens(SOURCE, "client-abc", "old-refresh-token") is None
+
+
+def test_exchange_code_still_returns_none_rather_than_raising_on_a_refusal(monkeypatch) -> None:
+    # Only refresh_tokens distinguishes a refusal; exchange_code's contract is unchanged.
+    for status in (400, 401):
+        monkeypatch.setattr(httpx, "post", lambda *a, _s=status, **k: httpx.Response(_s, json={"error": "invalid_grant"}))
+        assert exchange_code(SOURCE, "client-abc", "code", "verifier", "https://app.example/callback") is None
 
 
 def test_refresh_tokens_posts_the_refresh_grant(monkeypatch) -> None:
