@@ -347,7 +347,7 @@
           "date": { "type": "string", "maxLength": 32 },
           "vdate": { "type": "string", "maxLength": 32 },
           "ref": { "type": "string", "const": "" },
-          "src": { "type": "string", "enum": ["bank-report", "card-report", "manual-entry"] },
+          "src": { "type": "string", "enum": ["bank-report", "card-report", "manual-entry", "open-banking"] },
           "desc": { "type": "string", "maxLength": 500 },
           "out": { "type": "number" },
           "in": { "type": "number" },

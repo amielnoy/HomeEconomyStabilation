@@ -50,6 +50,19 @@ describe('Swagger/OpenAPI contract', () => {
     expect(payload.properties.cats.items.$ref).toContain('Category');
   });
 
+  /* A new `src` value has to land everywhere a `src` value is known, in lockstep: the
+     documented schema, the server's SnapshotSource literal and the browser's allowlist. */
+  it('documents exactly the transaction src values the server and the browser accept', () => {
+    const documented = [...spec.components.schemas.PrivacySafeTransaction.properties.src.enum].sort();
+    const literal = /SnapshotSource = Literal\[([^\]]*)\]/.exec(readFileSync(resolve(root, 'server/models.py'), 'utf8'));
+    const allowlist = /SAFE_SOURCES = new Set\(\[([^\]]*)\]\)/.exec(readFileSync(resolve(root, 'fe/src/privacy.ts'), 'utf8'));
+    const values = (match: RegExpExecArray | null) => [...(match?.[1] ?? '').matchAll(/['"]([^'"]+)['"]/g)].map((m) => m[1]).sort();
+
+    expect(documented).toContain('open-banking');
+    expect(documented).toEqual(values(literal));
+    expect(documented).toEqual(values(allowlist));
+  });
+
   it('keeps the manual explorer self-hosted and pointed at the checked-in specification', () => {
     expect(docsSource).toContain('/openapi.json');
     expect(docs).toContain('/dist/swagger-ui/swagger-ui-bundle.js');
