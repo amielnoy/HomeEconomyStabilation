@@ -347,3 +347,175 @@ def test_revoke_calls_the_repository_and_returns_no_content(monkeypatch) -> None
     )
     assert response.status_code == 204
     assert revoked == {"id": "conn-1"}
+
+
+# --- GET /api/open-banking/callback -------------------------------------------------
+# These pin the route's *current* behaviour. The connect/callback auth flow (a bearer
+# header a real browser redirect cannot carry, and the code exchange happening before
+# the auth check) is a known limitation awaiting a separate redesign; nothing here
+# asserts that ordering as desirable.
+
+CALLBACK_COOKIES = {
+    routes_module.SOURCE_COOKIE: "hapoalim",
+    routes_module.VERIFIER_COOKIE: "verifier-value",
+    routes_module.STATE_COOKIE: "state-value",
+}
+CALLBACK_URL = "/api/open-banking/callback?code=auth-code&state=state-value"
+PAIR = TokenPair(access_token="access-1", refresh_token="refresh-1", expires_in=3600)
+
+
+def callback_client() -> TestClient:
+    # A client of its own, so the PKCE cookies never leak into the module-wide one.
+    return TestClient(app, cookies=CALLBACK_COOKIES)
+
+
+def configure_callback(monkeypatch, *, sandbox: bool = True, licence: str | None = None, exchanged=PAIR) -> dict:
+    calls: dict = {}
+    monkeypatch.setattr(routes_module, "read_sources", lambda: [SOURCE])
+    monkeypatch.setattr(routes_module, "sandbox_enabled", lambda: sandbox)
+    monkeypatch.setattr(routes_module, "licence_id", lambda: licence)
+    monkeypatch.setattr(routes_module, "client_id_for", lambda source_id: "client-abc")
+
+    def fake_exchange(source, client_id, code, verifier, redirect_uri):
+        calls["exchange"] = {"source": source.id, "client_id": client_id, "code": code, "verifier": verifier}
+        return exchanged
+
+    monkeypatch.setattr(routes_module, "exchange_code", fake_exchange)
+
+    class FakeRepository:
+        def create_connection(self, source_id: str, refresh_token: str):
+            calls["created"] = {"source_id": source_id, "refresh_token": refresh_token}
+            return OpenBankingConnection(id="conn-1", source_id=source_id, status="active", created_at="2026-10-07T00:00:00Z")
+
+    monkeypatch.setattr(routes_module, "OpenBankingRepository", lambda client, user_id, env=None: FakeRepository())
+    return calls
+
+
+def test_callback_refuses_a_non_sandbox_exchange_without_a_licence(monkeypatch) -> None:
+    calls = configure_callback(monkeypatch, sandbox=False, licence=None)
+    authenticate(monkeypatch)
+
+    def _unexpected_exchange(*args, **kwargs):
+        raise AssertionError("exchange_code must not be reached once the sandbox/licence gate refuses the call")
+
+    monkeypatch.setattr(routes_module, "exchange_code", _unexpected_exchange)
+
+    response = callback_client().get(
+        CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 503
+    assert response.json() == {"code": "open_banking_not_configured"}
+    assert "created" not in calls
+
+
+def test_callback_proceeds_past_the_gate_with_a_licence_even_when_not_sandboxed(monkeypatch) -> None:
+    calls = configure_callback(monkeypatch, sandbox=False, licence="licence-123")
+    authenticate(monkeypatch)
+    response = callback_client().get(
+        CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 302
+    assert "exchange" in calls
+
+
+def test_callback_rejects_a_state_that_does_not_match_the_cookie(monkeypatch) -> None:
+    calls = configure_callback(monkeypatch)
+    authenticate(monkeypatch)
+    response = callback_client().get(
+        "/api/open-banking/callback?code=auth-code&state=forged-state", follow_redirects=False,
+        headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"code": "open_banking_state_mismatch"}
+    assert "exchange" not in calls
+
+
+def test_callback_rejects_a_request_without_the_pkce_cookies(monkeypatch) -> None:
+    calls = configure_callback(monkeypatch)
+    authenticate(monkeypatch)
+    response = TestClient(app).get(
+        CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"code": "open_banking_state_mismatch"}
+    assert "exchange" not in calls
+
+
+def test_callback_reports_a_failed_exchange_without_creating_a_connection(monkeypatch) -> None:
+    calls = configure_callback(monkeypatch, exchanged=None)
+    authenticate(monkeypatch)
+    response = callback_client().get(
+        CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 502
+    assert response.json() == {"code": "open_banking_exchange_failed"}
+    assert "created" not in calls
+
+
+def test_callback_requires_cloud_configuration_like_the_other_authenticated_routes(monkeypatch) -> None:
+    calls = configure_callback(monkeypatch)
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_PUBLISHABLE_KEY", raising=False)
+    response = callback_client().get(CALLBACK_URL, follow_redirects=False)
+    assert response.status_code == 503
+    assert response.json() == {"code": "cloud_not_configured"}
+    assert "created" not in calls
+
+
+def test_callback_requires_a_bearer_token_like_the_other_authenticated_routes(monkeypatch) -> None:
+    calls = configure_callback(monkeypatch)
+    authenticate(monkeypatch)
+    response = callback_client().get(CALLBACK_URL, follow_redirects=False)
+    assert response.status_code == 401
+    assert response.json() == {"code": "authentication_required"}
+    assert "created" not in calls
+
+
+def test_callback_rejects_an_invalid_session_like_the_other_authenticated_routes(monkeypatch) -> None:
+    calls = configure_callback(monkeypatch)
+    monkeypatch.setattr(app_module, "read_supabase_config", lambda: object())
+    monkeypatch.setattr(
+        app_module, "SupabaseRestClient",
+        lambda _config, _token: type("Unverified", (), {"verify_user": lambda self: None})(),
+    )
+    response = callback_client().get(
+        CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer expired.jwt.token"},
+    )
+    assert response.status_code == 401
+    assert response.json() == {"code": "invalid_session"}
+    assert "created" not in calls
+
+
+def test_callback_stores_the_connection_and_returns_to_the_app(monkeypatch) -> None:
+    calls = configure_callback(monkeypatch)
+    authenticate(monkeypatch)
+    response = callback_client().get(
+        CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html"
+    assert calls["exchange"] == {"source": "hapoalim", "client_id": "client-abc", "code": "auth-code", "verifier": "verifier-value"}
+    assert calls["created"] == {"source_id": "hapoalim", "refresh_token": "refresh-1"}
+    cleared = response.headers.get_list("set-cookie")
+    for cookie in (routes_module.VERIFIER_COOKIE, routes_module.STATE_COOKIE, routes_module.SOURCE_COOKIE):
+        assert any(header.startswith(f"{cookie}=") and "Max-Age=0" in header for header in cleared)
+    assert "refresh-1" not in response.text
+
+
+def test_callback_reports_a_failed_connection_write(monkeypatch) -> None:
+    configure_callback(monkeypatch)
+    authenticate(monkeypatch)
+    from server.supabase_store import SupabaseDataError
+
+    def _failing_create(source_id, refresh_token):
+        raise SupabaseDataError("open_banking_connection_write")
+
+    monkeypatch.setattr(
+        routes_module, "OpenBankingRepository",
+        lambda client, user_id, env=None: type("R", (), {"create_connection": lambda self, s, r: _failing_create(s, r)})(),
+    )
+    response = callback_client().get(
+        CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 502
+    assert response.json() == {"code": "open_banking_connection_failed"}
