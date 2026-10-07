@@ -11,6 +11,13 @@ SOURCE = OpenBankingSource(
     token_url="https://api.poalimdev.co.il/oauth/token",
 )
 
+CARD_ISSUER_SOURCE = OpenBankingSource(
+    id="visa", kind="card_issuer", name="Visa",
+    base_url="https://api.visa.sandbox/psd2/sandbox",
+    authorization_url="https://api.visa.sandbox/oauth/authorize",
+    token_url="https://api.visa.sandbox/oauth/token",
+)
+
 SANDBOX_RESPONSE = {
     "transactions": {
         "booked": [
@@ -109,3 +116,23 @@ def test_a_row_that_fails_model_validation_is_dropped_not_fatal(monkeypatch) -> 
     rows = pull_transactions(SOURCE, "access-token")
 
     assert [row.id for row in rows] == ["txn-6"]
+
+
+def test_card_issuer_source_maps_to_card_transaction_source(monkeypatch) -> None:
+    response = {
+        "transactions": {
+            "booked": [{
+                "transactionId": "txn-card-1", "bookingDate": "2026-10-04", "valueDate": "2026-10-04",
+                "transactionAmount": {"amount": "-50.00", "currency": "ILS"},
+                "remittanceInformationUnstructured": "restaurant",
+            }],
+            "pending": [],
+        }
+    }
+    monkeypatch.setattr(httpx, "get", lambda url, headers=None, timeout=None: httpx.Response(200, json=response))
+
+    rows = pull_transactions(CARD_ISSUER_SOURCE, "access-token")
+
+    assert len(rows) == 1
+    assert rows[0].source == "card"
+    assert rows[0].id == "txn-card-1"
