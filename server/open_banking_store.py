@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from .open_banking_crypto import decrypt_token, encrypt_token
-from .supabase_store import SupabaseDataError
+from .supabase_store import Operation, SupabaseDataError
 
 
 @dataclass(frozen=True, slots=True)
@@ -13,6 +13,19 @@ class OpenBankingConnection:
     source_id: str
     status: Literal["active", "revoked"]
     created_at: str
+
+
+def _connection_from_row(row: dict[str, Any], operation: Operation) -> OpenBankingConnection:
+    # Built from named fields, never `**row`: a real `select=*` row also carries
+    # `user_id` and `consent_expires_at` (and whatever a later migration adds), which the
+    # slotted dataclass deliberately does not model. A row missing a field this one needs
+    # is a data error the routes already map to a 502, not an unhandled crash.
+    try:
+        return OpenBankingConnection(
+            id=row["id"], source_id=row["source_id"], status=row["status"], created_at=row["created_at"],
+        )
+    except (KeyError, TypeError) as error:
+        raise SupabaseDataError(operation) from error
 
 
 class OpenBankingRepository:
@@ -24,7 +37,7 @@ class OpenBankingRepository:
             "GET", "open_banking_connections", operation="open_banking_connections_read",
             params={"user_id": f"eq.{self._user_id}", "select": "*"},
         )
-        return [OpenBankingConnection(**row) for row in rows]
+        return [_connection_from_row(row, "open_banking_connections_read") for row in rows]
 
     def create_connection(self, source_id: str, refresh_token: str) -> OpenBankingConnection:
         rows = self._client.table_request(
@@ -35,7 +48,7 @@ class OpenBankingRepository:
         )
         if not rows:
             raise SupabaseDataError("open_banking_connection_write")
-        connection = OpenBankingConnection(**rows[0])
+        connection = _connection_from_row(rows[0], "open_banking_connection_write")
         self.replace_refresh_token(connection.id, refresh_token)
         return connection
 

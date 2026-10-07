@@ -139,6 +139,26 @@ def test_connections_list_never_carries_a_token_field(monkeypatch) -> None:
     assert response.json() == {"connections": [{"id": "conn-1", "sourceId": "hapoalim", "status": "active", "createdAt": "2026-10-07T00:00:00Z"}]}
 
 
+def test_connections_list_survives_a_real_select_star_row(monkeypatch) -> None:
+    # The real repository, not a fake: a `select=*` row carries `user_id` and
+    # `consent_expires_at` too, which once crashed `OpenBankingConnection(**row)` into a 500.
+    class RowReturningClient(FakeAuthenticatedClient):
+        def table_request(self, method, table, **kwargs):
+            return [{
+                "id": "conn-1", "user_id": "user-1", "source_id": "hapoalim", "status": "active",
+                "consent_expires_at": None, "created_at": "2026-10-07T00:00:00Z",
+            }]
+
+    monkeypatch.setattr(app_module, "read_supabase_config", lambda: object())
+    monkeypatch.setattr(app_module, "SupabaseRestClient", lambda _config, _token: RowReturningClient())
+    response = client.get(
+        "/api/open-banking/connections", headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"connections": [{"id": "conn-1", "sourceId": "hapoalim", "status": "active", "createdAt": "2026-10-07T00:00:00Z"}]}
+    assert "user-1" not in response.text
+
+
 def test_sync_requires_open_banking_consent(monkeypatch) -> None:
     authenticate(monkeypatch)
     monkeypatch.setattr(
