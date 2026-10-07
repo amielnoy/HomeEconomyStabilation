@@ -1880,9 +1880,13 @@ async function syncOpenBankingConnection(connectionId: string) {
 }
 
 async function disconnectOpenBanking(connectionId: string) {
-  await openBankingClient.disconnect(connectionId);
-  openBankingConnections = await openBankingClient.listConnections();
-  await renderOpenBankingPanel();
+  try {
+    await openBankingClient.disconnect(connectionId);
+    openBankingConnections = await openBankingClient.listConnections();
+    await renderOpenBankingPanel();
+  } catch (cause) {
+    toast(cause instanceof Error ? cause.message : t('openBankingSyncResult', { added: 0, duplicates: 0 }));
+  }
 }
 
 async function loadOpenBankingPanel() {
@@ -2878,7 +2882,6 @@ async function loadResources() {
 load();
 captureMarketingAttribution(window.location.search);
 wire();
-void loadOpenBankingPanel();
-loadResources().then(() => { render(); });
+loadResources().then(() => { render(); void loadOpenBankingPanel(); });
 
 })();

@@ -74,6 +74,8 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/unit/cloud-sync.unit.test.ts` | Privacy-safe schema-v2 validation, signed-out behavior, auth headers, failures, timeout and DELETE |
 | `tests/unit/cloud-metadata.unit.test.ts` | Authenticated Supabase profile/consent reads and writes, response validation, safe auth headers and withdrawal |
 | `tests/unit/consent.unit.test.ts` | Versioned consent, malformed records and withdrawal |
+| `tests/unit/open-banking.unit.test.ts` | Connect-href construction without a network call, unauthenticated source listing, signed-out failure before a request, bearer-token sync returning mapped transactions, a non-OK sync response mapped to a stable error, and disconnect sent as a bodyless DELETE |
+| `tests/unit/open-banking-sync.unit.test.ts` | Merging synced rows into existing transactions: every row added once, no duplicate by id on a second sync, no duplicate against a row the same id already reached through a manual statement import, and unrelated transactions left untouched |
 
 ## Python server suites
 
@@ -88,6 +90,12 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/server/test_request_guard.py` | Media type, body size and bounded rate limiting |
 | `tests/server/test_repositories.py` | Profile, snapshot and consent CRUD with owner filters and stable failures |
 | `tests/server/test_app.py` | FastAPI health, methods, profile/consent persistence, authentication boundary, consent-gated snapshot writes, and the Google sign-in routes: refusal without cloud configuration, a callback that rejects a round trip it did not start, an httpOnly verifier absent from the redirect, no open redirect through `next`, and sign-out clearing only this device |
+| `tests/server/test_open_banking_config.py` | Source lines parsed from the environment: a well-formed line becoming a source, an http line dropped rather than trusted, a malformed line dropped rather than guessed at, newline-separated multiple sources, sandbox/licence flags and a client id read by its upper-cased source suffix |
+| `tests/server/test_open_banking_crypto.py` | A token round-tripped through encryption, encryption failing closed without a configured key, and decryption with the wrong key failing closed rather than raising |
+| `tests/server/test_open_banking_flow.py` | The PKCE authorize URL carrying its challenge and client id, a token response missing either token not accepted as a pair, a bounded token lifetime, code exchange posting the verifier and client id, exchange and refresh both returning none rather than raising on a non-200 or malformed response, and refresh posting the refresh grant |
+| `tests/server/test_open_banking_store.py` | A connection's refresh token stored encrypted rather than plaintext, read back decrypted, a missing token returned as none rather than raising, revoking deleting the token and marking the connection revoked, connection listing scoped to its user, and replacing a token raising without a configured encryption key |
+| `tests/server/test_open_banking_sync.py` | Booked and pending transactions mapped into the domain model with pending flagged, a description carrying an identifier redacted rather than stored raw, a non-200 response yielding no rows rather than raising, a row failing model validation dropped rather than fatal, and a card-issuer source mapped to a card transaction source |
+| `tests/server/test_open_banking_routes.py` | Sources listed empty when unconfigured and marked sandbox or production, connect refusing a non-sandbox call without a licence, authentication and consent required to connect or sync, the connect redirect carrying the sources authorize URL in sandbox mode, an unknown source id returning not found, a connections list never carrying a token field, sync pulling, refreshing and returning mapped transactions, sync refusing a non-sandbox connection without a licence even with consent, a refused refresh revoking the connection, and revoke calling the repository and returning no content |
 
 ## API suites
 
