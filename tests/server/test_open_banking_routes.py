@@ -41,12 +41,36 @@ def test_connect_refuses_a_non_sandbox_call_without_a_licence(monkeypatch) -> No
     assert response.json() == {"code": "open_banking_not_configured"}
 
 
+class FakeAuthenticatedClient:
+    def verify_user(self) -> str:
+        return "user-1"
+
+
+def authenticate(monkeypatch) -> None:
+    monkeypatch.setattr(app_module, "read_supabase_config", lambda: object())
+    monkeypatch.setattr(app_module, "SupabaseRestClient", lambda _config, _token: FakeAuthenticatedClient())
+
+
+def grant_open_banking_consent(monkeypatch) -> None:
+    monkeypatch.setattr(
+        routes_module, "ConsentRepository",
+        lambda client, user_id, purpose="cloud_sync": type("C", (), {
+            "read": lambda self, version: type("A", (), {"withdrawn_at": None})(),
+        })(),
+    )
+
+
 def test_connect_redirects_to_the_sources_authorize_url_in_sandbox_mode(monkeypatch) -> None:
     monkeypatch.setattr(routes_module, "read_sources", lambda: [SOURCE])
     monkeypatch.setattr(routes_module, "sandbox_enabled", lambda: True)
     monkeypatch.setattr(routes_module, "licence_id", lambda: None)
     monkeypatch.setattr(routes_module, "client_id_for", lambda source_id: "client-abc")
-    response = client.get("/api/open-banking/connect/hapoalim", follow_redirects=False)
+    authenticate(monkeypatch)
+    grant_open_banking_consent(monkeypatch)
+    response = client.get(
+        "/api/open-banking/connect/hapoalim", follow_redirects=False,
+        headers={"Authorization": "Bearer user.jwt.token"},
+    )
     assert response.status_code == 302
     assert response.headers["location"].startswith(SOURCE.authorization_url)
 
@@ -58,14 +82,36 @@ def test_connect_with_an_unknown_source_id_is_not_found(monkeypatch) -> None:
     assert response.status_code == 404
 
 
-class FakeAuthenticatedClient:
-    def verify_user(self) -> str:
-        return "user-1"
+def test_connect_requires_authentication_even_when_sandboxed(monkeypatch) -> None:
+    monkeypatch.setattr(routes_module, "read_sources", lambda: [SOURCE])
+    monkeypatch.setattr(routes_module, "sandbox_enabled", lambda: True)
+    monkeypatch.setattr(routes_module, "licence_id", lambda: None)
+    monkeypatch.setattr(routes_module, "client_id_for", lambda source_id: "client-abc")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_PUBLISHABLE_KEY", raising=False)
+    response = client.get("/api/open-banking/connect/hapoalim", follow_redirects=False)
+    assert response.status_code != 302
+    assert response.status_code == 503
+    assert response.json() == {"code": "cloud_not_configured"}
 
 
-def authenticate(monkeypatch) -> None:
-    monkeypatch.setattr(app_module, "read_supabase_config", lambda: object())
-    monkeypatch.setattr(app_module, "SupabaseRestClient", lambda _config, _token: FakeAuthenticatedClient())
+def test_connect_requires_open_banking_consent(monkeypatch) -> None:
+    monkeypatch.setattr(routes_module, "read_sources", lambda: [SOURCE])
+    monkeypatch.setattr(routes_module, "sandbox_enabled", lambda: True)
+    monkeypatch.setattr(routes_module, "licence_id", lambda: None)
+    monkeypatch.setattr(routes_module, "client_id_for", lambda source_id: "client-abc")
+    authenticate(monkeypatch)
+    monkeypatch.setattr(
+        routes_module, "ConsentRepository",
+        lambda client, user_id, purpose="cloud_sync": type("C", (), {"read": lambda self, version: None})(),
+    )
+    response = client.get(
+        "/api/open-banking/connect/hapoalim", follow_redirects=False,
+        headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code != 302
+    assert response.status_code == 403
+    assert response.json() == {"code": "open_banking_consent_required"}
 
 
 def test_connections_requires_authentication(monkeypatch) -> None:
@@ -109,6 +155,8 @@ def test_sync_requires_open_banking_consent(monkeypatch) -> None:
 def test_sync_pulls_refreshes_and_returns_mapped_transactions(monkeypatch) -> None:
     authenticate(monkeypatch)
     monkeypatch.setattr(routes_module, "read_sources", lambda: [SOURCE])
+    monkeypatch.setattr(routes_module, "sandbox_enabled", lambda: True)
+    monkeypatch.setattr(routes_module, "licence_id", lambda: None)
     monkeypatch.setattr(
         routes_module, "ConsentRepository",
         lambda client, user_id, purpose="cloud_sync": type("C", (), {
@@ -145,6 +193,79 @@ def test_sync_pulls_refreshes_and_returns_mapped_transactions(monkeypatch) -> No
     body = response.json()
     assert body["transactions"][0]["id"] == "txn-1"
     assert "refresh" not in response.text.lower()
+
+
+def test_sync_refuses_a_non_sandbox_connection_without_a_licence_even_with_consent(monkeypatch) -> None:
+    # Finding 2: the sandbox/licence gate must be re-checked on every sync call, not just
+    # at connect time — a connection created while sandboxed/licensed must stop syncing the
+    # moment that configuration is withdrawn.
+    authenticate(monkeypatch)
+    monkeypatch.setattr(routes_module, "read_sources", lambda: [SOURCE])
+    monkeypatch.setattr(routes_module, "sandbox_enabled", lambda: False)
+    monkeypatch.setattr(routes_module, "licence_id", lambda: None)
+    monkeypatch.setattr(
+        routes_module, "ConsentRepository",
+        lambda client, user_id, purpose="cloud_sync": type("C", (), {
+            "read": lambda self, version: type("A", (), {"withdrawn_at": None})(),
+        })(),
+    )
+
+    class FakeRepository:
+        def list_connections(self):
+            return [OpenBankingConnection(id="conn-1", source_id="hapoalim", status="active", created_at="2026-10-07T00:00:00Z")]
+
+    monkeypatch.setattr(routes_module, "OpenBankingRepository", lambda client, user_id, env=None: FakeRepository())
+    monkeypatch.setattr(routes_module, "client_id_for", lambda source_id: "client-abc")
+
+    def _unexpected_refresh(*args, **kwargs):
+        raise AssertionError("refresh_tokens should not be reached once the sandbox/licence gate refuses the call")
+
+    monkeypatch.setattr(routes_module, "refresh_tokens", _unexpected_refresh)
+
+    response = client.post(
+        "/api/open-banking/sync/conn-1", headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 503
+    assert response.json() == {"code": "open_banking_not_configured"}
+
+
+def test_sync_revokes_the_connection_when_the_refresh_is_refused(monkeypatch) -> None:
+    # Finding 3: a refused refresh looks exactly like "consent expired or withdrawn" from
+    # this app's side, so the connection must be revoked immediately, not just reported as
+    # a failed sync.
+    authenticate(monkeypatch)
+    monkeypatch.setattr(routes_module, "read_sources", lambda: [SOURCE])
+    monkeypatch.setattr(routes_module, "sandbox_enabled", lambda: True)
+    monkeypatch.setattr(routes_module, "licence_id", lambda: None)
+    monkeypatch.setattr(
+        routes_module, "ConsentRepository",
+        lambda client, user_id, purpose="cloud_sync": type("C", (), {
+            "read": lambda self, version: type("A", (), {"withdrawn_at": None})(),
+        })(),
+    )
+
+    revoked = {}
+
+    class FakeRepository:
+        def list_connections(self):
+            return [OpenBankingConnection(id="conn-1", source_id="hapoalim", status="active", created_at="2026-10-07T00:00:00Z")]
+
+        def read_refresh_token(self, connection_id: str) -> str:
+            return "stored-refresh-token"
+
+        def revoke(self, connection_id: str) -> None:
+            revoked.setdefault("id", connection_id)
+
+    monkeypatch.setattr(routes_module, "OpenBankingRepository", lambda client, user_id, env=None: FakeRepository())
+    monkeypatch.setattr(routes_module, "client_id_for", lambda source_id: "client-abc")
+    monkeypatch.setattr(routes_module, "refresh_tokens", lambda source, client_id, refresh_token: None)
+
+    response = client.post(
+        "/api/open-banking/sync/conn-1", headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 502
+    assert response.json() == {"code": "open_banking_refresh_failed"}
+    assert revoked == {"id": "conn-1"}
 
 
 def test_revoke_calls_the_repository_and_returns_no_content(monkeypatch) -> None:

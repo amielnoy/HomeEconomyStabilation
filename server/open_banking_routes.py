@@ -69,6 +69,22 @@ async def connect(source_id: str, request: Request) -> Response:
     if not client_id:
         return _error(503, "open_banking_not_configured")
 
+    # `connect` and `sync` require both an authenticated session and an active
+    # `open_banking` consent, exactly as `/api/snapshots` requires active `cloud_sync`
+    # consent today — mirrors sync's own auth-then-consent gate below.
+    authenticated = await _authenticated_client(request)
+    if isinstance(authenticated, JSONResponse):
+        return authenticated
+    client, user_id = authenticated
+    try:
+        consent = await run_in_threadpool(
+            ConsentRepository(client, user_id, purpose="open_banking").read, OPEN_BANKING_CONSENT_VERSION,
+        )
+    except SupabaseDataError:
+        return _error(502, "open_banking_consent_check_failed")
+    if not consent or consent.withdrawn_at is not None:
+        return _error(403, "open_banking_consent_required")
+
     challenge = create_challenge()
     redirect_uri = f"{request.url.scheme}://{request.url.netloc}/api/open-banking/callback"
     response = RedirectResponse(authorize_url(source, client_id, challenge, redirect_uri), status_code=302)
@@ -89,6 +105,10 @@ async def callback(request: Request) -> Response:
     source = _source_or_none(source_id)
     client_id = client_id_for(source_id) if source else None
     if not source or not client_id:
+        return _error(503, "open_banking_not_configured")
+    # Re-checked here, not just at `connect` time: the gate must hold for every outbound
+    # call against a non-sandbox source, not only the first one that created the cookies.
+    if not sandbox_enabled() and not licence_id():
         return _error(503, "open_banking_not_configured")
 
     redirect_uri = f"{request.url.scheme}://{request.url.netloc}/api/open-banking/callback"
@@ -155,12 +175,21 @@ async def sync(connection_id: str, request: Request) -> Response:
         client_id = client_id_for(target.source_id) if source else None
         if not source or not client_id:
             return _error(503, "open_banking_not_configured")
+        # Re-checked on every sync, not just at connection-creation time: a connection
+        # created while sandboxed/licensed must stop syncing the moment that configuration
+        # is withdrawn.
+        if not sandbox_enabled() and not licence_id():
+            return _error(503, "open_banking_not_configured")
 
         stored_refresh_token = await run_in_threadpool(repository.read_refresh_token, connection_id)
         if not stored_refresh_token:
             return _error(502, "open_banking_token_missing")
         pair = await run_in_threadpool(refresh_tokens, source, client_id, stored_refresh_token)
         if pair is None:
+            # The bank refusing the refresh is exactly what "consent expired or withdrawn"
+            # looks like from this app's side: revoke immediately rather than leaving a
+            # connection that looks active but can never sync again.
+            await run_in_threadpool(repository.revoke, connection_id)
             return _error(502, "open_banking_refresh_failed")
         await run_in_threadpool(repository.replace_refresh_token, connection_id, pair.refresh_token)
     except SupabaseDataError:
