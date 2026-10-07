@@ -200,7 +200,7 @@
         "tags": ["OpenBanking"],
         "summary": "Start the consent redirect to a source for the current user",
         "operationId": "startOpenBankingConnect",
-        "security": [],
+        "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "sourceId", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
