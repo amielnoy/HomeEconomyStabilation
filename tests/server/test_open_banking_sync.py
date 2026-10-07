@@ -136,3 +136,31 @@ def test_card_issuer_source_maps_to_card_transaction_source(monkeypatch) -> None
     assert len(rows) == 1
     assert rows[0].source == "card"
     assert rows[0].id == "txn-card-1"
+
+
+@pytest.mark.parametrize("response", [
+    httpx.Response(200, text="<!DOCTYPE html><html>Internal error</html>"),
+    httpx.Response(200, text=""),
+    httpx.Response(200, json=["not", "an", "object"]),
+    httpx.Response(200, json="just a string"),
+    httpx.Response(200, json=None),
+    httpx.Response(200, json={"transactions": ["not", "an", "object"]}),
+    httpx.Response(200, json={"transactions": None}),
+    httpx.Response(200, json={"transactions": {"booked": "not-a-list", "pending": {"a": 1}}}),
+    httpx.Response(200, json={"transactions": {"booked": ["not-a-row", 7, None], "pending": []}}),
+    httpx.Response(200, json={"transactions": {"booked": [{"transactionId": "t", "transactionAmount": "-5.00"}], "pending": []}}),
+], ids=[
+    "non-json", "empty-body", "json-array", "json-string", "json-null", "transactions-array",
+    "transactions-null", "booked-and-pending-not-lists", "rows-not-objects", "amount-not-an-object",
+])
+def test_a_malformed_200_body_yields_no_rows_rather_than_raising(monkeypatch, response) -> None:
+    monkeypatch.setattr(httpx, "get", lambda url, headers=None, timeout=None: response)
+    assert pull_transactions(SOURCE, "access-token") == []
+
+
+def test_malformed_rows_are_skipped_without_losing_the_well_formed_ones(monkeypatch) -> None:
+    good = SANDBOX_RESPONSE["transactions"]["booked"][0]
+    response = {"transactions": {"booked": ["junk", good, {"transactionAmount": None}], "pending": "junk"}}
+    monkeypatch.setattr(httpx, "get", lambda url, headers=None, timeout=None: httpx.Response(200, json=response))
+
+    assert [row.id for row in pull_transactions(SOURCE, "access-token")] == ["txn-1"]
