@@ -21,7 +21,7 @@ export interface PersistableTransaction {
 
 export interface PersistedTransaction extends BankTransaction {
   ref: '';
-  src: 'bank-report' | 'card-report' | 'manual-entry';
+  src: 'bank-report' | 'card-report' | 'manual-entry' | 'open-banking';
 }
 
 export interface PersistableState<T extends PersistableTransaction = PersistableTransaction> {
@@ -41,7 +41,7 @@ export interface PrivacySafeSnapshot extends PersistableState<PersistedTransacti
 }
 
 const REDACTED = '[redacted]';
-const SAFE_SOURCES = new Set(['bank-report', 'card-report', 'manual-entry']);
+const SAFE_SOURCES = new Set(['bank-report', 'card-report', 'manual-entry', 'open-banking']);
 
 export function redactFinancialIdentifiers(value: string): string {
   return value
@@ -60,9 +60,10 @@ export function redactFinancialIdentifiers(value: string): string {
     );
 }
 export function sanitizeTransaction(transaction: PersistableTransaction): PersistedTransaction {
-  const source = transaction.source === 'card' ? 'card-report'
-    : transaction.src === 'הזנה ידנית' || transaction.src === 'manual-entry' ? 'manual-entry'
-      : 'bank-report';
+  const source = transaction.src === 'open-banking' ? 'open-banking'
+    : transaction.source === 'card' ? 'card-report'
+      : transaction.src === 'הזנה ידנית' || transaction.src === 'manual-entry' ? 'manual-entry'
+        : 'bank-report';
   return {
     date: String(transaction.date || ''),
     vdate: String(transaction.vdate || transaction.date || ''),
