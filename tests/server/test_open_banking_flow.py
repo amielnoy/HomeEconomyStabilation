@@ -75,6 +75,24 @@ def test_exchange_code_returns_none_on_a_non_200_or_network_failure(monkeypatch)
     assert exchange_code(SOURCE, "client-abc", "code", "verifier", "https://app.example/callback") is None
 
 
+def test_exchange_code_returns_none_on_malformed_json_response(monkeypatch) -> None:
+    # 200 response with invalid JSON (e.g., truncated or HTML error page)
+    def fake_post_malformed(*a, **k):
+        return httpx.Response(200, text="<!DOCTYPE html><html>Internal error</html>")
+
+    monkeypatch.setattr(httpx, "post", fake_post_malformed)
+    assert exchange_code(SOURCE, "client-abc", "code", "verifier", "https://app.example/callback") is None
+
+
+def test_refresh_tokens_returns_none_on_malformed_json_response(monkeypatch) -> None:
+    # 200 response with invalid JSON (e.g., truncated or HTML error page)
+    def fake_post_malformed(*a, **k):
+        return httpx.Response(200, text="<!DOCTYPE html><html>Internal error</html>")
+
+    monkeypatch.setattr(httpx, "post", fake_post_malformed)
+    assert refresh_tokens(SOURCE, "client-abc", "old-refresh-token") is None
+
+
 def test_refresh_tokens_posts_the_refresh_grant(monkeypatch) -> None:
     captured = {}
 

@@ -43,34 +43,43 @@ def parse_token_response(payload: object) -> TokenPair | None:
     return TokenPair(access_token=access, refresh_token=refresh, expires_in=min(int(expires), 24 * 3600))
 
 
+def _post_for_tokens(source: OpenBankingSource, data: dict) -> TokenPair | None:
+    """Exchange POST request data for tokens, with error handling and JSON guard.
+
+    Handles network errors, non-200 responses, and malformed JSON responses.
+    Returns None for any error case (fail-closed pattern).
+    """
+    try:
+        response = httpx.post(
+            source.token_url,
+            data=data,
+            timeout=8.0,
+        )
+    except httpx.HTTPError:
+        return None
+    if response.status_code != 200:
+        return None
+    try:
+        return parse_token_response(response.json())
+    except ValueError:
+        # Malformed JSON (200 response with non-JSON body, truncated body, etc)
+        return None
+
+
 def exchange_code(
     source: OpenBankingSource, client_id: str, code: str, verifier: str, redirect_uri: str,
 ) -> TokenPair | None:
-    try:
-        response = httpx.post(
-            source.token_url,
-            data={
-                "grant_type": "authorization_code", "code": code, "code_verifier": verifier,
-                "redirect_uri": redirect_uri, "client_id": client_id,
-            },
-            timeout=8.0,
-        )
-    except httpx.HTTPError:
-        return None
-    if response.status_code != 200:
-        return None
-    return parse_token_response(response.json())
+    return _post_for_tokens(
+        source,
+        {
+            "grant_type": "authorization_code", "code": code, "code_verifier": verifier,
+            "redirect_uri": redirect_uri, "client_id": client_id,
+        },
+    )
 
 
 def refresh_tokens(source: OpenBankingSource, client_id: str, refresh_token: str) -> TokenPair | None:
-    try:
-        response = httpx.post(
-            source.token_url,
-            data={"grant_type": "refresh_token", "refresh_token": refresh_token, "client_id": client_id},
-            timeout=8.0,
-        )
-    except httpx.HTTPError:
-        return None
-    if response.status_code != 200:
-        return None
-    return parse_token_response(response.json())
+    return _post_for_tokens(
+        source,
+        {"grant_type": "refresh_token", "refresh_token": refresh_token, "client_id": client_id},
+    )
