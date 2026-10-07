@@ -14,6 +14,8 @@ from .metrics import record_supabase_response
 Operation = Literal[
     "profile_read", "profile_write", "snapshot_read", "snapshot_write", "snapshot_delete",
     "consent_read", "consent_write", "consent_withdraw",
+    "open_banking_connections_read", "open_banking_connection_write",
+    "open_banking_token_read", "open_banking_token_write", "open_banking_token_delete",
 ]
 
 
