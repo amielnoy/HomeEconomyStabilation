@@ -154,14 +154,17 @@ class SnapshotRepository:
 
 
 class ConsentRepository:
-    def __init__(self, client: SupabaseRestClient, user_id: str) -> None:
-        self._client, self._user_id = client, user_id
+    def __init__(
+        self, client: SupabaseRestClient, user_id: str,
+        purpose: Literal["cloud_sync", "open_banking"] = "cloud_sync",
+    ) -> None:
+        self._client, self._user_id, self._purpose = client, user_id, purpose
 
     def read(self, statement_version: str) -> ConsentAcceptance | None:
         rows = self._client.table_request(
             "GET", "consent_acceptances", operation="consent_read",
             params={
-                "user_id": f"eq.{self._user_id}", "purpose": "eq.cloud_sync",
+                "user_id": f"eq.{self._user_id}", "purpose": f"eq.{self._purpose}",
                 "statement_version": f"eq.{statement_version}", "select": "*", "limit": "1",
             },
         )
@@ -169,12 +172,10 @@ class ConsentRepository:
 
     def accept(self, statement_version: str, locale: Locale) -> ConsentAcceptance:
         accepted_at = datetime.now(timezone.utc).isoformat()
-        # (user_id, purpose, statement_version) is the primary key, so re-accepting
-        # merges onto the existing row and re-accepting after withdrawal clears it.
         rows = self._client.table_request(
             "POST", "consent_acceptances", operation="consent_write", params={"select": "*"},
             json={
-                "user_id": self._user_id, "purpose": "cloud_sync",
+                "user_id": self._user_id, "purpose": self._purpose,
                 "statement_version": statement_version, "locale": locale,
                 "accepted_at": accepted_at, "withdrawn_at": None,
             }, prefer="return=representation,resolution=merge-duplicates",
@@ -187,7 +188,7 @@ class ConsentRepository:
         rows = self._client.table_request(
             "PATCH", "consent_acceptances", operation="consent_withdraw",
             params={
-                "user_id": f"eq.{self._user_id}", "purpose": "eq.cloud_sync",
+                "user_id": f"eq.{self._user_id}", "purpose": f"eq.{self._purpose}",
                 "statement_version": f"eq.{statement_version}", "select": "*",
             },
             json={"withdrawn_at": datetime.now(timezone.utc).isoformat()}, prefer="return=representation",
