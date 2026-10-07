@@ -82,4 +82,22 @@ describe('Swagger/OpenAPI contract', () => {
       expect(operation.responses).toHaveProperty(String(HttpStatus.SERVICE_UNAVAILABLE));
     }
   });
+
+  it('documents the open-banking routes with the right authentication shape', () => {
+    expect(spec.paths['/api/open-banking/sources'].get.security).toEqual([]);
+    expect(spec.paths['/api/open-banking/connect/{sourceId}'].get.security).toEqual([]);
+    for (const path of ['/api/open-banking/connections', '/api/open-banking/sync/{connectionId}', '/api/open-banking/connections/{connectionId}', '/api/consents/open-banking']) {
+      for (const operation of Object.values(spec.paths[path]) as Array<{ security: unknown }>) {
+        expect(operation.security).toEqual([{ bearerAuth: [] }]);
+      }
+    }
+    expect(spec.components.schemas.Consent.properties.statementVersion.const === 'cloud-sync-v2-privacy-minimised-2026-08-24'
+      || spec.components.schemas.OpenBankingConsent.properties.statementVersion.const).toBeTruthy();
+  });
+
+  it('never documents a response schema that includes token material', () => {
+    const text = JSON.stringify(spec);
+    expect(text).not.toMatch(/refresh[_-]?token/i);
+    expect(text.toLowerCase()).not.toContain('encrypted_refresh_token');
+  });
 });
