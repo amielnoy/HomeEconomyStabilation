@@ -1,9 +1,11 @@
 from collections import deque
 from typing import Any
 
+import pytest
 from cryptography.fernet import Fernet
 
 from server.open_banking_store import OpenBankingRepository
+from server.supabase_store import SupabaseDataError
 
 ENV = {"OPEN_BANKING_TOKEN_ENCRYPTION_KEY": Fernet.generate_key().decode()}
 
@@ -74,3 +76,13 @@ def test_listing_connections_scopes_to_the_user() -> None:
 
     assert connections[0].source_id == "hapoalim"
     assert client.calls[0]["params"]["user_id"] == "eq.user-1"
+
+
+def test_replace_refresh_token_raises_with_missing_encryption_key() -> None:
+    client = FakeRestClient([])
+    repository = OpenBankingRepository(client, "user-1", env={})  # type: ignore[arg-type]
+
+    with pytest.raises(SupabaseDataError) as exc_info:
+        repository.replace_refresh_token("conn-1", "sandbox-refresh-token")
+
+    assert exc_info.value.operation == "open_banking_token_encrypt"
