@@ -38,18 +38,15 @@ export class SupabaseSnapshotRepository implements CloudSnapshotClient {
   private readonly fetchImpl: typeof fetch;
 
   constructor(private readonly input: {
-    accessToken: () => Promise<string | null>;
     endpoint?: string;
     fetchImpl?: typeof fetch;
     timeoutMs?: number;
-  }) {
+  } = {}) {
     this.endpoint = input.endpoint || '/api/snapshots';
     this.fetchImpl = input.fetchImpl || fetch;
   }
 
   private async request(method: 'GET' | 'PUT' | 'DELETE', payload?: CloudStatePayload) {
-    const token = await this.input.accessToken();
-    if (!token) throw new CloudSyncError('authentication_required', 'Sign in before using cloud sync.', HttpStatus.UNAUTHORIZED);
     if (payload && (!isCloudStatePayload(payload) || snapshotBytes(payload) > CLOUD_SNAPSHOT_MAX_BYTES)) {
       throw new CloudSyncError('invalid_snapshot', 'The snapshot is invalid or too large.', HttpStatus.BAD_REQUEST);
     }
@@ -59,12 +56,9 @@ export class SupabaseSnapshotRepository implements CloudSnapshotClient {
     try {
       response = await this.fetchImpl(this.endpoint, {
         method,
-        credentials: 'omit',
+        credentials: 'include',
         signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(payload ? { 'Content-Type': 'application/json' } : {}),
-        },
+        headers: payload ? { 'Content-Type': 'application/json' } : {},
         body: payload ? JSON.stringify({ schemaVersion: CLOUD_SNAPSHOT_SCHEMA_VERSION, payload }) : undefined,
       });
     } catch (cause) {
@@ -106,10 +100,9 @@ export class SupabaseSnapshotRepository implements CloudSnapshotClient {
 }
 
 export function createCloudSnapshotClient(input: {
-  accessToken: () => Promise<string | null>;
   endpoint?: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
-}): CloudSnapshotClient {
+} = {}): CloudSnapshotClient {
   return new SupabaseSnapshotRepository(input);
 }

@@ -17,30 +17,22 @@ export interface CloudConsent {
   withdrawnAt: string | null;
 }
 
-type TokenProvider = () => Promise<string | null>;
-
 class AuthenticatedJsonClient {
   constructor(private readonly input: {
-    accessToken: TokenProvider;
     fetchImpl?: typeof fetch;
     timeoutMs?: number;
   }) {}
 
   async request(endpoint: string, method: 'GET' | 'PUT' | 'DELETE', payload?: object): Promise<Record<string, unknown> | null> {
-    const token = await this.input.accessToken();
-    if (!token) throw new CloudSyncError('authentication_required', 'Sign in before using cloud sync.', HttpStatus.UNAUTHORIZED);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.input.timeoutMs ?? 10_000);
     let response: Response;
     try {
       response = await (this.input.fetchImpl || fetch)(endpoint, {
         method,
-        credentials: 'omit',
+        credentials: 'include',
         signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(payload ? { 'Content-Type': 'application/json' } : {}),
-        },
+        headers: payload ? { 'Content-Type': 'application/json' } : {},
         body: payload ? JSON.stringify(payload) : undefined,
       });
     } catch {
@@ -83,7 +75,7 @@ export class SupabaseProfileRepository {
   private readonly client: AuthenticatedJsonClient;
   private readonly endpoint: string;
 
-  constructor(input: { accessToken: TokenProvider; endpoint?: string; fetchImpl?: typeof fetch; timeoutMs?: number }) {
+  constructor(input: { endpoint?: string; fetchImpl?: typeof fetch; timeoutMs?: number } = {}) {
     this.client = new AuthenticatedJsonClient(input);
     this.endpoint = input.endpoint || '/api/profile';
   }
@@ -111,7 +103,7 @@ export class SupabaseConsentRepository {
   private readonly client: AuthenticatedJsonClient;
   private readonly endpoint: string;
 
-  constructor(input: { accessToken: TokenProvider; endpoint?: string; fetchImpl?: typeof fetch; timeoutMs?: number }) {
+  constructor(input: { endpoint?: string; fetchImpl?: typeof fetch; timeoutMs?: number } = {}) {
     this.client = new AuthenticatedJsonClient(input);
     this.endpoint = input.endpoint || '/api/consents/cloud-sync';
   }

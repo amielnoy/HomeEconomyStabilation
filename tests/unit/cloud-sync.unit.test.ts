@@ -18,13 +18,12 @@ describe('Supabase snapshot repository', () => {
 
   it('maps non-OK, malformed and timed-out provider responses to stable errors', async () => {
     const unavailable = new SupabaseSnapshotRepository({
-      accessToken: async () => 'token',
       fetchImpl: vi.fn(async () => new Response('{"code":"provider_down"}', { status: 502 })) as typeof fetch,
     });
     await expect(unavailable.load()).rejects.toMatchObject({ code: 'provider_down', status: 502 });
 
     const timeout = new SupabaseSnapshotRepository({
-      accessToken: async () => 'token', timeoutMs: 1,
+      timeoutMs: 1,
       fetchImpl: vi.fn((_url, init) => new Promise((_resolve, reject) => {
         init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
       })) as typeof fetch,
@@ -32,36 +31,39 @@ describe('Supabase snapshot repository', () => {
     await expect(timeout.load()).rejects.toMatchObject({ code: 'cloud_timeout', status: 504 });
   });
 
-  it('uses DELETE without a request payload', async () => {
+  it('uses DELETE without a request payload, with credentials included', async () => {
     const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
-      expect(init).toMatchObject({ method: 'DELETE', body: undefined });
+      expect(init).toMatchObject({ method: 'DELETE', credentials: 'include', body: undefined });
       return new Response(null, { status: 204 });
     });
-    const repository = new SupabaseSnapshotRepository({ accessToken: async () => 'token', fetchImpl: fetchImpl as typeof fetch });
+    const repository = new SupabaseSnapshotRepository({ fetchImpl: fetchImpl as typeof fetch });
     await expect(repository.remove()).resolves.toBeUndefined();
   });
 
-  it('fails before a network request when the user is signed out', async () => {
-    const fetchImpl = vi.fn();
-    const repository = new SupabaseSnapshotRepository({ accessToken: async () => null, fetchImpl });
+  it('sends the request with credentials and surfaces a 401 as a stable error when signed out', async () => {
+    const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      expect(init?.credentials).toBe('include');
+      expect(init?.headers ?? {}).not.toHaveProperty('Authorization');
+      return new Response(JSON.stringify({ code: 'authentication_required' }), { status: 401 });
+    });
+    const repository = new SupabaseSnapshotRepository({ fetchImpl: fetchImpl as typeof fetch });
 
     await expect(repository.load()).rejects.toMatchObject<Partial<CloudSyncError>>({
       code: 'authentication_required', status: 401,
     });
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(fetchImpl).toHaveBeenCalledOnce();
   });
 
-  it('sends the JWT only in the authorization header and returns a versioned snapshot', async () => {
+  it('sends no authorization header or token in the body, and returns a versioned snapshot', async () => {
     const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
-      expect(init?.headers).toMatchObject({ Authorization: 'Bearer user.jwt.token' });
+      expect(init?.credentials).toBe('include');
+      expect(init?.headers ?? {}).not.toHaveProperty('Authorization');
       expect(init?.body).not.toContain('user.jwt.token');
       return new Response(JSON.stringify({ snapshot: { schemaVersion: 2, payload: payload(), updatedAt: '2026-08-23T12:00:00Z' } }), {
         status: 200, headers: { 'Content-Type': 'application/json' },
       });
     });
-    const repository = new SupabaseSnapshotRepository({
-      accessToken: async () => 'user.jwt.token', fetchImpl: fetchImpl as typeof fetch,
-    });
+    const repository = new SupabaseSnapshotRepository({ fetchImpl: fetchImpl as typeof fetch });
 
     await expect(repository.save(payload())).resolves.toMatchObject({ schemaVersion: 2, payload: payload() });
     expect(fetchImpl).toHaveBeenCalledOnce();
