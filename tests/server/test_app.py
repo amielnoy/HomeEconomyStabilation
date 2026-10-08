@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from datetime import datetime, timezone
 
 import server.app as app_module
+import server.http_auth as http_auth_module
 from server.app import CLOUD_CONSENT_VERSION, app
 from server.models import ConsentAcceptance, UserProfile
 from server.supabase_store import StoredSnapshot
@@ -51,8 +52,8 @@ class FakeAuthenticatedClient:
 
 
 def authenticate(monkeypatch) -> None:
-    monkeypatch.setattr(app_module, "read_supabase_config", lambda: object())
-    monkeypatch.setattr(app_module, "SupabaseRestClient", lambda _config, _token: FakeAuthenticatedClient())
+    monkeypatch.setattr(http_auth_module, "read_supabase_config", lambda: object())
+    monkeypatch.setattr(http_auth_module, "SupabaseRestClient", lambda _config, _token: FakeAuthenticatedClient())
 
 
 def test_profile_and_consent_validate_small_bodies_before_provider_work(monkeypatch) -> None:

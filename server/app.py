@@ -22,7 +22,8 @@ from .auth_flow import (
     is_allowed_redirect,
     parse_session,
 )
-from .config import bearer_token, read_supabase_config
+from .config import read_supabase_config
+from .http_auth import SESSION_COOKIE, authenticated_client
 from .logging_config import log_event, route_name
 from .metrics import record_response, render_metrics
 from .models import CloudConsentInput, ConsentAcceptance, ProfileInput, SnapshotInput, UserProfile
@@ -56,20 +57,6 @@ def _client_key(request: Request) -> str:
     forwarded = request.headers.get("x-vercel-forwarded-for") or request.headers.get("x-forwarded-for") or "unknown"
     address = forwarded.split(",", maxsplit=1)[0].strip()[:100]
     return sha256(_rate_salt + address.encode("utf-8")).hexdigest()
-
-
-async def _authenticated_client(request: Request) -> tuple[SupabaseRestClient, str] | JSONResponse:
-    config = read_supabase_config()
-    if not config:
-        return _error(503, "cloud_not_configured")
-    token = bearer_token(request.headers.get("authorization"))
-    if not token:
-        return _error(401, "authentication_required")
-    client = SupabaseRestClient(config, token)
-    user_id = await run_in_threadpool(client.verify_user)
-    if not user_id:
-        return _error(401, "invalid_session")
-    return client, user_id
 
 
 async def _small_json_body(request: Request, model: type[ProfileInput] | type[CloudConsentInput]):
@@ -125,7 +112,6 @@ async def response_contract(request: Request, call_next):
     return response
 
 
-SESSION_COOKIE = "he_session"
 _DEFAULT_LANDING = "/mazan-habait.html"
 
 
@@ -252,7 +238,7 @@ async def snapshots(request: Request) -> Response:
         if len(raw_body) > 1_010_000:
             return _error(413, "snapshot_too_large")
 
-    authenticated = await _authenticated_client(request)
+    authenticated = await authenticated_client(request)
     if isinstance(authenticated, JSONResponse):
         return authenticated
     client, user_id = authenticated
@@ -301,7 +287,7 @@ async def profile(request: Request) -> Response:
     profile_input = await _small_json_body(request, ProfileInput) if request.method == "PUT" else None
     if isinstance(profile_input, JSONResponse):
         return profile_input
-    authenticated = await _authenticated_client(request)
+    authenticated = await authenticated_client(request)
     if isinstance(authenticated, JSONResponse):
         return authenticated
     client, user_id = authenticated
@@ -325,7 +311,7 @@ async def cloud_consent(request: Request) -> Response:
     consent_input = await _small_json_body(request, CloudConsentInput) if request.method == "PUT" else None
     if isinstance(consent_input, JSONResponse):
         return consent_input
-    authenticated = await _authenticated_client(request)
+    authenticated = await authenticated_client(request)
     if isinstance(authenticated, JSONResponse):
         return authenticated
     client, user_id = authenticated
