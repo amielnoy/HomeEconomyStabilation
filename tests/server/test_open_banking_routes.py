@@ -563,3 +563,125 @@ def test_callback_reports_a_failed_connection_write(monkeypatch) -> None:
     )
     assert response.status_code == 302
     assert response.headers["location"] == "/mazan-habait.html?openBankingError=open_banking_connection_failed"
+
+
+def test_accept_consent_requires_authentication(monkeypatch) -> None:
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_PUBLISHABLE_KEY", raising=False)
+    response = client.put("/api/consents/open-banking", json={"locale": "he"})
+    assert response.status_code == 503
+    assert response.json() == {"code": "cloud_not_configured"}
+
+
+def test_accept_consent_records_the_statement_version_and_locale(monkeypatch) -> None:
+    from datetime import datetime, timezone
+
+    authenticate(monkeypatch)
+    recorded = {}
+
+    class FakeAcceptance:
+        purpose = "open_banking"
+        statement_version = routes_module.OPEN_BANKING_CONSENT_VERSION
+        locale = "he"
+        accepted_at = datetime(2026, 10, 8, 12, 0, 0, tzinfo=timezone.utc)
+        withdrawn_at = None
+
+    def fake_accept(self, statement_version, locale):
+        recorded["statement_version"] = statement_version
+        recorded["locale"] = locale
+        return FakeAcceptance()
+
+    monkeypatch.setattr(
+        routes_module, "ConsentRepository",
+        lambda client, user_id, purpose="cloud_sync": type("C", (), {"accept": fake_accept})(),
+    )
+    response = client.put(
+        "/api/consents/open-banking", json={"locale": "he"}, headers={"Authorization": "Bearer user.jwt.token"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"consent": {
+        "purpose": "open_banking", "statementVersion": routes_module.OPEN_BANKING_CONSENT_VERSION,
+        "locale": "he", "acceptedAt": "2026-10-08T12:00:00+00:00", "withdrawnAt": None,
+    }}
+    assert recorded == {"statement_version": routes_module.OPEN_BANKING_CONSENT_VERSION, "locale": "he"}
+
+
+def test_read_consent_requires_authentication(monkeypatch) -> None:
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_PUBLISHABLE_KEY", raising=False)
+    response = client.get("/api/consents/open-banking")
+    assert response.status_code == 503
+    assert response.json() == {"code": "cloud_not_configured"}
+
+
+def test_read_consent_reports_none_when_never_accepted(monkeypatch) -> None:
+    authenticate(monkeypatch)
+    monkeypatch.setattr(
+        routes_module, "ConsentRepository",
+        lambda client, user_id, purpose="cloud_sync": type("C", (), {"read": lambda self, version: None})(),
+    )
+    response = client.get("/api/consents/open-banking", headers={"Authorization": "Bearer user.jwt.token"})
+    assert response.status_code == 200
+    assert response.json() == {"consent": None}
+
+
+def test_read_consent_returns_the_current_acceptance(monkeypatch) -> None:
+    from datetime import datetime, timezone
+
+    authenticate(monkeypatch)
+
+    class FakeAcceptance:
+        purpose = "open_banking"
+        statement_version = routes_module.OPEN_BANKING_CONSENT_VERSION
+        locale = "en"
+        accepted_at = datetime(2026, 10, 8, 12, 0, 0, tzinfo=timezone.utc)
+        withdrawn_at = None
+
+    monkeypatch.setattr(
+        routes_module, "ConsentRepository",
+        lambda client, user_id, purpose="cloud_sync": type("C", (), {"read": lambda self, version: FakeAcceptance()})(),
+    )
+    response = client.get("/api/consents/open-banking", headers={"Authorization": "Bearer user.jwt.token"})
+    assert response.status_code == 200
+    assert response.json() == {"consent": {
+        "purpose": "open_banking", "statementVersion": routes_module.OPEN_BANKING_CONSENT_VERSION,
+        "locale": "en", "acceptedAt": "2026-10-08T12:00:00+00:00", "withdrawnAt": None,
+    }}
+
+
+def test_withdraw_consent_requires_authentication(monkeypatch) -> None:
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_PUBLISHABLE_KEY", raising=False)
+    response = client.delete("/api/consents/open-banking")
+    assert response.status_code == 503
+    assert response.json() == {"code": "cloud_not_configured"}
+
+
+def test_withdraw_consent_is_a_no_op_when_nothing_was_accepted(monkeypatch) -> None:
+    authenticate(monkeypatch)
+    calls = {"withdraw": False}
+    monkeypatch.setattr(
+        routes_module, "ConsentRepository",
+        lambda client, user_id, purpose="cloud_sync": type("C", (), {
+            "read": lambda self, version: None,
+            "withdraw": lambda self, version: calls.__setitem__("withdraw", True),
+        })(),
+    )
+    response = client.delete("/api/consents/open-banking", headers={"Authorization": "Bearer user.jwt.token"})
+    assert response.status_code == 204
+    assert calls["withdraw"] is False
+
+
+def test_withdraw_consent_withdraws_an_existing_acceptance(monkeypatch) -> None:
+    authenticate(monkeypatch)
+    calls = {"withdraw": False}
+    monkeypatch.setattr(
+        routes_module, "ConsentRepository",
+        lambda client, user_id, purpose="cloud_sync": type("C", (), {
+            "read": lambda self, version: type("A", (), {"withdrawn_at": None})(),
+            "withdraw": lambda self, version: calls.__setitem__("withdraw", True),
+        })(),
+    )
+    response = client.delete("/api/consents/open-banking", headers={"Authorization": "Bearer user.jwt.token"})
+    assert response.status_code == 204
+    assert calls["withdraw"] is True

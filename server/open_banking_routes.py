@@ -216,6 +216,14 @@ async def revoke(connection_id: str, request: Request) -> Response:
     return Response(status_code=204)
 
 
+def _open_banking_consent_json(value) -> dict[str, object]:
+    return {
+        "purpose": value.purpose, "statementVersion": value.statement_version, "locale": value.locale,
+        "acceptedAt": value.accepted_at.isoformat(),
+        "withdrawnAt": value.withdrawn_at.isoformat() if value.withdrawn_at else None,
+    }
+
+
 @router.put("/api/consents/open-banking")
 async def accept_consent(request: Request) -> Response:
     from .app import _small_json_body
@@ -235,8 +243,36 @@ async def accept_consent(request: Request) -> Response:
         )
     except SupabaseDataError:
         return _error(502, "open_banking_consent_write_failed")
-    return JSONResponse({"consent": {
-        "purpose": value.purpose, "statementVersion": value.statement_version, "locale": value.locale,
-        "acceptedAt": value.accepted_at.isoformat(),
-        "withdrawnAt": value.withdrawn_at.isoformat() if value.withdrawn_at else None,
-    }})
+    return JSONResponse({"consent": _open_banking_consent_json(value)})
+
+
+@router.get("/api/consents/open-banking")
+async def read_consent(request: Request) -> Response:
+    authenticated = await authenticated_client(request)
+    if isinstance(authenticated, JSONResponse):
+        return authenticated
+    client, user_id = authenticated
+    try:
+        value = await run_in_threadpool(
+            ConsentRepository(client, user_id, purpose="open_banking").read, OPEN_BANKING_CONSENT_VERSION,
+        )
+    except SupabaseDataError:
+        return _error(502, "open_banking_consent_read_failed")
+    return JSONResponse({"consent": _open_banking_consent_json(value) if value else None})
+
+
+@router.delete("/api/consents/open-banking")
+async def withdraw_consent(request: Request) -> Response:
+    authenticated = await authenticated_client(request)
+    if isinstance(authenticated, JSONResponse):
+        return authenticated
+    client, user_id = authenticated
+    repository = ConsentRepository(client, user_id, purpose="open_banking")
+    try:
+        current = await run_in_threadpool(repository.read, OPEN_BANKING_CONSENT_VERSION)
+        if not current:
+            return Response(status_code=204)
+        await run_in_threadpool(repository.withdraw, OPEN_BANKING_CONSENT_VERSION)
+    except SupabaseDataError:
+        return _error(502, "open_banking_consent_write_failed")
+    return Response(status_code=204)

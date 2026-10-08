@@ -97,6 +97,7 @@ describe('Swagger/OpenAPI contract', () => {
   });
 
   it('documents the open-banking routes with the right authentication shape', () => {
+    expect(Object.keys(spec.paths['/api/consents/open-banking']).sort()).toEqual(['delete', 'get', 'put']);
     expect(spec.paths['/api/open-banking/sources'].get.security).toEqual([]);
     expect(spec.paths['/api/open-banking/connect/{sourceId}'].get.security).toEqual([{ bearerAuth: [] }]);
     for (const path of ['/api/open-banking/connections', '/api/open-banking/sync/{connectionId}', '/api/open-banking/connections/{connectionId}', '/api/consents/open-banking']) {

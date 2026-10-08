@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { SupabaseConsentRepository, SupabaseProfileRepository } from '../../fe/src/cloud-metadata';
-import { CLOUD_CONSENT_VERSION } from '../../fe/src/consent';
+import { CLOUD_CONSENT_VERSION, OPEN_BANKING_CONSENT_VERSION } from '../../fe/src/consent';
 
 describe('Supabase profile and consent repositories', () => {
   it('stores and validates the preferred locale with credentials included, no token in the body or headers', async () => {
@@ -43,5 +43,29 @@ describe('Supabase profile and consent repositories', () => {
     const repository = new SupabaseProfileRepository({ fetchImpl: fetchImpl as typeof fetch });
     await expect(repository.load()).rejects.toMatchObject({ code: 'authentication_required', status: 401 });
     expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it('records and withdraws an open-banking consent at its own endpoint, independent of purpose', async () => {
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      expect(url).toBe('/api/consents/open-banking');
+      return Response.json({ consent: {
+        purpose: 'open_banking', statementVersion: OPEN_BANKING_CONSENT_VERSION, locale: 'he',
+        acceptedAt: '2026-10-08T10:00:00Z', withdrawnAt: null,
+      } });
+    });
+    const repository = new SupabaseConsentRepository({ purpose: 'open_banking', fetchImpl: fetchImpl as typeof fetch });
+    await expect(repository.accept('he')).resolves.toMatchObject({
+      purpose: 'open_banking', statementVersion: OPEN_BANKING_CONSENT_VERSION,
+    });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it('rejects an open-banking response carrying the wrong purpose or statement version', async () => {
+    const wrongPurpose = vi.fn(async () => Response.json({ consent: {
+      purpose: 'cloud_sync', statementVersion: OPEN_BANKING_CONSENT_VERSION, locale: 'he',
+      acceptedAt: '2026-10-08T10:00:00Z', withdrawnAt: null,
+    } }));
+    const repository = new SupabaseConsentRepository({ purpose: 'open_banking', fetchImpl: wrongPurpose as typeof fetch });
+    await expect(repository.current()).rejects.toMatchObject({ code: 'invalid_server_consent', status: 502 });
   });
 });

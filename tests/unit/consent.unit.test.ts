@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CLOUD_CONSENT_KEY, CLOUD_CONSENT_VERSION, LocalConsentRepository } from '../../fe/src/consent';
+import {
+  CLOUD_CONSENT_KEY, CLOUD_CONSENT_VERSION, LocalConsentRepository,
+  OPEN_BANKING_CONSENT_KEY, OPEN_BANKING_CONSENT_VERSION,
+} from '../../fe/src/consent';
 
 const storage = () => {
   const values = new Map<string, string>();
@@ -34,5 +37,26 @@ describe('local consent repository', () => {
     expect(repository.current()?.locale).toBe('fr');
     repository.withdraw();
     expect(repository.current()).toBeNull();
+  });
+
+  it('keeps an open-banking consent in its own storage key, independent of cloud_sync', () => {
+    const store = storage();
+    const cloudSync = new LocalConsentRepository(store);
+    const openBanking = new LocalConsentRepository(store, 'open_banking');
+
+    cloudSync.accept('he', new Date('2026-10-08T12:00:00Z'));
+    expect(openBanking.current()).toBeNull();
+
+    const acceptance = openBanking.accept('he', new Date('2026-10-08T12:05:00Z'));
+    expect(acceptance).toEqual({
+      purpose: 'open_banking', statementVersion: OPEN_BANKING_CONSENT_VERSION,
+      acceptedAt: '2026-10-08T12:05:00.000Z', locale: 'he',
+    });
+    expect(cloudSync.current()?.purpose).toBe('cloud_sync');
+    expect(store.values.get(OPEN_BANKING_CONSENT_KEY)).not.toBe(store.values.get(CLOUD_CONSENT_KEY));
+
+    openBanking.withdraw();
+    expect(openBanking.current()).toBeNull();
+    expect(cloudSync.current()).not.toBeNull();
   });
 });

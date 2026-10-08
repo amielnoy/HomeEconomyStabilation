@@ -1525,6 +1525,26 @@ body.drawer-open{ overflow:hidden; }
       <button class="btn sm" id="cloud-consent-withdraw" type="button" hidden data-i18n="cloudConsentWithdraw" data-testid="cloud-consent-withdraw">ביטול ההסכמה</button>
     </div>
       </section>
+      <h3 data-testid="settings-translated-content" data-i18n="openBankingConsentTitle">הסכמה לחיבור בנק (Open Banking)</h3>
+      <section class="consent-card" aria-labelledby="open-banking-consent-heading" hidden data-testid="open-banking-consent" id="open-banking-consent">
+    <h4 id="open-banking-consent-heading" class="vh" data-i18n="openBankingConsentTitle" data-testid="open-banking-consent-heading">הסכמה לחיבור בנק (Open Banking)</h4>
+    <p data-i18n="openBankingConsentIntro">אישור זה נדרש לפני חיבור חשבון בנק אמיתי ומשיכת תנועות על פי בקשה. אין הוראת תשלום ואין סנכרון רקע — רק משיכת תנועות ביוזמתכם.</p>
+    <ul>
+      <li data-i18n="openBankingConsentData">תיאור תנועה, תאריך וסכום יישמרו בחשבון המאובטח; מספרי חשבון, כרטיס, IBAN ואסמכתאות מוסרים מהתיאור לפני השמירה. פרטי ההתחברות לבנק מוצפנים ואינם נשמרים בגלוי.</li>
+      <li data-i18n="openBankingConsentVoluntary">הבחירה חופשית. אפשר להמשיך להשתמש באפליקציה ללא חיבור בנק ולבטל את ההסכמה בכל עת — ביטול ההסכמה מנתק גם חיבורים קיימים.</li>
+      <li data-i18n="openBankingConsentAdvice">התחזיות והממצאים עשויים לטעות ואינם ייעוץ פיננסי, פנסיוני, מס או משפטי. יש לאמת מידע לפני פעולה.</li>
+      <li data-i18n="openBankingConsentRights">האישור אינו גורע מזכויות שלא ניתן לוותר עליהן לפי דין.</li>
+    </ul>
+    <p class="consent-status" id="open-banking-consent-status" role="status" aria-live="polite" data-testid="open-banking-consent-status"></p>
+    <label class="consent-check" data-testid="open-banking-consent-label">
+      <input id="open-banking-consent-check" type="checkbox" data-testid="open-banking-consent-check">
+      <span data-i18n="openBankingConsentCheckbox">קראתי והבנתי, ואני מסכים/ה מרצוני לתנאים המתוארים לחיבור בנק בשיטת Open Banking.</span>
+    </label>
+    <div class="consent-actions" data-testid="open-banking-consent-actions">
+      <button class="btn primary sm" id="open-banking-consent-accept" type="button" disabled data-i18n="openBankingConsentAccept" data-testid="open-banking-consent-accept">אישור ותיעוד ההסכמה</button>
+      <button class="btn sm" id="open-banking-consent-withdraw" type="button" hidden data-i18n="openBankingConsentWithdraw" data-testid="open-banking-consent-withdraw">ביטול ההסכמה</button>
+    </div>
+      </section>
     </div>
   </details>
 

@@ -1,4 +1,4 @@
-import { CLOUD_CONSENT_VERSION, type ConsentPort } from './consent.js';
+import { CLOUD_CONSENT_VERSION, OPEN_BANKING_CONSENT_VERSION, type ConsentPort, type ConsentPurpose } from './consent.js';
 import { CloudSyncError } from './cloud-sync.js';
 import { HttpStatus } from './http-status.js';
 import { isSupportedLocale, type Locale } from './localization.js';
@@ -10,12 +10,21 @@ export interface CloudProfile {
 }
 
 export interface CloudConsent {
-  purpose: 'cloud_sync';
-  statementVersion: typeof CLOUD_CONSENT_VERSION;
+  purpose: ConsentPurpose;
+  statementVersion: string;
   locale: Locale;
   acceptedAt: string;
   withdrawnAt: string | null;
 }
+
+const STATEMENT_VERSION: Record<ConsentPurpose, string> = {
+  cloud_sync: CLOUD_CONSENT_VERSION,
+  open_banking: OPEN_BANKING_CONSENT_VERSION,
+};
+const CONSENT_ENDPOINT: Record<ConsentPurpose, string> = {
+  cloud_sync: '/api/consents/cloud-sync',
+  open_banking: '/api/consents/open-banking',
+};
 
 class AuthenticatedJsonClient {
   constructor(private readonly input: {
@@ -62,10 +71,10 @@ function parseProfile(value: unknown): CloudProfile | null {
   return profile as unknown as CloudProfile;
 }
 
-function parseConsent(value: unknown): CloudConsent | null {
+function parseConsent(value: unknown, purpose: ConsentPurpose): CloudConsent | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const consent = value as Record<string, unknown>;
-  if (consent.purpose !== 'cloud_sync' || consent.statementVersion !== CLOUD_CONSENT_VERSION
+  if (consent.purpose !== purpose || consent.statementVersion !== STATEMENT_VERSION[purpose]
       || !isSupportedLocale(consent.locale) || !isDateTime(consent.acceptedAt)
       || !(consent.withdrawnAt === null || isDateTime(consent.withdrawnAt))) return null;
   return consent as unknown as CloudConsent;
@@ -102,23 +111,25 @@ export class SupabaseProfileRepository {
 export class SupabaseConsentRepository {
   private readonly client: AuthenticatedJsonClient;
   private readonly endpoint: string;
+  private readonly purpose: ConsentPurpose;
 
-  constructor(input: { endpoint?: string; fetchImpl?: typeof fetch; timeoutMs?: number } = {}) {
+  constructor(input: { purpose?: ConsentPurpose; endpoint?: string; fetchImpl?: typeof fetch; timeoutMs?: number } = {}) {
     this.client = new AuthenticatedJsonClient(input);
-    this.endpoint = input.endpoint || '/api/consents/cloud-sync';
+    this.purpose = input.purpose ?? 'cloud_sync';
+    this.endpoint = input.endpoint || CONSENT_ENDPOINT[this.purpose];
   }
 
   async current(): Promise<CloudConsent | null> {
     const consent = (await this.client.request(this.endpoint, 'GET'))?.consent;
     if (consent === null || consent === undefined) return null;
-    const parsed = parseConsent(consent);
+    const parsed = parseConsent(consent, this.purpose);
     if (!parsed) throw new CloudSyncError('invalid_server_consent', 'The cloud consent format is not supported.', HttpStatus.BAD_GATEWAY);
     return parsed;
   }
 
   async accept(locale: Locale): Promise<CloudConsent> {
     const consent = (await this.client.request(this.endpoint, 'PUT', { locale }))?.consent;
-    const parsed = parseConsent(consent);
+    const parsed = parseConsent(consent, this.purpose);
     if (!parsed) throw new CloudSyncError('invalid_server_consent', 'The cloud consent format is not supported.', HttpStatus.BAD_GATEWAY);
     return parsed;
   }

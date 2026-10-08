@@ -290,6 +290,18 @@
       }
     },
     "/api/consents/open-banking": {
+      "get": {
+        "tags": ["OpenBanking", "Consent"],
+        "summary": "Load the current open-banking consent statement",
+        "operationId": "loadOpenBankingConsent",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Current statement record, or null", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpenBankingConsentResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/OpenBankingFailure" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      },
       "put": {
         "tags": ["OpenBanking", "Consent"],
         "summary": "Accept the current open-banking consent statement",
@@ -302,6 +314,18 @@
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "413": { "$ref": "#/components/responses/RequestTooLarge" },
           "415": { "$ref": "#/components/responses/JsonRequired" },
+          "502": { "$ref": "#/components/responses/OpenBankingFailure" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      },
+      "delete": {
+        "tags": ["OpenBanking", "Consent"],
+        "summary": "Withdraw the current open-banking consent statement",
+        "operationId": "withdrawOpenBankingConsent",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "204": { "description": "Consent withdrawn, or no current record existed" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
           "502": { "$ref": "#/components/responses/OpenBankingFailure" },
           "503": { "$ref": "#/components/responses/NotConfigured" }
         }

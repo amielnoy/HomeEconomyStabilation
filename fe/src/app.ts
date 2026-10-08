@@ -4,7 +4,9 @@ import { createPrivacySafeSnapshot } from './privacy.js';
 import { createLocaleFormatters, formatMessage, getLocaleConfig, isSupportedLocale, resolveLocale, type Locale } from './localization.js';
 import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js';
 import { runFinancialAgents, type FinancialAgentResults } from './financial-agents.js';
-import { LocalConsentRepository } from './consent.js';
+import { LocalConsentRepository, type ConsentAcceptance } from './consent.js';
+import { SupabaseConsentRepository } from './cloud-metadata.js';
+import { WriteThroughConsentRepository } from './consent-sync.js';
 import { Logger, resolveLevel } from './logging.js';
 import type { AppState, BankTransaction, CardBrand, CardIssuer, Category, CategoryKind, Rule, SavingsGoal } from './domain-model.js';
 import { AppStateCodec, LocalStorageStateRepository } from './state-repository.js';
@@ -35,7 +37,6 @@ let directoryOpen = window.location.hash === '#savings-directory';
 let goalsOpen = window.location.hash === '#goals';
 let cardsOpen = window.location.hash === '#cards';
 let expensesOpen = window.location.hash === '#expenses';
-const consentRepository = new LocalConsentRepository(localStorage);
 let drawerReturnFocus: HTMLElement | null = null;
 
 /* =====================================================================
@@ -1840,6 +1841,25 @@ let openBankingConnections: OpenBankingConnectionInfo[] = [];
 let signInAvailable = false;
 let signedIn = false;
 
+/* Local storage stays authoritative for what the UI shows as accepted — the cloud
+   write only fires once signed in, and a failure there never rolls the local record
+   back. Each purpose gets its own repository: a household can consent to one without
+   the other, and withdrawing open-banking access must never touch cloud-sync's
+   record or vice versa. */
+function reportConsentSyncFailure() { toast(t('consentSyncFailed')); }
+const cloudConsentRepository = new WriteThroughConsentRepository({
+  local: new LocalConsentRepository(localStorage),
+  remote: new SupabaseConsentRepository({ purpose: 'cloud_sync' }),
+  signedIn: () => signedIn,
+  onRemoteError: reportConsentSyncFailure,
+});
+const openBankingConsentRepository = new WriteThroughConsentRepository({
+  local: new LocalConsentRepository(localStorage, 'open_banking'),
+  remote: new SupabaseConsentRepository({ purpose: 'open_banking' }),
+  signedIn: () => signedIn,
+  onRemoteError: reportConsentSyncFailure,
+});
+
 async function loadSignInState() {
   const response = await fetch('/api/auth/session', { credentials: 'include' }).catch(() => null);
   const body: unknown = response ? await response.json().catch(() => null) : null;
@@ -2232,23 +2252,72 @@ function renderDrawer() {
     })
     : t('noStoredData');
   renderCloudConsent();
+  renderOpenBankingConsent();
 }
 
-function renderCloudConsent() {
-  const acceptance = consentRepository.current();
-  const status = $('#cloud-consent-status');
-  const acceptButton = document.querySelector<HTMLButtonElement>('#cloud-consent-accept')!;
-  const withdrawButton = document.querySelector<HTMLButtonElement>('#cloud-consent-withdraw')!;
-  const checkbox = document.querySelector<HTMLInputElement>('#cloud-consent-check')!;
-  status.textContent = acceptance
-    ? t('cloudConsentAcceptedAt', { date: DDMMYY.format(new Date(acceptance.acceptedAt)) })
-    : t('cloudConsentNotAccepted');
+/* Shared DOM painting for a consent card; the status text itself is resolved by the
+   caller with a literal t(key) call, so each purpose's copy stays its own and the
+   localization-contract test can still find every key by scanning the source for
+   literal t() calls — a key built dynamically here would be invisible to that scan. */
+function renderConsentCard(idPrefix: string, acceptance: ConsentAcceptance | null, statusText: string) {
+  const status = $(`#${idPrefix}-status`);
+  const acceptButton = document.querySelector<HTMLButtonElement>(`#${idPrefix}-accept`)!;
+  const withdrawButton = document.querySelector<HTMLButtonElement>(`#${idPrefix}-withdraw`)!;
+  const checkbox = document.querySelector<HTMLInputElement>(`#${idPrefix}-check`)!;
+  status.textContent = statusText;
   status.className = acceptance ? 'consent-status accepted' : 'consent-status';
   checkbox.checked = false;
   checkbox.disabled = Boolean(acceptance);
   acceptButton.disabled = true;
   acceptButton.hidden = Boolean(acceptance);
   withdrawButton.hidden = !acceptance;
+}
+
+function renderCloudConsent() {
+  const acceptance = cloudConsentRepository.current();
+  renderConsentCard('cloud-consent', acceptance, acceptance
+    ? t('cloudConsentAcceptedAt', { date: DDMMYY.format(new Date(acceptance.acceptedAt)) })
+    : t('cloudConsentNotAccepted'));
+}
+
+function renderOpenBankingConsent() {
+  const section = $('#open-banking-consent');
+  section.hidden = !openBankingSources.length;
+  if (section.hidden) return;
+  const acceptance = openBankingConsentRepository.current();
+  renderConsentCard('open-banking-consent', acceptance, acceptance
+    ? t('openBankingConsentAcceptedAt', { date: DDMMYY.format(new Date(acceptance.acceptedAt)) })
+    : t('openBankingConsentNotAccepted'));
+}
+
+/* The saved/withdrawn messages are resolved by the caller, not here, and resolved at
+   click time (as closures), not at wire time: t() depends on the locale selected at
+   the moment of the click, which can change after the page loads. Resolving once up
+   front would bake in whatever locale was active when the page first wired up. */
+function wireConsentCard(
+  idPrefix: string, repository: WriteThroughConsentRepository, render: () => void,
+  savedMessage: () => string, withdrawnMessage: () => string,
+) {
+  $(`#${idPrefix}-check`).addEventListener('change', (event) => {
+    const checked = (event.currentTarget as HTMLInputElement).checked;
+    document.querySelector<HTMLButtonElement>(`#${idPrefix}-accept`)!.disabled = !checked;
+  });
+  $(`#${idPrefix}-accept`).addEventListener('click', () => {
+    const checkbox = document.querySelector<HTMLInputElement>(`#${idPrefix}-check`)!;
+    if (!checkbox.checked) return;
+    void repository.accept(locale).then(() => {
+      render();
+      document.querySelector<HTMLButtonElement>(`#${idPrefix}-withdraw`)!.focus();
+      toast(savedMessage());
+    });
+  });
+  $(`#${idPrefix}-withdraw`).addEventListener('click', () => {
+    void repository.withdraw().then(() => {
+      render();
+      document.querySelector<HTMLInputElement>(`#${idPrefix}-check`)!.focus();
+      toast(withdrawnMessage());
+    });
+  });
 }
 
 function prepareManualForm() {
@@ -2743,24 +2812,10 @@ function wire() {
   $('#btn-backup').addEventListener('click', exportBackup);
   $('#dr-export').addEventListener('click', exportBackup);
   $('#dr-import').addEventListener('change', (e) => { const input = e.currentTarget as HTMLInputElement; if (input.files?.[0]) importBackup(input.files[0]); input.value = ''; });
-  $('#cloud-consent-check').addEventListener('change', (event) => {
-    const checked = (event.currentTarget as HTMLInputElement).checked;
-    document.querySelector<HTMLButtonElement>('#cloud-consent-accept')!.disabled = !checked;
-  });
-  $('#cloud-consent-accept').addEventListener('click', () => {
-    const checkbox = document.querySelector<HTMLInputElement>('#cloud-consent-check')!;
-    if (!checkbox.checked) return;
-    consentRepository.accept(locale);
-    renderCloudConsent();
-    document.querySelector<HTMLButtonElement>('#cloud-consent-withdraw')!.focus();
-    toast(t('cloudConsentSavedLocally'));
-  });
-  $('#cloud-consent-withdraw').addEventListener('click', () => {
-    consentRepository.withdraw();
-    renderCloudConsent();
-    document.querySelector<HTMLInputElement>('#cloud-consent-check')!.focus();
-    toast(t('cloudConsentWithdrawn'));
-  });
+  wireConsentCard('cloud-consent', cloudConsentRepository, renderCloudConsent,
+    () => t('cloudConsentSavedLocally'), () => t('cloudConsentWithdrawn'));
+  wireConsentCard('open-banking-consent', openBankingConsentRepository, renderOpenBankingConsent,
+    () => t('openBankingConsentSavedLocally'), () => t('openBankingConsentWithdrawn'));
   $('#manual-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const date = $('#manual-date').value;
