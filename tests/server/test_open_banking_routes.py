@@ -142,6 +142,32 @@ def test_connections_list_never_carries_a_token_field(monkeypatch) -> None:
     assert response.json() == {"connections": [{"id": "conn-1", "sourceId": "hapoalim", "status": "active", "createdAt": "2026-10-07T00:00:00Z"}]}
 
 
+def test_connections_list_authenticates_with_the_session_cookie_alone(monkeypatch) -> None:
+    """The browser has no token to put in a header — the httpOnly cookie must be enough."""
+    tokens_seen: list[str] = []
+
+    def recording_client(_config, token):
+        tokens_seen.append(token)
+        return FakeAuthenticatedClient()
+
+    monkeypatch.setattr(http_auth_module, "read_supabase_config", lambda: object())
+    monkeypatch.setattr(http_auth_module, "SupabaseRestClient", recording_client)
+    monkeypatch.setattr(
+        routes_module, "OpenBankingRepository",
+        lambda client, user_id, env=None: type("R", (), {
+            "list_connections": lambda self: [OpenBankingConnection(id="conn-1", source_id="hapoalim", status="active", created_at="2026-10-07T00:00:00Z")],
+        })(),
+    )
+    cookie_client = TestClient(app)
+    cookie_client.cookies.set("he_session", "cookie.session.token")
+    response = cookie_client.get("/api/open-banking/connections")
+
+    assert response.request.headers.get("authorization") is None
+    assert response.status_code == 200
+    assert response.json() == {"connections": [{"id": "conn-1", "sourceId": "hapoalim", "status": "active", "createdAt": "2026-10-07T00:00:00Z"}]}
+    assert tokens_seen == ["cookie.session.token"]
+
+
 def test_connections_list_survives_a_real_select_star_row(monkeypatch) -> None:
     # The real repository, not a fake: a `select=*` row carries `user_id` and
     # `consent_expires_at` too, which once crashed `OpenBankingConnection(**row)` into a 500.
