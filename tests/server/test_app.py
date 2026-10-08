@@ -248,3 +248,79 @@ def test_sign_in_exchange_failure_redirects_to_the_original_landing_target(monke
     )
     assert response.status_code == 302
     assert response.headers["location"] == "/some-other-page.html?signInError=sign_in_failed"
+
+
+def _cleared(response, name: str) -> bool:
+    return any(
+        header.startswith(f"{name}=") and "Max-Age=0" in header
+        for header in response.headers.get_list("set-cookie")
+    )
+
+
+def test_sign_in_state_mismatch_clears_both_pkce_cookies(monkeypatch) -> None:
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    callback_client = TestClient(app)
+    callback_client.cookies.set("he_pkce", "verifier-value")
+    callback_client.cookies.set("he_state", "state-value|/mazan-habait.html")
+    response = callback_client.get("/api/auth/callback?code=abc&state=wrong", follow_redirects=False)
+    assert response.status_code == 302
+    assert _cleared(response, "he_pkce") and _cleared(response, "he_state")
+
+
+def test_sign_in_exchange_failure_clears_both_pkce_cookies(monkeypatch) -> None:
+    import httpx
+
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: httpx.Response(400, json={"error": "invalid_grant"}))
+    callback_client = TestClient(app)
+    callback_client.cookies.set("he_pkce", "verifier-value")
+    callback_client.cookies.set("he_state", "state-value|/mazan-habait.html")
+    response = callback_client.get("/api/auth/callback?code=abc&state=state-value", follow_redirects=False)
+    assert response.status_code == 302
+    assert _cleared(response, "he_pkce") and _cleared(response, "he_state")
+    assert not any(h.startswith("he_session=") for h in response.headers.get_list("set-cookie"))
+
+
+def test_sign_in_success_sets_the_session_and_clears_both_pkce_cookies(monkeypatch) -> None:
+    import httpx
+
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    monkeypatch.setattr(
+        httpx, "post",
+        lambda *a, **k: httpx.Response(200, json={
+            "access_token": "fresh.access.token", "refresh_token": "r", "expires_in": 3600,
+            "token_type": "bearer", "user": {"id": "user-1"},
+        }),
+    )
+    callback_client = TestClient(app)
+    callback_client.cookies.set("he_pkce", "verifier-value")
+    callback_client.cookies.set("he_state", "state-value|/mazan-habait.html")
+    response = callback_client.get("/api/auth/callback?code=abc&state=state-value", follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html"
+    assert _cleared(response, "he_pkce") and _cleared(response, "he_state")
+    session = next(h for h in response.headers.get_list("set-cookie") if h.startswith("he_session="))
+    assert "fresh.access.token" in session and "HttpOnly" in session
+
+
+def test_sign_in_error_is_appended_to_a_landing_target_that_already_has_a_query(monkeypatch) -> None:
+    import httpx
+
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: httpx.Response(400, json={"error": "invalid_grant"}))
+    callback_client = TestClient(app)
+    callback_client.cookies.set("he_pkce", "verifier-value")
+    callback_client.cookies.set("he_state", "state-value|/page.html?x=1")
+    response = callback_client.get("/api/auth/callback?code=abc&state=state-value", follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["location"] == "/page.html?x=1&signInError=sign_in_failed"
+    assert response.headers["location"].count("?") == 1
+
+
+def test_sign_in_error_param_keeps_a_fragment_after_the_query() -> None:
+    assert app_module._with_query_param("/page.html?x=1#tab", "signInError", "e") == "/page.html?x=1&signInError=e#tab"
+    assert app_module._with_query_param("/page.html", "signInError", "e") == "/page.html?signInError=e"

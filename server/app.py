@@ -5,6 +5,7 @@ from hashlib import sha256
 from secrets import token_bytes
 from os import environ
 from time import monotonic
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 from fastapi import FastAPI, Request, Response
@@ -147,6 +148,24 @@ async def start_google_sign_in(request: Request) -> Response:
     return response
 
 
+def _with_query_param(target: str, name: str, value: str) -> str:
+    """Add one query parameter to `target`, whether or not it already carries a query."""
+    parts = urlsplit(target)
+    query = parse_qsl(parts.query, keep_blank_values=True)
+    query.append((name, value))
+    return urlunsplit(parts._replace(query=urlencode(query)))
+
+
+def _sign_in_exit(target: str, *, error: str | None = None) -> Response:
+    # The same every-exit shape as the Open Banking callback: success included, the PKCE
+    # cookies are spent the moment the round trip comes back, whatever its outcome.
+    url = _with_query_param(target, "signInError", error) if error else target
+    response = RedirectResponse(url, status_code=302)
+    for spent in (VERIFIER_COOKIE, STATE_COOKIE):
+        response.delete_cookie(spent, path="/")
+    return response
+
+
 @app.get("/api/auth/callback")
 async def finish_google_sign_in(request: Request) -> Response:
     config = read_supabase_config()
@@ -158,17 +177,14 @@ async def finish_google_sign_in(request: Request) -> Response:
     code = request.query_params.get("code")
     # The state must come back exactly as it went out, or this is somebody else's round trip.
     if not verifier or not code or len(stored) != 2 or stored[0] != request.query_params.get("state"):
-        return RedirectResponse(f"{_DEFAULT_LANDING}?signInError=sign_in_state_mismatch", status_code=302)
+        return _sign_in_exit(_DEFAULT_LANDING, error="sign_in_state_mismatch")
 
     exchanged = await run_in_threadpool(_exchange_code, config, code, verifier)
     if exchanged is None:
-        landing = stored[1] if len(stored) == 2 else _DEFAULT_LANDING
-        return RedirectResponse(f"{landing}?signInError=sign_in_failed", status_code=302)
+        return _sign_in_exit(stored[1], error="sign_in_failed")
 
-    response = RedirectResponse(stored[1], status_code=302)
+    response = _sign_in_exit(stored[1])
     _cookie(response, SESSION_COOKIE, exchanged.access_token, exchanged.expires_in)
-    for spent in (VERIFIER_COOKIE, STATE_COOKIE):
-        response.delete_cookie(spent, path="/")
     return response
 
 
