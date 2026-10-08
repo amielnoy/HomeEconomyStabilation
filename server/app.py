@@ -158,11 +158,12 @@ async def finish_google_sign_in(request: Request) -> Response:
     code = request.query_params.get("code")
     # The state must come back exactly as it went out, or this is somebody else's round trip.
     if not verifier or not code or len(stored) != 2 or stored[0] != request.query_params.get("state"):
-        return _error(400, "sign_in_state_mismatch")
+        return RedirectResponse(f"{_DEFAULT_LANDING}?signInError=sign_in_state_mismatch", status_code=302)
 
     exchanged = await run_in_threadpool(_exchange_code, config, code, verifier)
     if exchanged is None:
-        return _error(502, "sign_in_failed")
+        landing = stored[1] if len(stored) == 2 else _DEFAULT_LANDING
+        return RedirectResponse(f"{landing}?signInError=sign_in_failed", status_code=302)
 
     response = RedirectResponse(stored[1], status_code=302)
     _cookie(response, SESSION_COOKIE, exchanged.access_token, exchanged.expires_in)

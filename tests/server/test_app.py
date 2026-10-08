@@ -149,14 +149,18 @@ def test_sign_in_is_refused_cleanly_when_the_cloud_is_not_configured() -> None:
 
 
 def test_the_callback_refuses_a_round_trip_it_did_not_start(monkeypatch) -> None:
-    """Without the verifier and a matching state this is somebody else's sign-in."""
+    """Without the verifier and a matching state this is somebody else's sign-in.
+
+    The callback is reached by a top-level browser navigation the provider initiates, so
+    the failure is a redirect carrying an error code rather than a raw JSON body.
+    """
     monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
     monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
 
     response = client.get("/api/auth/callback?code=abc&state=zzz", follow_redirects=False)
 
-    assert response.status_code == 400
-    assert response.json() == {"code": "sign_in_state_mismatch"}
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?signInError=sign_in_state_mismatch"
 
 
 def test_signing_in_sends_the_browser_to_google_and_keeps_the_verifier_private(monkeypatch) -> None:
@@ -220,3 +224,27 @@ def test_auth_session_reports_signed_in_with_a_valid_cookie(monkeypatch) -> None
 def test_auth_session_never_echoes_the_cookie_value() -> None:
     response = client.get("/api/auth/session", cookies={"he_session": "a-very-secret-token-value"})
     assert "a-very-secret-token-value" not in response.text
+
+
+def test_sign_in_state_mismatch_redirects_with_an_error_code_not_raw_json(monkeypatch) -> None:
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    response = client.get("/api/auth/callback?code=abc&state=xyz", follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?signInError=sign_in_state_mismatch"
+
+
+def test_sign_in_exchange_failure_redirects_to_the_original_landing_target(monkeypatch) -> None:
+    import httpx
+
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: httpx.Response(400, json={"error": "invalid_grant"}))
+    callback_client = TestClient(app)
+    callback_client.cookies.set("he_pkce", "verifier-value")
+    callback_client.cookies.set("he_state", "state-value|/some-other-page.html")
+    response = callback_client.get(
+        "/api/auth/callback?code=abc&state=state-value", follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert response.headers["location"] == "/some-other-page.html?signInError=sign_in_failed"
