@@ -3,6 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import server.app as app_module
+import server.http_auth as http_auth_module
 import server.open_banking_routes as routes_module
 from server.app import app
 from server.open_banking_config import OpenBankingSource
@@ -49,8 +50,8 @@ class FakeAuthenticatedClient:
 
 
 def authenticate(monkeypatch) -> None:
-    monkeypatch.setattr(app_module, "read_supabase_config", lambda: object())
-    monkeypatch.setattr(app_module, "SupabaseRestClient", lambda _config, _token: FakeAuthenticatedClient())
+    monkeypatch.setattr(http_auth_module, "read_supabase_config", lambda: object())
+    monkeypatch.setattr(http_auth_module, "SupabaseRestClient", lambda _config, _token: FakeAuthenticatedClient())
 
 
 def grant_open_banking_consent(monkeypatch) -> None:
@@ -151,8 +152,8 @@ def test_connections_list_survives_a_real_select_star_row(monkeypatch) -> None:
                 "consent_expires_at": None, "created_at": "2026-10-07T00:00:00Z",
             }]
 
-    monkeypatch.setattr(app_module, "read_supabase_config", lambda: object())
-    monkeypatch.setattr(app_module, "SupabaseRestClient", lambda _config, _token: RowReturningClient())
+    monkeypatch.setattr(http_auth_module, "read_supabase_config", lambda: object())
+    monkeypatch.setattr(http_auth_module, "SupabaseRestClient", lambda _config, _token: RowReturningClient())
     response = client.get(
         "/api/open-banking/connections", headers={"Authorization": "Bearer user.jwt.token"},
     )
@@ -391,6 +392,23 @@ def configure_callback(monkeypatch, *, sandbox: bool = True, licence: str | None
     return calls
 
 
+def test_callback_state_mismatch_redirects_instead_of_returning_raw_json() -> None:
+    response = callback_client().get(
+        "/api/open-banking/callback?code=abc&state=wrong", follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?openBankingError=open_banking_state_mismatch"
+
+
+def test_callback_clears_all_pkce_cookies_even_on_a_state_mismatch() -> None:
+    response = callback_client().get(
+        "/api/open-banking/callback?code=abc&state=wrong", follow_redirects=False,
+    )
+    set_cookie_headers = response.headers.get_list("set-cookie")
+    for name in ("he_ob_state", "he_ob_pkce", "he_ob_source"):
+        assert any(header.startswith(f"{name}=") and "Max-Age=0" in header for header in set_cookie_headers)
+
+
 def test_callback_refuses_a_non_sandbox_exchange_without_a_licence(monkeypatch) -> None:
     calls = configure_callback(monkeypatch, sandbox=False, licence=None)
     authenticate(monkeypatch)
@@ -403,8 +421,8 @@ def test_callback_refuses_a_non_sandbox_exchange_without_a_licence(monkeypatch) 
     response = callback_client().get(
         CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer user.jwt.token"},
     )
-    assert response.status_code == 503
-    assert response.json() == {"code": "open_banking_not_configured"}
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?openBankingError=open_banking_not_configured"
     assert "created" not in calls
 
 
@@ -425,8 +443,8 @@ def test_callback_rejects_a_state_that_does_not_match_the_cookie(monkeypatch) ->
         "/api/open-banking/callback?code=auth-code&state=forged-state", follow_redirects=False,
         headers={"Authorization": "Bearer user.jwt.token"},
     )
-    assert response.status_code == 400
-    assert response.json() == {"code": "open_banking_state_mismatch"}
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?openBankingError=open_banking_state_mismatch"
     assert "exchange" not in calls
 
 
@@ -436,8 +454,8 @@ def test_callback_rejects_a_request_without_the_pkce_cookies(monkeypatch) -> Non
     response = TestClient(app).get(
         CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer user.jwt.token"},
     )
-    assert response.status_code == 400
-    assert response.json() == {"code": "open_banking_state_mismatch"}
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?openBankingError=open_banking_state_mismatch"
     assert "exchange" not in calls
 
 
@@ -447,8 +465,8 @@ def test_callback_reports_a_failed_exchange_without_creating_a_connection(monkey
     response = callback_client().get(
         CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer user.jwt.token"},
     )
-    assert response.status_code == 502
-    assert response.json() == {"code": "open_banking_exchange_failed"}
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?openBankingError=open_banking_exchange_failed"
     assert "created" not in calls
 
 
@@ -457,8 +475,8 @@ def test_callback_requires_cloud_configuration_like_the_other_authenticated_rout
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_PUBLISHABLE_KEY", raising=False)
     response = callback_client().get(CALLBACK_URL, follow_redirects=False)
-    assert response.status_code == 503
-    assert response.json() == {"code": "cloud_not_configured"}
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?openBankingError=cloud_not_configured"
     assert "created" not in calls
 
 
@@ -466,23 +484,23 @@ def test_callback_requires_a_bearer_token_like_the_other_authenticated_routes(mo
     calls = configure_callback(monkeypatch)
     authenticate(monkeypatch)
     response = callback_client().get(CALLBACK_URL, follow_redirects=False)
-    assert response.status_code == 401
-    assert response.json() == {"code": "authentication_required"}
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?openBankingError=authentication_required"
     assert "created" not in calls
 
 
 def test_callback_rejects_an_invalid_session_like_the_other_authenticated_routes(monkeypatch) -> None:
     calls = configure_callback(monkeypatch)
-    monkeypatch.setattr(app_module, "read_supabase_config", lambda: object())
+    monkeypatch.setattr(http_auth_module, "read_supabase_config", lambda: object())
     monkeypatch.setattr(
-        app_module, "SupabaseRestClient",
+        http_auth_module, "SupabaseRestClient",
         lambda _config, _token: type("Unverified", (), {"verify_user": lambda self: None})(),
     )
     response = callback_client().get(
         CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer expired.jwt.token"},
     )
-    assert response.status_code == 401
-    assert response.json() == {"code": "invalid_session"}
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?openBankingError=invalid_session"
     assert "created" not in calls
 
 
@@ -517,5 +535,5 @@ def test_callback_reports_a_failed_connection_write(monkeypatch) -> None:
     response = callback_client().get(
         CALLBACK_URL, follow_redirects=False, headers={"Authorization": "Bearer user.jwt.token"},
     )
-    assert response.status_code == 502
-    assert response.json() == {"code": "open_banking_connection_failed"}
+    assert response.status_code == 302
+    assert response.headers["location"] == "/mazan-habait.html?openBankingError=open_banking_connection_failed"
