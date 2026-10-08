@@ -146,7 +146,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | File | Coverage |
 | --- | --- |
 | `tests/component/cloud-consent.component.test.ts` | Unselected explicit consent, voluntariness, limits and rights |
-| `tests/component/cloud-sync.component.test.ts` | Hidden by default, a sync trigger, and a reconciliation choice that stays dormant until a conflict is found |
+| `tests/component/cloud-sync.component.test.ts` | Hidden by default, sync/restore/delete triggers, and a reconciliation choice that stays dormant until a conflict is found |
 | `tests/component/credit-card-upload.component.test.ts` | Multi-file spreadsheet upload contract |
 | `tests/component/financial-agents.component.test.ts` | Accessible eight-agent host and prominent safe-to-spend result |
 | `tests/component/language-picker.component.test.ts` | Native language names, accessible field and keyboard semantics |

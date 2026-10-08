@@ -15,6 +15,8 @@ describe('cloud sync component', () => {
     expect(title.hidden).toBe(true);
     expect(root.getAttribute('aria-labelledby')).toBe('cloud-sync-heading');
     expect(document.querySelector('[data-testid="cloud-sync-now"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="cloud-restore"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="cloud-delete"]')).not.toBeNull();
     expect((reconciliation as HTMLElement).hidden).toBe(true);
     expect(document.querySelector('[data-testid="cloud-reconciliation-keep"]')).not.toBeNull();
     expect(document.querySelector('[data-testid="cloud-reconciliation-use-cloud"]')).not.toBeNull();

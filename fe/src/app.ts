@@ -1888,11 +1888,37 @@ async function pushCloudSnapshot() {
   }
 }
 
+async function deleteCloudSnapshot() {
+  try {
+    await snapshotRepository.remove();
+    lastCloudSyncAt = null;
+    cloudReconciliationOutcome = 'none';
+    renderCloudSync();
+    toast(t('cloudDeleteSuccess'));
+  } catch {
+    toast(t('cloudDeleteFailed'));
+  }
+}
+
 function applyCloudSnapshot(payload: CloudStatePayload) {
   const restored = stateCodec.decode(payload);
   if (!restored) { toast(t('cloudSyncFailed')); return; }
   S = restored;
   save(); renderDrawer(); render();
+}
+
+async function restoreFromCloud() {
+  try {
+    const snapshot = await snapshotRepository.load();
+    if (!snapshot) { toast(t('cloudRestoreNothingToRestore')); return; }
+    applyCloudSnapshot(snapshot.payload);
+    lastCloudSyncAt = snapshot.updatedAt ?? lastCloudSyncAt;
+    cloudReconciliationOutcome = 'none';
+    renderCloudSync();
+    toast(t('cloudRestoreSuccess'));
+  } catch {
+    toast(t('cloudRestoreFailed'));
+  }
 }
 
 async function useCloudData() {
@@ -2398,6 +2424,25 @@ function wireConsentCard(
   });
 }
 
+/* Click once to arm, click again within 4s to confirm — the same two-step pattern
+   #dr-wipe already uses for a destructive local action, reused here for the two cloud
+   actions that overwrite one side or the other. Labels are resolved at click time, same
+   reasoning as wireConsentCard: a baked-in label would survive a locale change. */
+function wireArmedAction(buttonId: string, confirmLabel: () => string, idleLabel: () => string, onConfirm: () => void) {
+  const button = document.querySelector<HTMLButtonElement>(`#${buttonId}`)!;
+  button.addEventListener('click', () => {
+    if (button.dataset.armed) {
+      delete button.dataset.armed;
+      button.textContent = idleLabel();
+      onConfirm();
+    } else {
+      button.dataset.armed = '1';
+      button.textContent = confirmLabel();
+      setTimeout(() => { delete button.dataset.armed; button.textContent = idleLabel(); }, 4000);
+    }
+  });
+}
+
 function prepareManualForm() {
   const cat = $('#manual-cat');
   const current = cat.value;
@@ -2900,6 +2945,8 @@ function wire() {
   $('#cloud-sync-now').addEventListener('click', () => void pushCloudSnapshot());
   $('#cloud-reconciliation-keep').addEventListener('click', () => void pushCloudSnapshot());
   $('#cloud-reconciliation-use-cloud').addEventListener('click', () => void useCloudData());
+  wireArmedAction('cloud-restore', () => t('cloudRestoreConfirm'), () => t('cloudRestoreButton'), () => void restoreFromCloud());
+  wireArmedAction('cloud-delete', () => t('confirmDelete'), () => t('cloudDeleteButton'), () => void deleteCloudSnapshot());
   $('#manual-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const date = $('#manual-date').value;
