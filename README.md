@@ -249,7 +249,7 @@ Vitest בודק לוגיקת דפדפן וחוזים במהירות. Pytest בו
 
 מודל הנתונים המינימלי כולל `user_profiles`,‏ `app_snapshots`,‏ `consent_acceptances` ושתי טבלאות הפיילוט `open_banking_connections`/`open_banking_tokens`. כל הטבלאות מפעילות RLS ומאפשרות למשתמש מאומת לגשת רק לשורה שלו. בצד Python המחלקות `UserProfileRepository`,‏ `SnapshotRepository`,‏ `ConsentRepository` ו־`OpenBankingRepository` מנהלות את הקריאה והכתיבה דרך JWT המשתמש ו־publishable key בלבד. בדפדפן `SupabaseSnapshotRepository`,‏ `SupabaseProfileRepository` ו־`SupabaseConsentRepository` מדברות עם נתיבי API מאומתים; `LocalConsentRepository` נשארת ברירת המחדל עד חיבור Auth לממשק.
 
-**פיילוט Open Banking:** חיבור read-only לבנק הפועלים (sandbox) דרך תקן ה־Open Banking של בנק ישראל — ללא הוראות תשלום וללא סנכרון רקע, חסום מאחורי `OPEN_BANKING_SANDBOX`/`OPEN_BANKING_LICENCE_ID`. הקוד קיים ועבר בדיקות, אך אינו נגיש למשתמש אמיתי עדיין: עדיין אין נתיב כניסה מאומת מהדפדפן (אותה בעיה שחוסמת גם את סנכרון הענן למעלה), ואין ממשק להענקת ההסכמה הייעודית. פירוט מלא, כולל מה חסר לפני הפעלה, נמצא ב־[SUPABASE.md](SUPABASE.md) וב־[TODO.md](TODO.md).
+**פיילוט Open Banking:** חיבור read-only לבנק הפועלים (sandbox) דרך תקן ה־Open Banking של בנק ישראל — ללא הוראות תשלום וללא סנכרון רקע, חסום מאחורי `OPEN_BANKING_SANDBOX`/`OPEN_BANKING_LICENCE_ID`. הקוד קיים ועבר בדיקות, ונתיב כניסה מאומת מהדפדפן (he_session cookie, ממשק כניסה/התנתקות) כבר בנוי — אך הפיילוט עדיין אינו נגיש למשתמש אמיתי: עד שה־Supabase/Google/`AUTH_ALLOWED_ORIGINS` של production יוגדרו, כפתור הכניסה נשאר מוסתר, ואין עדיין ממשק להענקת ההסכמה הייעודית (`open_banking`). פירוט מלא, כולל מה חסר לפני הפעלה, נמצא ב־[SUPABASE.md](SUPABASE.md) וב־[TODO.md](TODO.md).
 
 ### בדיקה ידנית דרך Swagger או Scalar
 

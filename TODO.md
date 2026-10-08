@@ -18,7 +18,9 @@
 - [ ] להפעיל את ספק Google ב־Supabase ולהדביק Client ID ו־Client Secret.
 - [ ] להגדיר ב־Supabase את `https://home-economy-stabilation.vercel.app/api/auth/callback` כ־Redirect URL, בלי wildcard.
 - [ ] להגדיר בפריסה `SUPABASE_URL`,‏ `SUPABASE_PUBLISHABLE_KEY` ו־`AUTH_ALLOWED_ORIGINS`; עד אז `/api/auth/google` מחזיר `503 cloud_not_configured`.
-- [ ] לבנות את ממשק הכניסה בדפדפן: מצב מחובר/מנותק, חיבור `accessToken()` ל־session, ושער ההסכמה לפני כל העלאה.
+- [x] לבנות את ממשק הכניסה בדפדפן: מצב מחובר/מנותק. בוצע ב־`docs/superpowers/plans/2026-10-08-cookie-session-auth.md` — `he_session` ה־cookie הקיים הוא מנגנון האימות, לא `accessToken()` ב־JS (token שקריא ל־JS בוטל כעיקרון עיצוב, לא רק נדחה).
+- [ ] לחבר את `fe/src/cloud-sync.ts` ו־`fe/src/cloud-metadata.ts` לאותו מנגנון: להסיר את ה־`accessToken()` callback ולהשתמש ב־`credentials: 'include'`, באותו דפוס כבר בנוי ב־`fe/src/open-banking.ts`, ואז לחבר אותם בפועל ל־UI.
+- [ ] שער ההסכמה לפני כל העלאה (כולל הממשק להענקת הסכמת `open_banking`).
 - [ ] להחליט ולממש מה קורה לנתונים שכבר במכשיר בכניסה ראשונה — לשאול ולצרף לאחר הסכמה.
 - [x] להחיל לפי הסדר את שלוש המיגרציות ולוודא שהיסטוריית המיגרציות המקומית והמרוחקת זהה; הן יוצרות שלוש טבלאות, grants,‏ RLS,‏ triggers ו־constraint לגרסה 2.
 - [ ] להריץ בדיקת integration עם שני משתמשים ולוודא בפועל בידוד RLS, כתיבה, קריאה, מחיקה וטיפול מבוקר ברשומת v1.
