@@ -1525,6 +1525,21 @@ body.drawer-open{ overflow:hidden; }
       <button class="btn sm" id="cloud-consent-withdraw" type="button" hidden data-i18n="cloudConsentWithdraw" data-testid="cloud-consent-withdraw">ביטול ההסכמה</button>
     </div>
       </section>
+      <h3 id="cloud-sync-title" data-testid="cloud-sync-title" data-i18n="cloudSyncTitle" hidden>סנכרון ענן</h3>
+      <section class="consent-card" aria-labelledby="cloud-sync-heading" hidden data-testid="cloud-sync" id="cloud-sync">
+    <h4 id="cloud-sync-heading" class="vh" data-i18n="cloudSyncTitle" data-testid="cloud-sync-heading">סנכרון ענן</h4>
+    <p class="consent-status" id="cloud-sync-status" role="status" aria-live="polite" data-testid="cloud-sync-status"></p>
+    <div class="consent-actions" data-testid="cloud-sync-actions">
+      <button class="btn sm" id="cloud-sync-now" type="button" data-i18n="cloudSyncButton" data-testid="cloud-sync-now">סנכרון עכשיו</button>
+    </div>
+    <div id="cloud-reconciliation" hidden data-testid="cloud-reconciliation">
+      <p data-i18n="cloudReconciliationIntro">קיים בענן גיבוי שאינו תואם את הנתונים במכשיר הזה. איזו גרסה לשמור?</p>
+      <div class="consent-actions" data-testid="cloud-reconciliation-actions">
+        <button class="btn sm" id="cloud-reconciliation-keep" type="button" data-i18n="cloudReconciliationKeepDevice" data-testid="cloud-reconciliation-keep">לשמור את הנתונים מהמכשיר הזה</button>
+        <button class="btn sm" id="cloud-reconciliation-use-cloud" type="button" data-i18n="cloudReconciliationUseCloud" data-testid="cloud-reconciliation-use-cloud">להשתמש בנתונים מהענן</button>
+      </div>
+    </div>
+      </section>
       <h3 data-testid="settings-translated-content" data-i18n="openBankingConsentTitle">הסכמה לחיבור בנק (Open Banking)</h3>
       <section class="consent-card" aria-labelledby="open-banking-consent-heading" hidden data-testid="open-banking-consent" id="open-banking-consent">
     <h4 id="open-banking-consent-heading" class="vh" data-i18n="openBankingConsentTitle" data-testid="open-banking-consent-heading">הסכמה לחיבור בנק (Open Banking)</h4>

@@ -24,7 +24,7 @@
 
 **ידוע וחסר כרגע, לפני שהפיילוט הופך לנגיש למשתמש אמיתי:**
 
-- **נתיב הכניסה מהדפדפן וממשק ההסכמה בנויים; `SupabaseSnapshotRepository`/`SupabaseProfileRepository` עדיין לא מחוברים ל־UI.** `he_session` ה־cookie הקיים הוא מנגנון האימות האמיתי היחיד (ראו `docs/superpowers/plans/2026-10-08-cookie-session-auth.md`). `cloud-sync.ts`/`cloud-metadata.ts` הועברו לאותו דפוס `credentials: 'include'` שכבר נבנה עבור `open-banking.ts`. כרטיס הסכמה קיים לכל אחת משתי המטרות (`cloud_sync` ו־`open_banking`) בתא ההגדרות: כתיבה מקומית מיידית, וכתיבה לענן — דרך `SupabaseConsentRepository` — כשהמשתמש מחובר; כשל ברכיב הענן מתועד ולא הופך את הרשומה המקומית. `connect`,‏ `sync` וכרטיס ה־consent נבדקו ועובדים מול ה־cookie. מה שעדיין לא קיים: כפתור „סנכרון עכשיו” (`SupabaseSnapshotRepository`) ומסך פרופיל (`SupabaseProfileRepository`) — אף אחד מהם עדיין לא נבנה ב־`app.ts`.
+- **נתיב הכניסה מהדפדפן, ממשק ההסכמה, כפתור הסנכרון וסנכרון השפה כולם בנויים.** `he_session` ה־cookie הקיים הוא מנגנון האימות האמיתי היחיד (ראו `docs/superpowers/plans/2026-10-08-cookie-session-auth.md`). `cloud-sync.ts`/`cloud-metadata.ts` הועברו לאותו דפוס `credentials: 'include'` שכבר נבנה עבור `open-banking.ts`. כרטיס הסכמה קיים לכל אחת משתי המטרות (`cloud_sync` ו־`open_banking`) בתא ההגדרות: כתיבה מקומית מיידית, וכתיבה לענן — דרך `SupabaseConsentRepository` — כשהמשתמש מחובר; כשל ברכיב הענן מתועד ולא הופך את הרשומה המקומית. כפתור „סנכרון עכשיו” דוחף את המצב המקומי לענן דרך `SupabaseSnapshotRepository`; בחירת שפה כשחתום-פנימה כותבת גם לענן דרך `SupabaseProfileRepository`, best-effort. בכניסה, אם קיים בענן גיבוי שהמכשיר הריק יכול לאמץ בלי לאבד דבר — הוא מאומץ אוטומטית; אם המכשיר כבר מכיל נתונים שסותרים את הענן, מוצגת בחירה מפורשת (`fe/src/cloud-sync-reconciliation.ts`) ולא מוכרעת באופן שקט. `connect`,‏ `sync`, כרטיס ה־consent, הסנכרון וה־reconciliation נבדקו ועובדים מול ה־cookie.
 - **הסנדבוקס האמיתי של בנק הפועלים לא נבדק בפועל** — לא היו credentials זמינים. צורת הקריאה האמיתית ל־NextGenPSD2 דורשת שלב יצירת consent resource, headers נוספים (`Consent-ID`,‏ `X-Request-ID`,‏ `PSU-IP-Address`) ולרוב תעודת client — אף אחד מהם לא ממומש עדיין. הנוסח של הצהרת ההסכמה ל־`open_banking` גם הוא לא עבר בדיקת דובר שפת אם לעברית/אנגלית ולא תורגם במקור לאמהרית/צרפתית (פלייסהולדר באנגלית בינתיים, כמו שאר מחרוזות הפיצ'ר).
 - לוגיקת ה־revoke-on-refusal בודקת כרגע רק קוד HTTP‏ (400/401) ולא את קוד השגיאה הספציפי (`invalid_grant`) — טעות תצורה שלנו (client id שגוי, תעודה שפגה) יכולה באופן תיאורטי לבטל חיבורים של משתמשים במקום רק refusal אמיתי מהבנק.
 - שני sync חופפים על אותו חיבור עלולים להיכשל זה בזה דרך rotation של ה־refresh token.
@@ -33,7 +33,7 @@
 
 ## מחלקות וגבולות
 
-- `SupabaseSnapshotRepository` בצד הדפדפן מממש את `CloudSnapshotClient`. הוא מקבל callback ל־access token ואינו שומר אותו.
+- `SupabaseSnapshotRepository` בצד הדפדפן מממש את `CloudSnapshotClient`. הוא נשען על ה־`he_session` cookie (`credentials: 'include'`) ואינו מחזיק טוקן כלשהו ב־JS.
 - `SupabaseProfileRepository` ו־`SupabaseConsentRepository` שומרים שפה והסכמה דרך `/api/profile` ו־`/api/consents/cloud-sync`, ומאמתים את תשובת השרת לפני שימוש.
 - `SupabaseRestClient` ב־Python מאמת משתמש דרך `/auth/v1/user` וניגש ל־PostgREST עם ה־JWT שלו.
 - `UserProfileRepository`,‏ `SnapshotRepository` ו־`ConsentRepository` מרכזים קריאה, יצירה, עדכון ומחיקה עם סינון owner מפורש בנוסף ל־RLS.
@@ -88,12 +88,10 @@ npm run build
 
 ## הפעלה עתידית
 
-לפני הפעלת הכפתור במוצר יש להשלים, לפי הסדר:
+הקוד קיים, עבר בדיקות ועובד מקצה לקצה מול ה־cookie (כניסה, הסכמה, סנכרון, reconciliation). לפני הפעלה אמיתית למשתמש production עדיין יש להשלים:
 
-1. Supabase Auth וניהול session מאובטח.
-2. חיבור `SupabaseProfileRepository` ו־`SupabaseConsentRepository` ל־session ולפקדי הממשק (ההתמדה והאכיפה בשרת כבר קיימות).
-3. פעולות מפורשות: „סנכרון עכשיו”, „שחזור” ו„מחיקה מהענן”.
-4. reconciliation שלא דורס מצב מקומי חדש יותר ללא אישור.
-5. בדיקות integration מול פרויקט Supabase ייעודי שאינו production.
+1. הגדרת Supabase Auth/Google ו־`AUTH_ALLOWED_ORIGINS` בפריסה עצמה (ראו „כניסה עם Google” למעלה) — עד אז הכניסה מוסתרת ולא נגישה.
+2. בדיקות integration מול פרויקט Supabase ייעודי שאינו production, עם שני משתמשים אמיתיים.
+3. מסכי מחיקה/שחזור ייעודיים, מדיניות שמירה ופרטי בעל שליטה — ראו [TODO.md](TODO.md).
 
 כל בדיקות ה־API, האבטחה, ההסכמה וה־RLS הנדרשות לפני ההפעלה ממופות ב־[TEST_PLAN.md](TEST_PLAN.md). אין להשתמש ב־JWT של production או בנתונים פיננסיים אמיתיים בבדיקות ידניות או אוטומטיות.

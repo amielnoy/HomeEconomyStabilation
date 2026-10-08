@@ -5,8 +5,10 @@ import { createLocaleFormatters, formatMessage, getLocaleConfig, isSupportedLoca
 import { captureMarketingAttribution, trackMarketingEvent } from './marketing.js';
 import { runFinancialAgents, type FinancialAgentResults } from './financial-agents.js';
 import { LocalConsentRepository, type ConsentAcceptance } from './consent.js';
-import { SupabaseConsentRepository } from './cloud-metadata.js';
+import { SupabaseConsentRepository, SupabaseProfileRepository } from './cloud-metadata.js';
 import { WriteThroughConsentRepository } from './consent-sync.js';
+import { SupabaseSnapshotRepository, type CloudStatePayload } from './cloud-sync.js';
+import { reconcileCloudSnapshot, type ReconciliationOutcome } from './cloud-sync-reconciliation.js';
 import { Logger, resolveLevel } from './logging.js';
 import type { AppState, BankTransaction, CardBrand, CardIssuer, Category, CategoryKind, Rule, SavingsGoal } from './domain-model.js';
 import { AppStateCodec, LocalStorageStateRepository } from './state-repository.js';
@@ -1860,6 +1862,69 @@ const openBankingConsentRepository = new WriteThroughConsentRepository({
   onRemoteError: reportConsentSyncFailure,
 });
 
+const snapshotRepository = new SupabaseSnapshotRepository();
+const profileRepository = new SupabaseProfileRepository();
+let lastCloudSyncAt: string | null = null;
+let cloudReconciliationPayload: CloudStatePayload | null = null;
+let cloudReconciliationOutcome: ReconciliationOutcome = 'none';
+
+/* Active local consent, not merely a stored session, is what unlocks every cloud-sync
+   action: a withdrawn consent removes its local record (see LocalConsentRepository),
+   so current() returning null already means "do not touch the cloud" with no further
+   check needed. */
+function cloudSyncActive(): boolean {
+  return signedIn && cloudConsentRepository.current() !== null;
+}
+
+async function pushCloudSnapshot() {
+  try {
+    const snapshot = await snapshotRepository.save(createPrivacySafeSnapshot(S));
+    lastCloudSyncAt = snapshot.updatedAt ?? new Date().toISOString();
+    cloudReconciliationOutcome = 'none';
+    renderCloudSync();
+    toast(t('cloudSyncSuccess'));
+  } catch {
+    toast(t('cloudSyncFailed'));
+  }
+}
+
+function applyCloudSnapshot(payload: CloudStatePayload) {
+  const restored = stateCodec.decode(payload);
+  if (!restored) { toast(t('cloudSyncFailed')); return; }
+  S = restored;
+  save(); renderDrawer(); render();
+}
+
+async function useCloudData() {
+  if (!cloudReconciliationPayload) return;
+  applyCloudSnapshot(cloudReconciliationPayload);
+  cloudReconciliationOutcome = 'none';
+  renderCloudSync();
+  toast(t('cloudReconciliationAdopted'));
+}
+
+/* Runs once at boot, after sign-in state is known. An empty device adopts the cloud
+   snapshot outright (see reconcileCloudSnapshot); any other mismatch is surfaced as a
+   choice rather than picked automatically — neither this device nor the cloud is
+   silently overwritten without the household saying which copy to keep. A failure here
+   (network, timeout) leaves local state untouched; the sync button stays available for
+   a later manual retry. */
+async function checkCloudReconciliation() {
+  if (!cloudSyncActive()) return;
+  try {
+    const snapshot = await snapshotRepository.load();
+    cloudReconciliationPayload = snapshot?.payload ?? null;
+    if (snapshot?.updatedAt) lastCloudSyncAt = snapshot.updatedAt;
+    cloudReconciliationOutcome = reconcileCloudSnapshot(createPrivacySafeSnapshot(S), cloudReconciliationPayload);
+    if (cloudReconciliationOutcome === 'adopt-cloud' && cloudReconciliationPayload) {
+      applyCloudSnapshot(cloudReconciliationPayload);
+      cloudReconciliationOutcome = 'none';
+      toast(t('cloudReconciliationAdopted'));
+    }
+  } catch { /* leave local state and the last-known sync status untouched */ }
+  renderCloudSync();
+}
+
 async function loadSignInState() {
   const response = await fetch('/api/auth/session', { credentials: 'include' }).catch(() => null);
   const body: unknown = response ? await response.json().catch(() => null) : null;
@@ -2253,6 +2318,19 @@ function renderDrawer() {
     : t('noStoredData');
   renderCloudConsent();
   renderOpenBankingConsent();
+  renderCloudSync();
+}
+
+function renderCloudSync() {
+  const section = $('#cloud-sync');
+  const active = cloudSyncActive();
+  section.hidden = !active;
+  $('#cloud-sync-title').hidden = !active;
+  if (!active) return;
+  $('#cloud-sync-status').textContent = lastCloudSyncAt
+    ? t('cloudSyncLastSynced', { date: DDMMYY.format(new Date(lastCloudSyncAt)) })
+    : t('cloudSyncNotYetSynced');
+  $('#cloud-reconciliation').hidden = cloudReconciliationOutcome !== 'conflict';
 }
 
 /* Shared DOM painting for a consent card; the status text itself is resolved by the
@@ -2789,6 +2867,9 @@ function wire() {
     if (!isSupportedLocale(nextLocale) || nextLocale === locale) return;
     locale = nextLocale;
     localStorage.setItem('mazan-habait/locale', locale);
+    // Best-effort: the page reloads right after, so there is no UI left to report a
+    // failure to, and nothing here should delay or block that reload.
+    if (cloudSyncActive()) void profileRepository.save(locale).catch(() => {});
     // Reload from the canonical source strings so translated dynamic content
     // is never translated on top of a previously selected language.
     window.location.reload();
@@ -2816,6 +2897,9 @@ function wire() {
     () => t('cloudConsentSavedLocally'), () => t('cloudConsentWithdrawn'));
   wireConsentCard('open-banking-consent', openBankingConsentRepository, renderOpenBankingConsent,
     () => t('openBankingConsentSavedLocally'), () => t('openBankingConsentWithdrawn'));
+  $('#cloud-sync-now').addEventListener('click', () => void pushCloudSnapshot());
+  $('#cloud-reconciliation-keep').addEventListener('click', () => void pushCloudSnapshot());
+  $('#cloud-reconciliation-use-cloud').addEventListener('click', () => void useCloudData());
   $('#manual-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const date = $('#manual-date').value;
@@ -2980,6 +3064,9 @@ load();
 captureMarketingAttribution(window.location.search);
 wire();
 reportAuthErrorFromQueryString();
-loadResources().then(() => { render(); void loadSignInState().then(() => loadOpenBankingPanel()); });
+loadResources().then(() => {
+  render();
+  void loadSignInState().then(() => { void loadOpenBankingPanel(); void checkCloudReconciliation(); });
+});
 
 })();

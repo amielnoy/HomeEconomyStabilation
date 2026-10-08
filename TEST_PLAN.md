@@ -72,6 +72,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/unit/settlement-bills.unit.test.ts` | Linking a settlement line to the card report it paid for: an exact match on the billed figure, a refund counted inside the bill, two reports or two settlements of the same figure left unclaimed, a settlement too late to be paying, detail that was never imported, two cards told apart by the report each arrived in, and a bank row that is not a card settlement left alone |
 | `tests/unit/transaction-view.unit.test.ts` | Folding card charges into one line per issuer beside statement rows, each issuer kept apart, an unnamed card folded without joining a named one, refunds carried into the card they arrived on, the summary dated by its newest charge, statement order preserved, and charges itemised where no statement row stands beside them |
 | `tests/unit/cloud-sync.unit.test.ts` | Privacy-safe schema-v2 validation, signed-out behavior, auth headers, failures, timeout and DELETE |
+| `tests/unit/cloud-sync-reconciliation.unit.test.ts` | No cloud snapshot, an empty device adopting the cloud outright, a device already matching the cloud, and a genuine conflict when both sides hold differing data |
 | `tests/unit/cloud-metadata.unit.test.ts` | Authenticated Supabase profile/consent reads and writes, response validation, safe auth headers and withdrawal |
 | `tests/unit/consent.unit.test.ts` | Versioned consent, malformed records and withdrawal, each purpose in its own storage key |
 | `tests/unit/consent-sync.unit.test.ts` | Write-through consent repository: local-only while signed out, local-then-remote while signed in, a remote failure that never reverts the local acceptance, and current() reading local storage only |
@@ -145,6 +146,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | File | Coverage |
 | --- | --- |
 | `tests/component/cloud-consent.component.test.ts` | Unselected explicit consent, voluntariness, limits and rights |
+| `tests/component/cloud-sync.component.test.ts` | Hidden by default, a sync trigger, and a reconciliation choice that stays dormant until a conflict is found |
 | `tests/component/credit-card-upload.component.test.ts` | Multi-file spreadsheet upload contract |
 | `tests/component/financial-agents.component.test.ts` | Accessible eight-agent host and prominent safe-to-spend result |
 | `tests/component/language-picker.component.test.ts` | Native language names, accessible field and keyboard semantics |
