@@ -19,6 +19,7 @@ import { cardStatements, type CardStatement } from './card-statements.js';
 import { settlementBills } from './settlement-bills.js';
 import { OpenBankingClient, type OpenBankingConnectionInfo, type OpenBankingSourceInfo } from './open-banking.js';
 import { mergeSyncedTransactions } from './open-banking-sync.js';
+import { applySignInControls, openBankingAvailable, readSignInState } from './sign-in-state.js';
 
 interface DownloadApi { save(input: { filename: string; data: string }): Promise<void>; }
 interface DomElement extends HTMLElement { value: string; files: FileList | null; reset(): void; }
@@ -1832,17 +1833,20 @@ const openBankingClient = new OpenBankingClient();
 let openBankingSources: OpenBankingSourceInfo[] = [];
 let openBankingConnections: OpenBankingConnectionInfo[] = [];
 
-/* Whether the browser currently holds a session cookie the server recognizes.
-   Known only after loadSignInState() resolves; false until then, which keeps both
-   the sign-in/out controls and the open-banking trigger dark-by-default. */
+/* Whether sign-in exists on this deployment at all (the cloud is configured), and
+   whether the browser currently holds a session cookie the server recognizes. Known
+   only after loadSignInState() resolves; false until then, which keeps both the
+   sign-in/out controls and the open-banking trigger dark-by-default. */
+let signInAvailable = false;
 let signedIn = false;
 
 async function loadSignInState() {
   const response = await fetch('/api/auth/session', { credentials: 'include' }).catch(() => null);
-  const body = response ? await response.json().catch(() => null) as { signedIn?: boolean } | null : null;
-  signedIn = body?.signedIn === true;
-  $('#btn-sign-in').hidden = signedIn;
-  $('#btn-sign-out').hidden = !signedIn;
+  const body: unknown = response ? await response.json().catch(() => null) : null;
+  const state = readSignInState(body);
+  signInAvailable = state.available;
+  signedIn = state.signedIn;
+  applySignInControls(document, state);
 }
 
 async function renderOpenBankingPanel() {
@@ -1850,9 +1854,12 @@ async function renderOpenBankingPanel() {
   panel.textContent = '';
   /* The trigger ships hidden in the markup and is revealed only while at least one source
      is configured and the browser is signed in: with no sources, or no session, it would
-     be a dead button (connecting a bank with no session has nowhere to redirect back to). */
-  $('#btn-open-banking').hidden = !openBankingSources.length || !signedIn;
-  if (!openBankingSources.length) { panel.hidden = true; return; }
+     be a dead button (connecting a bank with no session has nowhere to redirect back to).
+     The panel follows the same rule — its Connect, Sync and Disconnect controls would
+     all answer 401 to a signed-out browser. */
+  const available = openBankingAvailable(openBankingSources.length, signedIn);
+  $('#btn-open-banking').hidden = !available;
+  if (!available) { panel.hidden = true; return; }
   panel.hidden = false;
   for (const source of openBankingSources) {
     const connection = openBankingConnections.find((c) => c.sourceId === source.id && c.status === 'active');
@@ -2624,8 +2631,10 @@ function wire() {
   $('#btn-sign-out').addEventListener('click', () => {
     void fetch('/api/auth/signout', { method: 'POST', credentials: 'include' }).then(() => {
       signedIn = false;
-      $('#btn-sign-in').hidden = false;
-      $('#btn-sign-out').hidden = true;
+      applySignInControls(document, { available: signInAvailable, signedIn });
+      /* Connections belong to the account that just left; the sources are a deployment
+         fact (listed without a session) and stay. */
+      openBankingConnections = [];
       void renderOpenBankingPanel();
     });
   });

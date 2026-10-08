@@ -208,8 +208,12 @@ def _exchange_code(config, code: str, verifier: str):
 
 @app.get("/api/auth/session")
 async def auth_session(request: Request) -> Response:
+    # Two separate answers, never folded together: whether sign-in exists on this
+    # deployment at all, and whether this caller is signed in. A sign-in button shown
+    # where the cloud is not configured would only ever lead to a 503.
+    available = read_supabase_config() is not None
     result = await authenticated_client(request)
-    return JSONResponse({"signedIn": not isinstance(result, JSONResponse)})
+    return JSONResponse({"signedIn": not isinstance(result, JSONResponse), "available": available})
 
 
 @app.post("/api/auth/signout")

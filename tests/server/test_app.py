@@ -206,19 +206,46 @@ def test_signing_out_clears_only_this_devices_session() -> None:
     assert 'he_session=""' in cleared or "he_session=;" in cleared
 
 
-def test_auth_session_reports_signed_out_without_a_cookie_or_header(monkeypatch) -> None:
+def test_auth_session_reports_unavailable_when_the_cloud_is_not_configured(monkeypatch) -> None:
+    """No configured cloud means no sign-in at all — not merely a signed-out caller."""
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_PUBLISHABLE_KEY", raising=False)
     response = client.get("/api/auth/session")
     assert response.status_code == 200
-    assert response.json() == {"signedIn": False}
+    assert response.json() == {"signedIn": False, "available": False}
+
+    # A cookie does not change the answer: availability is a deployment fact.
+    with_cookie = client.get("/api/auth/session", cookies={"he_session": "cookie.token.value"})
+    assert with_cookie.json() == {"signedIn": False, "available": False}
+
+
+def test_auth_session_reports_available_but_signed_out_without_a_cookie_or_header(monkeypatch) -> None:
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    response = client.get("/api/auth/session")
+    assert response.status_code == 200
+    assert response.json() == {"signedIn": False, "available": True}
+
+
+def test_auth_session_reports_available_but_signed_out_for_an_invalid_cookie(monkeypatch) -> None:
+    class RejectingClient:
+        def verify_user(self) -> None:
+            return None
+
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    monkeypatch.setattr(http_auth_module, "SupabaseRestClient", lambda _config, _token: RejectingClient())
+    response = client.get("/api/auth/session", cookies={"he_session": "expired.token.value"})
+    assert response.json() == {"signedIn": False, "available": True}
 
 
 def test_auth_session_reports_signed_in_with_a_valid_cookie(monkeypatch) -> None:
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
     authenticate(monkeypatch)
     response = client.get("/api/auth/session", cookies={"he_session": "cookie.token.value"})
     assert response.status_code == 200
-    assert response.json() == {"signedIn": True}
+    assert response.json() == {"signedIn": True, "available": True}
 
 
 def test_auth_session_never_echoes_the_cookie_value() -> None:
