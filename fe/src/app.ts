@@ -1828,24 +1828,30 @@ const openCardGroups = new Set<string>();
    statement's. */
 const openBills = new Set<string>();
 
-/* No sign-in flow is wired into the browser app yet (cloud-sync.ts's Supabase
-   repository is implemented but not yet constructed anywhere here — see its
-   "once wired" note in consent.ts). Until that lands, there is no real session to
-   read a token from, so this stands in for it: it resolves to null, which the open
-   banking client treats the same way it would treat a signed-out session. */
-async function currentAccessToken(): Promise<string | null> {
-  return null;
-}
-const openBankingClient = new OpenBankingClient({ accessToken: () => currentAccessToken() });
+const openBankingClient = new OpenBankingClient();
 let openBankingSources: OpenBankingSourceInfo[] = [];
 let openBankingConnections: OpenBankingConnectionInfo[] = [];
+
+/* Whether the browser currently holds a session cookie the server recognizes.
+   Known only after loadSignInState() resolves; false until then, which keeps both
+   the sign-in/out controls and the open-banking trigger dark-by-default. */
+let signedIn = false;
+
+async function loadSignInState() {
+  const response = await fetch('/api/auth/session', { credentials: 'include' }).catch(() => null);
+  const body = response ? await response.json().catch(() => null) as { signedIn?: boolean } | null : null;
+  signedIn = body?.signedIn === true;
+  $('#btn-sign-in').hidden = signedIn;
+  $('#btn-sign-out').hidden = !signedIn;
+}
 
 async function renderOpenBankingPanel() {
   const panel = $('#open-banking-panel');
   panel.textContent = '';
   /* The trigger ships hidden in the markup and is revealed only while at least one source
-     is configured: with none (the dark-by-default state) it would be a dead button. */
-  $('#btn-open-banking').hidden = !openBankingSources.length;
+     is configured and the browser is signed in: with no sources, or no session, it would
+     be a dead button (connecting a bank with no session has nowhere to redirect back to). */
+  $('#btn-open-banking').hidden = !openBankingSources.length || !signedIn;
   if (!openBankingSources.length) { panel.hidden = true; return; }
   panel.hidden = false;
   for (const source of openBankingSources) {
@@ -2615,6 +2621,14 @@ function wire() {
     const panel = $('#open-banking-panel');
     panel.hidden = !panel.hidden;
   });
+  $('#btn-sign-out').addEventListener('click', () => {
+    void fetch('/api/auth/signout', { method: 'POST', credentials: 'include' }).then(() => {
+      signedIn = false;
+      $('#btn-sign-in').hidden = false;
+      $('#btn-sign-out').hidden = true;
+      void renderOpenBankingPanel();
+    });
+  });
   $('#card-file').addEventListener('change', (e) => {
     const input = e.currentTarget as HTMLInputElement;
     if (input.files) handleFiles(input.files, 'card', pendingCardKind ?? undefined, pendingCardBrand, pendingCardLast4);
@@ -2882,9 +2896,26 @@ async function loadResources() {
   applyLocale();
 }
 
+/* Google sign-in and the open-banking connect/callback flow both redirect back here
+   with an error code on the query string rather than leaving the user on an error page
+   of their own. Surfacing it as a toast (and stripping it) is what tells the user
+   something went wrong when the round trip lands back on this page with nothing else
+   to show for it. */
+function reportAuthErrorFromQueryString() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('openBankingError') ?? params.get('signInError');
+  if (!code) return;
+  toast(code);
+  params.delete('openBankingError');
+  params.delete('signInError');
+  const query = params.toString();
+  history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : '') + window.location.hash);
+}
+
 load();
 captureMarketingAttribution(window.location.search);
 wire();
-loadResources().then(() => { render(); void loadOpenBankingPanel(); });
+reportAuthErrorFromQueryString();
+loadResources().then(() => { render(); void loadSignInState().then(() => loadOpenBankingPanel()); });
 
 })();

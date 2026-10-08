@@ -9,6 +9,8 @@
   "subtitle": "የቤተሰብ ፋይናንስ፣ ከባንክ መረጃዎ",
   "bankUpload": "የባንክ ሪፖርት ያስገቡ",
   "cardUpload": "የካርድ ሪፖርት ያስገቡ",
+  "signIn": "Sign in with Google",
+  "signOut": "Sign out",
   "openBankingConnect": "Connect a bank",
   "openBankingConnected": "Connected",
   "openBankingSyncNow": "Sync now",

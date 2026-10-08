@@ -90,6 +90,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/server/test_request_guard.py` | Media type, body size and bounded rate limiting |
 | `tests/server/test_repositories.py` | Profile, snapshot and consent CRUD with owner filters and stable failures |
 | `tests/server/test_app.py` | FastAPI health, methods, profile/consent persistence, authentication boundary, consent-gated snapshot writes, and the Google sign-in routes: refusal without cloud configuration, a callback that rejects a round trip it did not start, an httpOnly verifier absent from the redirect, no open redirect through `next`, and sign-out clearing only this device |
+| `tests/server/test_http_auth.py` | The shared `authenticated_client` helper: refusal when Supabase is not configured or when neither an `Authorization` header nor the `he_session` cookie is present, acceptance of either one alone, the header winning when both are present, and rejection of a session the provider cannot verify |
 | `tests/server/test_open_banking_config.py` | Source lines parsed from the environment: a well-formed line becoming a source, an http line dropped rather than trusted, a malformed line dropped rather than guessed at, newline-separated multiple sources, sandbox/licence flags and a client id read by its upper-cased source suffix |
 | `tests/server/test_open_banking_crypto.py` | A token round-tripped through encryption, encryption failing closed without a configured key, and decryption with the wrong key failing closed rather than raising |
 | `tests/server/test_open_banking_flow.py` | The PKCE authorize URL carrying its challenge and client id, a token response missing either token not accepted as a pair, a bounded token lifetime, code exchange posting the verifier and client id, exchange and refresh both returning none rather than raising on a non-200 or malformed response, and refresh posting the refresh grant |
@@ -149,6 +150,7 @@ The shared POSIX runner tracks all three child process IDs, waits for every exit
 | `tests/component/open-banking-panel.component.test.ts` | Connect-a-bank trigger beside the existing import buttons and an initially hidden, empty connections panel |
 | `tests/component/savings-directory.component.test.ts` | Official tools and adviser registries, independence checks, the requested advisor listing carrying its role and its not-an-endorsement notice, Paamonim, Mekimi, commercial providers and safe links |
 | `tests/component/settings-drawer.component.test.ts` | Modal semantics, initial inert state and four collapsible settings groups |
+| `tests/component/sign-in.component.test.ts` | Sign-in and sign-out controls both start hidden, and the sign-in link points at the Google auth route |
 
 ## End-to-end and sanity suites
 

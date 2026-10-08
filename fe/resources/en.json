@@ -9,6 +9,8 @@
   "subtitle": "Household finances, from your bank data",
   "bankUpload": "Upload bank report",
   "cardUpload": "Upload card report",
+  "signIn": "Sign in with Google",
+  "signOut": "Sign out",
   "openBankingConnect": "Connect a bank",
   "openBankingConnected": "Connected",
   "openBankingSyncNow": "Sync now",
