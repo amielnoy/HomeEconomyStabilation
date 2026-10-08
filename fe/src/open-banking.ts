@@ -25,11 +25,7 @@ export class OpenBankingError extends Error {
 export class OpenBankingClient {
   private readonly fetchImpl: typeof fetch;
 
-  constructor(private readonly input: {
-    accessToken: () => Promise<string | null>;
-    fetchImpl?: typeof fetch;
-    timeoutMs?: number;
-  }) {
+  constructor(private readonly input: { fetchImpl?: typeof fetch; timeoutMs?: number } = {}) {
     this.fetchImpl = input.fetchImpl || fetch;
   }
 
@@ -37,20 +33,12 @@ export class OpenBankingClient {
     return `/api/open-banking/connect/${encodeURIComponent(sourceId)}`;
   }
 
-  private async request(
-    method: 'GET' | 'POST' | 'DELETE', path: string, options: { authenticated?: boolean } = {},
-  ): Promise<Record<string, unknown> | null> {
-    const headers: Record<string, string> = {};
-    if (options.authenticated !== false) {
-      const token = await this.input.accessToken();
-      if (!token) throw new OpenBankingError('authentication_required', 'Sign in before using Open Banking.', HttpStatus.UNAUTHORIZED);
-      headers.Authorization = `Bearer ${token}`;
-    }
+  private async request(method: 'GET' | 'POST' | 'DELETE', path: string): Promise<Record<string, unknown> | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.input.timeoutMs ?? 10_000);
     let response: Response;
     try {
-      response = await this.fetchImpl(path, { method, credentials: 'omit', signal: controller.signal, headers, body: undefined });
+      response = await this.fetchImpl(path, { method, credentials: 'include', signal: controller.signal, body: undefined });
     } catch (cause) {
       if (controller.signal.aborted) {
         throw new OpenBankingError('open_banking_timeout', 'Open Banking request timed out.', HttpStatus.GATEWAY_TIMEOUT);
@@ -68,7 +56,7 @@ export class OpenBankingClient {
   }
 
   async listSources(): Promise<OpenBankingSourceInfo[]> {
-    const body = await this.request('GET', '/api/open-banking/sources', { authenticated: false });
+    const body = await this.request('GET', '/api/open-banking/sources');
     return (body?.sources as OpenBankingSourceInfo[] | undefined) ?? [];
   }
 
