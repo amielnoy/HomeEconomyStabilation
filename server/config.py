@@ -30,6 +30,11 @@ def read_supabase_config(env: dict[str, str] | None = None) -> SupabaseConfig | 
 def bearer_token(header: str | None) -> str | None:
     if not header or not header.startswith("Bearer "):
         return None
-    token = header.removeprefix("Bearer ")
+    return session_token(header.removeprefix("Bearer "))
+
+
+def session_token(value: str | None) -> str | None:
+    if not value:
+        return None
     allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._~-")
-    return token if token and all(character in allowed for character in token) else None
+    return value if all(character in allowed for character in value) else None

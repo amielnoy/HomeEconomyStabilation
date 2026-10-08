@@ -1,4 +1,4 @@
-from server.config import bearer_token, read_supabase_config
+from server.config import bearer_token, read_supabase_config, session_token
 
 
 def test_configuration_fails_closed_and_accepts_only_publishable_https() -> None:
@@ -17,3 +17,11 @@ def test_bearer_token_parser_rejects_ambiguous_values() -> None:
     assert bearer_token("Bearer user.jwt.token") == "user.jwt.token"
     assert bearer_token("bearer user.jwt.token") is None
     assert bearer_token("Bearer token with spaces") is None
+
+
+def test_session_token_applies_the_same_shape_check_bearer_token_does() -> None:
+    assert session_token(None) is None
+    assert session_token("") is None
+    assert session_token("has a space") is None
+    assert session_token("has\nnewline") is None
+    assert session_token("valid.token-value_123~ok") == "valid.token-value_123~ok"
