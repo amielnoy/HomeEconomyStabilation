@@ -314,17 +314,105 @@ def _sync_against_a_bank_token_endpoint(monkeypatch, fake_post):
     return response, effects
 
 
-@pytest.mark.parametrize("status, body", [(400, {"error": "invalid_grant"}), (401, {"error": "invalid_client"})])
-def test_sync_revokes_the_connection_when_the_bank_definitively_refuses_the_refresh(monkeypatch, status, body) -> None:
-    # A 400/401 refusal looks exactly like "consent expired or withdrawn" from this app's
-    # side, so the connection must be revoked immediately, not just reported as a failed sync.
+def test_sync_revokes_the_connection_on_a_400_naming_invalid_grant(monkeypatch) -> None:
+    # A 400 naming invalid_grant looks exactly like "consent expired or withdrawn" from
+    # this app's side, so the connection must be revoked immediately, not just reported
+    # as a failed sync.
     response, effects = _sync_against_a_bank_token_endpoint(
-        monkeypatch, lambda *a, **k: httpx.Response(status, json=body),
+        monkeypatch, lambda *a, **k: httpx.Response(400, json={"error": "invalid_grant"}),
     )
     assert response.status_code == 502
     assert response.json() == {"code": "open_banking_refresh_failed"}
     assert effects["revoked"] == "conn-1"
     assert effects["status"] == "revoked"
+
+
+@pytest.mark.parametrize("status, body", [
+    (401, {"error": "invalid_client"}),  # our own client credentials, not the user's consent
+    (400, {"error": "invalid_request"}),  # a 400 that isn't invalid_grant is our mistake, not a dead consent
+    (400, None),  # no parseable body proves nothing about the grant
+])
+def test_sync_never_revokes_the_connection_on_anything_short_of_invalid_grant(monkeypatch, status, body) -> None:
+    fake_response = httpx.Response(status, json=body) if body is not None else httpx.Response(status, text="")
+    response, effects = _sync_against_a_bank_token_endpoint(monkeypatch, lambda *a, **k: fake_response)
+    assert response.status_code == 502
+    assert response.json() == {"code": "open_banking_refresh_failed"}
+    assert "revoked" not in effects
+    assert effects["status"] == "active"
+
+
+def test_sync_serializes_concurrent_requests_so_the_second_sees_the_rotated_token(monkeypatch) -> None:
+    # Two overlapping syncs on the same connection must not both read the refresh token
+    # the first is about to rotate: the second has to wait, then read the *new* token
+    # the first one stored, not the stale one it would have read if they ran unlocked.
+    #
+    # Driven with asyncio.gather on a single event loop, not real threads: this app
+    # serves concurrent requests as interleaved coroutines on one loop (the deployment
+    # this guards against is a single process, not a thread pool), and asyncio.Lock is
+    # only meaningful within one loop — exercising it from independent OS threads, each
+    # with TestClient's own event loop, would not reproduce that and risks a hang.
+    import asyncio
+    import time
+
+    import httpx as httpx_module
+    from httpx import ASGITransport
+
+    authenticate(monkeypatch)
+    monkeypatch.setattr(routes_module, "read_sources", lambda: [SOURCE])
+    monkeypatch.setattr(routes_module, "sandbox_enabled", lambda: True)
+    monkeypatch.setattr(routes_module, "licence_id", lambda: None)
+    grant_open_banking_consent(monkeypatch)
+
+    connection_id = "conn-concurrent-1"
+    state: dict[str, object] = {"refresh_token": "token-v1"}
+
+    class FakeRepository:
+        def list_connections(self):
+            return [OpenBankingConnection(id=connection_id, source_id="hapoalim", status="active", created_at="2026-10-07T00:00:00Z")]
+
+        def read_refresh_token(self, connection_id: str) -> str:
+            return state["refresh_token"]
+
+        def replace_refresh_token(self, connection_id: str, refresh_token: str) -> None:
+            state["refresh_token"] = refresh_token
+
+        def revoke(self, connection_id: str) -> None:
+            raise AssertionError("neither request should be refused by the fake bank")
+
+    monkeypatch.setattr(routes_module, "OpenBankingRepository", lambda client, user_id, env=None: FakeRepository())
+    monkeypatch.setattr(routes_module, "client_id_for", lambda source_id: "client-abc")
+    monkeypatch.setattr(routes_module, "pull_transactions", lambda source, access_token: [])
+
+    tokens_seen: list[str] = []
+    call_count = {"n": 0}
+
+    def fake_post(url, data=None, timeout=None):
+        tokens_seen.append(data["refresh_token"])
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            # Blocks this real worker thread (run_in_threadpool), not the event loop, long
+            # enough that the second request is certainly queued behind the lock first.
+            time.sleep(0.2)
+            return httpx_module.Response(200, json={"access_token": "a1", "refresh_token": "token-v2", "expires_in": 3600})
+        return httpx_module.Response(200, json={"access_token": "a2", "refresh_token": "token-v3", "expires_in": 3600})
+
+    monkeypatch.setattr(httpx_module, "post", fake_post)
+
+    async def run_two_concurrent_syncs() -> list[int]:
+        transport = ASGITransport(app=app)
+        async with httpx_module.AsyncClient(transport=transport, base_url="http://testserver") as async_client:
+            first, second = await asyncio.gather(
+                async_client.post(f"/api/open-banking/sync/{connection_id}", headers={"Authorization": "Bearer user.jwt.token"}),
+                async_client.post(f"/api/open-banking/sync/{connection_id}", headers={"Authorization": "Bearer user.jwt.token"}),
+            )
+            return [first.status_code, second.status_code]
+
+    statuses = asyncio.run(run_two_concurrent_syncs())
+
+    assert statuses == [200, 200]
+    # The second request waited and read the token the first one had just rotated to,
+    # rather than racing it with the stale token both would have read without the lock.
+    assert tokens_seen == ["token-v1", "token-v2"]
 
 
 def _raise(error: Exception):

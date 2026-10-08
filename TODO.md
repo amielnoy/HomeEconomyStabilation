@@ -38,8 +38,8 @@
 
 - [x] לממש את `docs/superpowers/plans/2026-10-08-cookie-session-auth.md`: הופעל — `he_session` הוא מנגנון האימות האמיתי, גם עבור cloud-sync וגם עבור Open Banking.
 - [x] לבנות ממשק להענקת ההסכמה הייעודית — כרטיס הסכמה ל־`open_banking` בנוי בתא ההגדרות, כולל `GET`/`DELETE /api/consents/open-banking` חדשים בשרת (לא היו קיימים, רק `PUT`) לקריאת המצב הנוכחי וביטול. עדיין דורש בדיקה ידנית של הנוסח — ראו הערה ב־README.md.
-- [ ] לצמצם את ה־revoke-on-refusal ל־400 עם `body.error == "invalid_grant"` בלבד, במקום כל 400/401 — טעות תצורה שלנו לא אמורה לבטל חיבור משתמש. חובה לפני הפעלת `OPEN_BANKING_LICENCE_ID` ב־production.
-- [ ] לסדר (serialize) sync חופפים על אותו חיבור, כדי ש־rotation של refresh token לא יבטל חיבור שסונכרן בהצלחה הרגע.
+- [x] לצמצם את ה־revoke-on-refusal ל־400 עם `body.error == "invalid_grant"` בלבד — `OpenBankingRefreshRefused` מועלה רק על 400 עם גוף שמציין `invalid_grant`; 401 (client שגוי) או 400 בלי גוף תקין נחשבים כשל חולף שלא מבטל חיבור.
+- [x] לסדר (serialize) sync חופפים על אותו חיבור — `_lock_for_connection()` ב־`server/open_banking_routes.py`: מנעול `asyncio.Lock` לכל `connection_id`, מוחזק מקריאת ה־refresh token ועד כתיבת הטוקן המוחלף; בקשה שחיכתה קוראת מחדש את הטוקן אחרי שהראשונה סובבה אותו, במקום להשתמש בעותק ישן.
 - [ ] לאמת את ה־sandbox האמיתי של בנק הפועלים ולהתאים את `server/open_banking_sync.py` לצורת הקריאה האמיתית של NextGenPSD2 (שלב consent resource,‏ `Consent-ID`,‏ `X-Request-ID`,‏ `PSU-IP-Address`, תעודת client) — צריך credentials אמיתיים מ־poalimdev.co.il שלא היו זמינים עד כה.
 
 ## ניטור production

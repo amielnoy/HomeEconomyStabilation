@@ -95,19 +95,14 @@ def test_refresh_tokens_returns_none_on_malformed_json_response(monkeypatch) -> 
     assert refresh_tokens(SOURCE, "client-abc", "old-refresh-token") is None
 
 
-@pytest.mark.parametrize("status, body", [
-    (400, {"error": "invalid_grant"}),
-    (401, {"error": "invalid_client"}),
-    (400, None),  # a definitive refusal is the status, whatever (or no) body comes with it
-])
-def test_refresh_tokens_raises_refused_on_a_definitive_bank_refusal(monkeypatch, status, body) -> None:
-    response = httpx.Response(status, json=body) if body is not None else httpx.Response(status, text="")
+def test_refresh_tokens_raises_refused_only_on_a_400_naming_invalid_grant(monkeypatch) -> None:
+    response = httpx.Response(400, json={"error": "invalid_grant"})
     monkeypatch.setattr(httpx, "post", lambda *a, **k: response)
 
     with pytest.raises(OpenBankingRefreshRefused) as exc_info:
         refresh_tokens(SOURCE, "client-abc", "old-refresh-token")
 
-    assert exc_info.value.status_code == status
+    assert exc_info.value.status_code == 400
 
 
 def _raise(error: Exception):
@@ -125,7 +120,16 @@ def _raise(error: Exception):
     lambda *a, **k: httpx.Response(200, text="<!DOCTYPE html><html>Internal error</html>"),
     lambda *a, **k: httpx.Response(200, json=["not", "a", "mapping"]),
     lambda *a, **k: httpx.Response(200, json={"access_token": "a", "expires_in": 3600}),
-], ids=["network-error", "timeout", "500", "502", "503", "non-json-200", "json-array-200", "missing-refresh-200"])
+    # A 401 means our own client credentials were rejected, not the user's consent.
+    lambda *a, **k: httpx.Response(401, json={"error": "invalid_client"}),
+    # A 400 proves nothing about the grant itself without an invalid_grant body.
+    lambda *a, **k: httpx.Response(400, text=""),
+    lambda *a, **k: httpx.Response(400, json={"error": "invalid_request"}),
+    lambda *a, **k: httpx.Response(400, json={"error": "invalid_scope"}),
+], ids=[
+    "network-error", "timeout", "500", "502", "503", "non-json-200", "json-array-200", "missing-refresh-200",
+    "401-invalid-client", "400-no-body", "400-invalid-request", "400-invalid-scope",
+])
 def test_refresh_tokens_treats_a_transient_failure_as_none_not_a_refusal(monkeypatch, fake_post) -> None:
     monkeypatch.setattr(httpx, "post", fake_post)
     assert refresh_tokens(SOURCE, "client-abc", "old-refresh-token") is None

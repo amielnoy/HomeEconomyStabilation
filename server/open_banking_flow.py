@@ -44,13 +44,17 @@ def parse_token_response(payload: object) -> TokenPair | None:
 
 
 class OpenBankingRefreshRefused(Exception):
-    """The bank definitively refused a refresh grant (HTTP 400 or 401).
+    """The bank definitively refused the refresh grant because the grant itself is dead.
 
-    RFC 6749 §5.2 answers a dead grant (`invalid_grant`: the consent expired or was
-    withdrawn at the bank) with a 400, and a rejected client with a 401. Either way the
-    stored refresh token will never work again, so this — and only this — is grounds to
-    revoke the connection. Everything else that can go wrong (network error, timeout, a
-    5xx, a body that is not a usable token response) is transient and must not revoke.
+    RFC 6749 §5.2 answers a dead grant — `invalid_grant`: the consent expired or was
+    withdrawn at the bank — with a 400 carrying that exact error code in the body. That,
+    and only that, proves the stored refresh token will never work again, so it is the
+    only outcome grounds to revoke the connection. A 401 (`invalid_client`) means our own
+    client credentials were rejected, not the user's consent; a 400 with any other error
+    code (`invalid_request`, `invalid_scope`, or no parseable body at all) is similarly a
+    configuration mistake on our side, not proof the user's consent is gone. None of
+    those may revoke a connection the user never asked to end, any more than a network
+    error, timeout, 5xx, or an unusable token body may — all of those stay transient.
     """
 
     def __init__(self, status_code: int) -> None:
@@ -58,16 +62,21 @@ class OpenBankingRefreshRefused(Exception):
         self.status_code = status_code
 
 
-_REFUSAL_STATUSES = frozenset({400, 401})
+def _is_invalid_grant(response: httpx.Response) -> bool:
+    try:
+        body = response.json()
+    except ValueError:
+        return False
+    return isinstance(body, dict) and body.get("error") == "invalid_grant"
 
 
 def _post_for_tokens(source: OpenBankingSource, data: dict, *, raise_on_refusal: bool = False) -> TokenPair | None:
     """Exchange POST request data for tokens, with error handling and JSON guard.
 
     Handles network errors, non-200 responses, and malformed JSON responses by
-    returning None (fail-closed). With `raise_on_refusal`, a definitive 400/401 refusal
-    raises OpenBankingRefreshRefused instead, so a caller can tell it apart from a
-    transient failure; without it, every failure is the same None.
+    returning None (fail-closed). With `raise_on_refusal`, a 400 whose body names
+    `invalid_grant` raises OpenBankingRefreshRefused instead, so a caller can tell a
+    dead grant apart from every other failure, which stays None.
     """
     try:
         response = httpx.post(
@@ -78,7 +87,7 @@ def _post_for_tokens(source: OpenBankingSource, data: dict, *, raise_on_refusal:
     except httpx.HTTPError:
         return None
     if response.status_code != 200:
-        if raise_on_refusal and response.status_code in _REFUSAL_STATUSES:
+        if raise_on_refusal and response.status_code == 400 and _is_invalid_grant(response):
             raise OpenBankingRefreshRefused(response.status_code)
         return None
     try:

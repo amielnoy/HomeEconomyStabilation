@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 
 from fastapi import APIRouter, Request, Response
@@ -34,6 +35,24 @@ def _error_code(response: JSONResponse) -> str:
 
 def _source_or_none(source_id: str):
     return next((source for source in read_sources() if source.id == source_id), None)
+
+
+# One lock per connection so two overlapping syncs on the same connection never both act
+# on the refresh token the other is about to rotate. A process-lifetime dict of these,
+# never pruned, is the same "in-process sanity layer, not a distributed guarantee" the
+# rate limiter already is for this single deployment — a household has at most a handful
+# of connections, so the dict never grows large enough to matter.
+_sync_locks: dict[str, asyncio.Lock] = {}
+_sync_locks_guard = asyncio.Lock()
+
+
+async def _lock_for_connection(connection_id: str) -> asyncio.Lock:
+    async with _sync_locks_guard:
+        lock = _sync_locks.get(connection_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            _sync_locks[connection_id] = lock
+        return lock
 
 
 def _callback_exit(target: str, *, error: str | None = None) -> Response:
@@ -175,23 +194,29 @@ async def sync(connection_id: str, request: Request) -> Response:
         if not sandbox_enabled() and not licence_id():
             return _error(503, "open_banking_not_configured")
 
-        stored_refresh_token = await run_in_threadpool(repository.read_refresh_token, connection_id)
-        if not stored_refresh_token:
-            return _error(502, "open_banking_token_missing")
-        try:
-            pair = await run_in_threadpool(refresh_tokens, source, client_id, stored_refresh_token)
-        except OpenBankingRefreshRefused:
-            # The bank definitively refusing the refresh (400/401) is exactly what "consent
-            # expired or withdrawn" looks like from this app's side: revoke immediately
-            # rather than leaving a connection that looks active but can never sync again.
-            await run_in_threadpool(repository.revoke, connection_id)
-            return _error(502, "open_banking_refresh_failed")
-        if pair is None:
-            # A transient failure (network error, timeout, 5xx, malformed body) is not a
-            # revocation: the connection stays active so the next sync can simply retry,
-            # rather than forcing the user to re-consent at the bank after a network blip.
-            return _error(502, "open_banking_refresh_failed")
-        await run_in_threadpool(repository.replace_refresh_token, connection_id, pair.refresh_token)
+        # Held across the read-refresh-replace sequence, and the token is re-read only
+        # after acquiring it: a sync that waited behind another one must see the refresh
+        # token the first sync just rotated, not the stale copy it would have read before
+        # waiting — reusing a token the bank already consumed is exactly what the bank
+        # reports as a refused grant, revoking a connection that just synced successfully.
+        async with await _lock_for_connection(connection_id):
+            stored_refresh_token = await run_in_threadpool(repository.read_refresh_token, connection_id)
+            if not stored_refresh_token:
+                return _error(502, "open_banking_token_missing")
+            try:
+                pair = await run_in_threadpool(refresh_tokens, source, client_id, stored_refresh_token)
+            except OpenBankingRefreshRefused:
+                # A 400 naming invalid_grant is exactly what "consent expired or withdrawn"
+                # looks like from this app's side: revoke immediately rather than leaving a
+                # connection that looks active but can never sync again.
+                await run_in_threadpool(repository.revoke, connection_id)
+                return _error(502, "open_banking_refresh_failed")
+            if pair is None:
+                # A transient failure (network error, timeout, 5xx, malformed body) is not a
+                # revocation: the connection stays active so the next sync can simply retry,
+                # rather than forcing the user to re-consent at the bank after a network blip.
+                return _error(502, "open_banking_refresh_failed")
+            await run_in_threadpool(repository.replace_refresh_token, connection_id, pair.refresh_token)
     except SupabaseDataError:
         return _error(502, "open_banking_sync_failed")
 
