@@ -51,7 +51,14 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      # The allure-instrumented script variants and ALLURE_RESULTS_DIR make all three
+      # runners (vitest, pytest, and Playwright's conditional allure-playwright reporter)
+      # write into the same results directory; test:gate itself is unchanged.
       - name: Run Vitest, Pytest and Playwright in parallel
+        env:
+          ALLURE_RESULTS_DIR: allure-results
+          VITEST_SCRIPT: test:allure
+          SERVER_TEST_SCRIPT: test:server:allure
         run: npm run test:gate
 
       - name: Upload Playwright report
@@ -62,6 +69,22 @@ jobs:
           path: |
             playwright-report/
             test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # A failed run still leaves partial allure-results from whatever finished before
+      # the failure, which is exactly what is useful for debugging it — generated and
+      # uploaded the same way whether the run passed or failed, never on a cancelled one.
+      - name: Generate Allure report
+        if: ${{ !cancelled() }}
+        run: npx allure generate allure-results --output allure-report
+
+      - name: Upload Allure report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: allure-report
+          path: allure-report/
           if-no-files-found: ignore
           retention-days: 14
 

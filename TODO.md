@@ -8,7 +8,7 @@
 - [ ] להגן על ענף `main` ולדרוש מעבר של job בשם `Build and test` לפני merge.
 - [ ] להפעיל ידנית את workflow ‏`CI` פעם אחת ולוודא ש־`Deploy latest version to Vercel` מפרסם את ה־commit שנבדק.
 - [ ] לוודא שה־production alias הוא `home-economy-stabilation.vercel.app` ושכשל בבדיקות מונע פריסה.
-- [ ] לשמור את `allure-report` כ־CI artifact עם מדיניות retention מתאימה, בלי לפרסם attachments שעלולים להכיל מידע רגיש.
+- [x] לשמור את `allure-report` כ־CI artifact עם מדיניות retention מתאימה — נוסף ל־`gate.yml`: ה־job המרכזי מריץ את גרסאות ה־allure של vitest/pytest/Playwright (אותו `test:gate`, רק עם `ALLURE_RESULTS_DIR`/`VITEST_SCRIPT`/`SERVER_TEST_SCRIPT`), מייצר את הדוח עם `npx allure generate` ומעלה אותו כ־artifact בשם `allure-report`, `retention-days: 14` — תואם למדיניות ה־retention הקיימת כבר ל־`playwright-report`. כל התוכן שנתפס (צילומי מסך, traces, שמות בדיקות) מגיע מבדיקות עם נתונים סינתטיים בלבד, לפי המוסכמה הקיימת בפרויקט — אין נתונים אמיתיים לחשוף.
 
 ## פרויקט Supabase
 
