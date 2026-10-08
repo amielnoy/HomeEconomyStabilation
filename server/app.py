@@ -189,6 +189,12 @@ def _exchange_code(config, code: str, verifier: str):
         return None
 
 
+@app.get("/api/auth/session")
+async def auth_session(request: Request) -> Response:
+    result = await authenticated_client(request)
+    return JSONResponse({"signedIn": not isinstance(result, JSONResponse)})
+
+
 @app.post("/api/auth/signout")
 async def sign_out() -> Response:
     """Only this device's session ends. Nothing stored for the account is touched."""

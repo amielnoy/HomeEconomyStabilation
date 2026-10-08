@@ -200,3 +200,23 @@ def test_signing_out_clears_only_this_devices_session() -> None:
     assert response.json() == {"status": "signed_out"}
     cleared = next(c for c in response.headers.get_list("set-cookie") if c.startswith("he_session="))
     assert 'he_session=""' in cleared or "he_session=;" in cleared
+
+
+def test_auth_session_reports_signed_out_without_a_cookie_or_header(monkeypatch) -> None:
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_PUBLISHABLE_KEY", raising=False)
+    response = client.get("/api/auth/session")
+    assert response.status_code == 200
+    assert response.json() == {"signedIn": False}
+
+
+def test_auth_session_reports_signed_in_with_a_valid_cookie(monkeypatch) -> None:
+    authenticate(monkeypatch)
+    response = client.get("/api/auth/session", cookies={"he_session": "cookie.token.value"})
+    assert response.status_code == 200
+    assert response.json() == {"signedIn": True}
+
+
+def test_auth_session_never_echoes_the_cookie_value() -> None:
+    response = client.get("/api/auth/session", cookies={"he_session": "a-very-secret-token-value"})
+    assert "a-very-secret-token-value" not in response.text
