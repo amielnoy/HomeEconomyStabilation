@@ -3,6 +3,7 @@ FROM node:24-alpine AS build
 WORKDIR /workspace
 RUN apk add --no-cache python3
 COPY package.json package-lock.json ./
+COPY scripts/install-git-hooks.sh ./scripts/install-git-hooks.sh
 RUN npm ci
 COPY . .
 RUN npm run build

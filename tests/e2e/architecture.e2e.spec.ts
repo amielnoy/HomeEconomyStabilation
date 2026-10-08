@@ -8,7 +8,7 @@ test.beforeEach(async ({ architecturePage }) => {
 test('documents the application architecture and links back to the product', async ({ architecturePage }) => {
   await expect(architecturePage.page).toHaveTitle('Home Economy — Architecture');
   await expect(architecturePage.title).toContainText('Home Economy');
-  await expect(architecturePage.sections).toHaveCount(9);
+  await expect(architecturePage.sections).toHaveCount(10);
   await expect(architecturePage.diagram).toHaveAttribute('role', 'img');
   await expect(architecturePage.applicationLink).toHaveAttribute('href', './mazan-habait.html');
 });

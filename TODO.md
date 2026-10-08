@@ -30,6 +30,14 @@
 
 סיום המשימות אינו משנה את עקרון ה־local-first: סירוב לסנכרון או ביטול הסכמה חייבים להשאיר את השימוש המקומי פעיל.
 
+## Open Banking (פיילוט) — נותר לפני שהוא נגיש למשתמש אמיתי
+
+- [ ] לממש את `docs/superpowers/plans/2026-10-08-cookie-session-auth.md`: להפוך את ה־cookie הקיים (`he_session`) למנגנון האימות האמיתי, גם עבור cloud-sync וגם עבור Open Banking — בלעדיו אין שום דרך לדפדפן להגיע למצב מאומת ולא ל־`connect`,‏ `sync` ולא ל־`/api/snapshots` עובדים בפועל.
+- [ ] לבנות ממשק להענקת ההסכמה הייעודית (`PUT /api/consents/open-banking`) — אין היום דרך בדפדפן לקבל אותה, כך ש־`connect` ייכשל ב־403 גם לאחר שהכניסה לדפדפן תיפתר.
+- [ ] לצמצם את ה־revoke-on-refusal ל־400 עם `body.error == "invalid_grant"` בלבד, במקום כל 400/401 — טעות תצורה שלנו לא אמורה לבטל חיבור משתמש. חובה לפני הפעלת `OPEN_BANKING_LICENCE_ID` ב־production.
+- [ ] לסדר (serialize) sync חופפים על אותו חיבור, כדי ש־rotation של refresh token לא יבטל חיבור שסונכרן בהצלחה הרגע.
+- [ ] לאמת את ה־sandbox האמיתי של בנק הפועלים ולהתאים את `server/open_banking_sync.py` לצורת הקריאה האמיתית של NextGenPSD2 (שלב consent resource,‏ `Consent-ID`,‏ `X-Request-ID`,‏ `PSU-IP-Address`, תעודת client) — צריך credentials אמיתיים מ־poalimdev.co.il שלא היו זמינים עד כה.
+
 ## ניטור production
 
 - [ ] לבחור שירות ניטור חיצוני עבור Vercel ולהגדיר health check מהאינטרנט ללא מידע רגיש.

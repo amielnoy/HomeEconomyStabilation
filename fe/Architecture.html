@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta data-testid="viewport-meta" name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Architecture guide for the private Home Economy browser application, its eight local financial agents, localization, testing and trust boundaries.">
+<meta name="description" content="Architecture guide for the private Home Economy browser application, its eight local financial agents, the Open Banking pilot, localization, testing and trust boundaries.">
 <title>Home Economy — Architecture</title>
 <style>
   :root{
@@ -56,18 +56,18 @@
   <div>
     <p class="eyebrow">Architecture · home-economy-stabilation</p>
     <h1 data-testid="architecture-title">Home Economy — how the application fits together</h1>
-    <p class="stand">A local-first browser application that turns bank and credit-card exports into a private household-finance workspace. Parsing, categorization and forecasting remain on the user’s device. The dormant UI has an authenticated first-party API for profile, versioned consent and consent-gated snapshots backed by owner-only Supabase RLS.</p>
-    <p><span class="pill on">TypeScript</span><span class="pill on">Python FastAPI</span><span class="pill on">Static HTML</span><span class="pill">Vercel API</span><span class="pill">Supabase-ready</span><span class="pill">Local-first</span><span class="pill">HE · EN · AM · FR</span><span class="pill">RTL + LTR</span><span class="pill">WCAG A/AA checks</span></p>
+    <p class="stand">A local-first browser application that turns bank and credit-card exports into a private household-finance workspace. Parsing, categorization and forecasting remain on the user’s device. The dormant UI has an authenticated first-party API for profile, versioned consent and consent-gated snapshots backed by owner-only Supabase RLS, plus a read-only Open Banking pilot — proven against a real bank sandbox, dark by default, and not yet reachable by a real browser session.</p>
+    <p><span class="pill on">TypeScript</span><span class="pill on">Python FastAPI</span><span class="pill on">Static HTML</span><span class="pill">Vercel API</span><span class="pill">Supabase-ready</span><span class="pill">Open Banking (pilot)</span><span class="pill">Local-first</span><span class="pill">HE · EN · AM · FR</span><span class="pill">RTL + LTR</span><span class="pill">WCAG A/AA checks</span></p>
   </div>
   <a class="app-link" data-testid="architecture-app-link" href="./mazan-habait.html">Open application ↗</a>
 </header>
 
 <nav class="toc" aria-label="Page contents">
-  <a href="#overview">1 · What it is</a><a href="#runtime">2 · Runtime shape</a><a href="#pipeline">3 · Data pipeline</a><a href="#modules">4 · Modules</a><a href="#state">5 · State</a><a href="#i18n">6 · Localization</a><a href="#privacy">7 · Trust boundary</a><a href="#testing">8 · Testing</a><a href="#extend">9 · Extension points</a>
+  <a href="#overview">1 · What it is</a><a href="#runtime">2 · Runtime shape</a><a href="#pipeline">3 · Data pipeline</a><a href="#modules">4 · Modules</a><a href="#state">5 · State</a><a href="#i18n">6 · Localization</a><a href="#privacy">7 · Trust boundary</a><a href="#openbanking">8 · Open Banking pilot</a><a href="#testing">9 · Testing</a><a href="#extend">10 · Extension points</a>
 </nav>
 <nav class="rail" aria-label="Architecture sections">
   <h2>Contents</h2>
-  <a href="#overview"><span class="n">1</span><span>What it is</span></a><a href="#runtime"><span class="n">2</span><span>Runtime shape</span></a><a href="#pipeline"><span class="n">3</span><span>Data pipeline</span></a><a href="#modules"><span class="n">4</span><span>Modules</span></a><a href="#state"><span class="n">5</span><span>State</span></a><a href="#i18n"><span class="n">6</span><span>Localization</span></a><a href="#privacy"><span class="n">7</span><span>Trust boundary</span></a><a href="#testing"><span class="n">8</span><span>Testing</span></a><a href="#extend"><span class="n">9</span><span>Extension points</span></a>
+  <a href="#overview"><span class="n">1</span><span>What it is</span></a><a href="#runtime"><span class="n">2</span><span>Runtime shape</span></a><a href="#pipeline"><span class="n">3</span><span>Data pipeline</span></a><a href="#modules"><span class="n">4</span><span>Modules</span></a><a href="#state"><span class="n">5</span><span>State</span></a><a href="#i18n"><span class="n">6</span><span>Localization</span></a><a href="#privacy"><span class="n">7</span><span>Trust boundary</span></a><a href="#openbanking"><span class="n">8</span><span>Open Banking pilot</span></a><a href="#testing"><span class="n">9</span><span>Testing</span></a><a href="#extend"><span class="n">10</span><span>Extension points</span></a>
 </nav>
 
 <main id="content" data-testid="architecture-content">
@@ -136,6 +136,14 @@
   <tr><td><code>server/</code> + <code>api/index.py</code></td><td>FastAPI boundary, Pydantic allowlist, profile/consent CRUD and consent-gated snapshot writes through RLS.</td><td>Supabase publishable key and user JWT</td><td>Database passwords or service-role keys</td></tr>
   <tr><td><code>openapi.json</code> + <code>fe/src/*-docs.ts</code></td><td>One API contract rendered by self-hosted Swagger and Scalar through compiled TypeScript modules.</td><td>Documented first-party routes</td><td>Runtime credentials, inline JavaScript or duplicated schemas</td></tr>
   <tr><td><code>server/auth_flow.py</code></td><td>Google sign-in primitives: PKCE challenge, authorize URL, redirect allow-list and session parsing.</td><td>Provider contract and this deployment's own origins</td><td>Browser credentials, cookies or financial state</td></tr>
+  <tr><td><code>server/open_banking_config.py</code></td><td>Configured sources, the sandbox/licence gate and per-source client ids.</td><td>Environment variables</td><td>Tokens, HTTP calls or routing</td></tr>
+  <tr><td><code>server/open_banking_crypto.py</code></td><td>Fernet encrypt/decrypt for a bank refresh token, fails closed with no key.</td><td><code>OPEN_BANKING_TOKEN_ENCRYPTION_KEY</code></td><td>Storage, routing or the token's plaintext beyond one call</td></tr>
+  <tr><td><code>server/open_banking_flow.py</code></td><td>Per-source PKCE authorize URL and the OAuth code/refresh token exchange.</td><td><code>auth_flow.py</code>'s PKCE primitives, reused as-is</td><td>Storage or routing</td></tr>
+  <tr><td><code>server/open_banking_store.py</code></td><td><code>OpenBankingRepository</code>: connections and encrypted tokens, named fields only — never <code>**row</code>.</td><td>Supabase REST client and the crypto module</td><td>HTTP routing or bank protocol details</td></tr>
+  <tr><td><code>server/open_banking_sync.py</code></td><td>Pulls XS2A transactions, redacts identifiers through the shared boundary, maps into <code>Transaction</code>.</td><td>The shared <code>FINANCIAL_IDENTIFIER_PATTERNS</code> in <code>models.py</code></td><td>Storage, consent or routing</td></tr>
+  <tr><td><code>server/open_banking_routes.py</code></td><td>Consent, connect, callback, connections, sync and revoke routes; re-checks the sandbox/licence gate on every outbound call, not only at connect.</td><td>All of the above, plus the shared authenticated-session check</td><td>Bank protocol parsing or token encryption</td></tr>
+  <tr><td><code>fe/src/open-banking.ts</code></td><td><code>OpenBankingClient</code>: fetch wrapper for sources, connections, sync and disconnect.</td><td>This deployment's own <code>/api/open-banking/*</code> routes</td><td>DOM rendering or dedupe logic</td></tr>
+  <tr><td><code>fe/src/open-banking-sync.ts</code></td><td>Merges a synced batch into existing transactions by id, without duplicating a row already present.</td><td>The transaction domain model</td><td>Networking or DOM</td></tr>
   <tr><td><code>fe/src/logging.ts</code></td><td>Bounded in-memory record ring with a dated daily copy, redacting every value it stores.</td><td>Its own record shape and a storage port</td><td>Financial values, file names or the network</td></tr>
   <tr><td><code>fe/src/http-status.ts</code></td><td>Single static vocabulary for REST response codes.</td><td>HTTP semantics</td><td>Response bodies or routing</td></tr>
   <tr><td><code>docker-compose.yml</code></td><td>Isolate web, API, Scalar, tests and monitoring services on one local network.</td><td>Health checks and runtime environment</td><td>Production secrets</td></tr>
@@ -160,11 +168,19 @@
     ├── cloud-metadata.ts       profile + consent repositories
     ├── privacy.ts              identifier redaction and persistence boundary
     ├── logging.ts              redacted diagnostic records + daily copy
-    └── consent.ts              versioned consent repository
+    ├── consent.ts              versioned consent repository
+    ├── open-banking.ts         OpenBankingClient: sources, connections, sync, disconnect
+    └── open-banking-sync.ts    merge a synced batch into state by id, no duplicates
 
 server/ + api/index.py         authenticated Python first-party boundary
-    └── auth_flow.py           Google sign-in: PKCE, redirect allow-list, session
-supabase/migrations/           profile, snapshot, consent + RLS
+    ├── auth_flow.py           Google sign-in: PKCE, redirect allow-list, session
+    ├── open_banking_config.py    sources, sandbox/licence gate
+    ├── open_banking_crypto.py    Fernet encrypt/decrypt, fails closed
+    ├── open_banking_flow.py      per-source PKCE + token exchange
+    ├── open_banking_store.py     connections + encrypted tokens repository
+    ├── open_banking_sync.py      pull XS2A, redact, map to Transaction
+    └── open_banking_routes.py    connect · callback · connections · sync · revoke
+supabase/migrations/           profile, snapshot, consent, open-banking connections/tokens + RLS
 docker compose                 web → API ← Prometheus → Grafana
 
 resources/{he,en,am,fr}.json    copy loaded at runtime
@@ -204,7 +220,50 @@ t('recommendationsSummary', {
 <ul class="notes"><li>Selected reports are read by browser APIs and parsed in memory.</li><li>All eight financial agents are deterministic local strategies; there is no remote model call.</li><li>Saving opportunities separate annual and one-time estimates, expose their evidence, and never cancel a charge automatically.</li><li>Local use sends no transaction to a server. Optional cloud backup is separate, requires sign-in and refuses writes unless the current versioned consent is active.</li><li>The API accepts only a publishable key, verifies the JWT with Supabase Auth and relies on grants plus owner-only RLS; no service-role key is present.</li><li>Prometheus labels contain only bounded route/operation names, latency, method and status; JWTs, user IDs and financial payloads are excluded.</li><li>Agent findings are indicators, not financial advice and require human verification.</li><li>Consent may be declined or withdrawn without disabling local use; acknowledgement is not a waiver of non-waivable rights.</li><li>Marketing attribution records campaign parameters and local events, never bank report contents.</li><li>The directory separates official comparison tools, nonprofit household-finance support, Paamonim’s WhatsApp updates channel and commercial providers; inclusion is not an endorsement, private-advice promise or eligibility promise.</li><li>External directory links use <code>noopener noreferrer</code> and open only after an explicit action.</li></ul>
 <div class="callout good"><b>Failure mode.</b> If local storage is unavailable, the app warns the user and keeps working in memory until the tab closes. A storage failure does not redirect data elsewhere.</div>
 
-<h2 data-testid="architecture-section" id="testing">8 · Testing strategy</h2>
+<h2 data-testid="architecture-section" id="openbanking">8 · Open Banking pilot</h2>
+<p class="lead">A household can connect a real bank/card account through the Bank of Israel's Open Banking standard and pull transactions on demand, read-only, proven against Bank Hapoalim's XS2A sandbox. The pilot is dark by default: every non-sandbox call is refused unless an operator sets a licence id, and today it also ships with no reachable UI entry point for a real user — see the callout below for exactly why, and <code>TODO.md</code> for what closes that gap.</p>
+<div class="grid">
+  <div class="box"><span class="tag">consent &amp; OAuth</span><b>PKCE round trip per source</b><span>Each configured source gets its own authorize URL and token exchange, mirroring the existing Google sign-in's PKCE primitives rather than inventing a second flow.</span></div>
+  <div class="box"><span class="tag">custody</span><b>Encrypted at rest, decrypted only in memory</b><span>A bank refresh token is encrypted with Fernet before it reaches Supabase and decrypted only for the duration of a sync call. No route response, log line or Prometheus label ever carries it.</span></div>
+  <div class="box"><span class="tag">mapping</span><b>One provenance, every existing feature</b><span>A synced row becomes an ordinary <code>Transaction</code> with <code>src: 'open-banking'</code> — the categorizer, settlement neutralizing and card-summary folding handle it exactly as a manual import, with no special-casing.</span></div>
+  <div class="box"><span class="tag">redaction</span><b>Shared identifier boundary</b><span>A bank's free-text transaction description is redacted through the same <code>FINANCIAL_IDENTIFIER_PATTERNS</code> the rest of the API uses to reject an account-like value, so the two paths cannot silently drift apart.</span></div>
+</div>
+<figure class="diagram" data-testid="openbanking-diagram-container" tabindex="0">
+<svg viewBox="0 0 920 420" role="img" aria-labelledby="ob-diagram-title ob-diagram-desc" data-testid="openbanking-diagram">
+  <title id="ob-diagram-title">Open Banking pilot data flow</title>
+  <desc id="ob-diagram-desc">A signed-in browser starts a PKCE authorize redirect to a configured bank source, gated by sandbox/licence configuration and an active open-banking consent. The bank redirects back to a callback route that exchanges the code for tokens and stores the refresh token encrypted. A later sync call refreshes the token, pulls transactions from the bank's XS2A endpoint, redacts identifiers, maps them into the ordinary transaction model, and merges them into application state without duplicating rows already present.</desc>
+  <defs><marker id="ob-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#929dac"/></marker></defs>
+  <text class="group" x="20" y="22">Browser</text>
+  <rect x="20" y="34" width="190" height="86" rx="11" fill="#dbeafe" stroke="#8eafe0"/><text class="label" x="36" y="61" fill="#19395e">Connect / sync panel</text><text class="sub" x="36" y="82" fill="#19395e">open-banking.ts</text><text class="sub" x="36" y="100" fill="#19395e">open-banking-sync.ts</text>
+  <text class="group" x="270" y="22">FastAPI routes</text>
+  <rect x="270" y="34" width="210" height="86" rx="11" fill="#dcf3e8" stroke="#85c8a5"/><text class="label" x="286" y="61" fill="#14532d">connect · callback</text><text class="sub" x="286" y="82" fill="#14532d">sandbox/licence gate</text><text class="sub" x="286" y="100" fill="#14532d">open_banking_routes.py</text>
+  <rect x="270" y="150" width="210" height="86" rx="11" fill="#dcf3e8" stroke="#85c8a5"/><text class="label" x="286" y="177" fill="#14532d">sync · revoke</text><text class="sub" x="286" y="198" fill="#14532d">consent + auth gate</text><text class="sub" x="286" y="216" fill="#14532d">open_banking_routes.py</text>
+  <text class="group" x="530" y="22">Server modules</text>
+  <rect x="530" y="34" width="190" height="56" rx="11" fill="#f3e8ff" stroke="#bea0df"/><text class="label" x="546" y="58" fill="#4c1d78">PKCE / token exchange</text><text class="sub" x="546" y="76" fill="#4c1d78">open_banking_flow.py</text>
+  <rect x="530" y="104" width="190" height="56" rx="11" fill="#f3e8ff" stroke="#bea0df"/><text class="label" x="546" y="128" fill="#4c1d78">Encrypt / decrypt</text><text class="sub" x="546" y="146" fill="#4c1d78">open_banking_crypto.py</text>
+  <rect x="530" y="174" width="190" height="62" rx="11" fill="#f3e8ff" stroke="#bea0df"/><text class="label" x="546" y="198" fill="#4c1d78">Pull + redact + map</text><text class="sub" x="546" y="216" fill="#4c1d78">open_banking_sync.py</text>
+  <text class="group" x="20" y="268">Persistence</text>
+  <rect x="20" y="280" width="250" height="76" rx="11" fill="#e5f4ed" stroke="#92c4aa"/><text class="label" x="36" y="308" fill="#165336">open_banking_connections</text><text class="sub" x="36" y="330" fill="#165336">open_banking_tokens (encrypted)</text><text class="sub" x="36" y="348" fill="#165336">Supabase, owner-only RLS</text>
+  <text class="group" x="530" y="268">External sandbox</text>
+  <rect x="530" y="280" width="190" height="76" rx="11" fill="#ffe9d6" stroke="#e7b681"/><text class="label" x="546" y="308" fill="#723703">Bank Hapoalim XS2A</text><text class="sub" x="546" y="330" fill="#723703">poalimdev.co.il sandbox</text>
+  <path class="edge" marker-end="url(#ob-arrow)" d="M210 77H270"/>
+  <path class="edge" marker-end="url(#ob-arrow)" d="M480 77H530 62"/>
+  <path class="edge" marker-end="url(#ob-arrow)" d="M210 193H270"/>
+  <path class="edge" marker-end="url(#ob-arrow)" d="M480 193V204H530"/>
+  <path class="edge" marker-end="url(#ob-arrow)" d="M625 90V104"/>
+  <path class="edge" marker-end="url(#ob-arrow)" d="M625 160V174"/>
+  <path class="edge" marker-end="url(#ob-arrow)" d="M270 120C200 150 145 200 145 280"/>
+  <path class="edge" marker-end="url(#ob-arrow)" d="M625 236V280"/>
+  <path class="edge" marker-end="url(#ob-arrow)" d="M270 196C190 230 145 230 145 280"/>
+  <text class="edge-label" x="214" y="68">authorize redirect</text><text class="edge-label" x="486" y="68">PKCE exchange</text><text class="edge-label" x="214" y="184">sync request</text><text class="edge-label" x="486" y="186">refresh + pull</text><text class="edge-label" x="636" y="100">encrypt</text><text class="edge-label" x="636" y="170">decrypt</text><text class="edge-label" x="636" y="258">XS2A call</text>
+  <rect x="20" y="384" width="880" height="24" rx="9" fill="none" stroke="#a92f27" stroke-dasharray="6 5"/><text class="sub" x="36" y="400" fill="var(--critical)">Every path refuses unless OPEN_BANKING_SANDBOX=1 or OPEN_BANKING_LICENCE_ID is set — checked on every outbound call, not only at connect</text>
+</svg>
+<figcaption>Read-only (AIS) only: no payment initiation anywhere in this flow. The route layer refuses to proceed unless an active <code>open_banking</code> consent exists and, on a bank-confirmed refusal of the refresh token, revokes the connection and deletes the stored token immediately rather than leaving a dead credential behind.</figcaption>
+</figure>
+<div class="callout"><b>Known gap: the browser cannot reach a signed-in state yet.</b> <code>connect</code> and <code>sync</code> correctly require both an authenticated session and an active <code>open_banking</code> consent — but no code path in this repository currently puts the browser into that authenticated state. The existing Google sign-in flow sets an <code>httpOnly</code> session cookie that no route reads; nothing reads it because the API's auth check only accepts an <code>Authorization</code> header, which a cookie that JavaScript cannot see has no way to populate. A design for closing this — making the existing cookie the one real auth mechanism, shared by this pilot and the still-unwired cloud-sync feature — is written up in <code>docs/superpowers/specs/2026-10-08-cookie-session-auth-design.md</code> and <code>docs/superpowers/plans/2026-10-08-cookie-session-auth.md</code>. Tracked in <code>TODO.md</code>.</div>
+<div class="callout"><b>Known gap: the real sandbox was never verified.</b> The XS2A field names this pilot assumes follow the Berlin Group/NextGenPSD2 shape, but the actual call this pilot makes to Bank Hapoalim's sandbox has never been run — no sandbox credentials were available while building it. A real NextGenPSD2 call also needs a consent-resource step, <code>Consent-ID</code>/<code>X-Request-ID</code>/<code>PSU-IP-Address</code> headers and usually a client certificate, none of which this pilot implements yet. If the real sandbox's shape differs once verified, <code>server/open_banking_sync.py</code> is the only file that should need to change — nothing downstream does, because every other module consumes the already-mapped <code>Transaction</code> shape. Tracked in <code>TODO.md</code>.</div>
+
+<h2 data-testid="architecture-section" id="testing">9 · Testing strategy</h2>
 <p>The suite has three concurrent execution lanes after the build barrier. Vitest covers browser logic and structural contracts, Pytest covers FastAPI and Supabase repositories, and Playwright exercises real HTTP and browser behavior. The runner waits for every exit code, then the Docker gate merges their events into a static Allure report served on localhost.</p>
 <div class="flow"><div class="stage"><span class="k">Fast</span><p>Vitest covers browser algorithms and contracts; Pytest covers FastAPI handlers, Pydantic models and repositories.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Contracts</span><p>Key parity, named parameters, HTML hooks and design-system rules.</p></div><div class="arrow">→</div><div class="stage"><span class="k">HTTP API</span><p>Playwright sends real requests to verify routing, headers, status codes and anonymous access boundaries.</p></div><div class="arrow">→</div><div class="stage"><span class="k">Browser</span><p>Playwright checks agent approvals, real imports, RTL/LTR, mobile layout, dynamic copy and axe WCAG A/AA rules.</p></div></div>
 <div class="callout good"><b>Safe-to-spend sanity matrix.</b> Unit tests cover the formula, negative runway and month-end date clamping. Browser tests cover missing balance, missing recurring income and projected shortfall in desktop Chromium, Android Chromium and iOS WebKit, and reject <code>NaN</code>, <code>Infinity</code> or a negative allowance as user guidance.</div>
@@ -217,10 +276,10 @@ npm run test:docker:stop # stop the test and report servers
 npm run stack:start # application + Prometheus + Grafana</code></pre>
 <p class="small">The complete automated-suite inventory, browser matrix, manual release checks and failure policy are maintained in <code>TEST_PLAN.md</code>.</p>
 
-<h2 data-testid="architecture-section" id="extend">9 · Extension points</h2>
+<h2 data-testid="architecture-section" id="extend">10 · Extension points</h2>
 <div class="grid"><div class="box"><span class="tag">new locale</span><b>Extend the locale contract</b><span>Add the locale configuration and a complete resource file. Parameter-parity tests make sentence drift visible immediately.</span></div><div class="box"><span class="tag">new institution</span><b>Add an adapter</b><span>Implement the normalized importer contract; keep institution-specific rules outside rendering.</span></div><div class="box"><span class="tag">new agent</span><b>Derive, explain, approve</b><span>Add a pure typed engine to <code>financial-agents.ts</code>, a localized plain-language card, stable test IDs and independent unit/API/component/browser coverage. Any mutation requires an explicit approval action.</span></div><div class="box"><span class="tag">next split</span><b>Continue shrinking the composition root</b><span>Bank ingestion, state validation and categorization are extracted. Workbook binary parsing, forecast calculation and DOM views remain the next safe seams.</span></div></div>
 <div class="callout"><b>Architecture guardrail.</b> Do not enable cloud upload until authentication is connected to the UI, cloud profile/consent controls and deletion/recovery journeys are complete, and controller contact details, retention policy, threat model and legal review are ready. Local use must remain available after refusal.</div>
-<p class="small"><b>Activation status:</b> the linked Supabase project has the three migrations plus authenticated profile/consent routes and server-side consent enforcement. Auth UI, two-user RLS integration and user-facing cloud journeys remain tracked in <code>TODO.md</code>. “Supabase-ready” does not mean cloud storage is enabled for users.</p>
+<p class="small"><b>Activation status:</b> the linked Supabase project has the five migrations (profile/snapshot/consent plus open-banking connections/tokens) plus authenticated profile/consent/open-banking routes and server-side consent enforcement. Auth UI, two-user RLS integration and user-facing cloud journeys — including the Open Banking pilot's own connect/sync entry point — remain tracked in <code>TODO.md</code>. “Supabase-ready” does not mean cloud storage, or the Open Banking pilot, is reachable by a real user yet.</p>
 </main>
 
 <footer><a href="guide.html">מדריך בעברית</a> · <a href="guide-en.html">English product guide</a> · Home Economy architecture · generated from the current repository structure · <a href="https://github.com/amielnoy/HomeEconomyStabilation#readme" target="_blank" rel="noopener noreferrer">README source ↗</a></footer>

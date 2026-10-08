@@ -7,6 +7,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
+COPY scripts/install-git-hooks.sh ./scripts/install-git-hooks.sh
 RUN npm ci
 
 COPY requirements.txt requirements-dev.txt ./
