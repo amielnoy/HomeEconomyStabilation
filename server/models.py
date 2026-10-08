@@ -8,10 +8,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 Locale = Literal["he", "en", "am", "fr"]
 CategoryKind = Literal["expense", "income", "neutral"]
-SnapshotSource = Literal["bank-report", "card-report", "manual-entry"]
+SnapshotSource = Literal["bank-report", "card-report", "manual-entry", "open-banking"]
 
 _RESERVED_KEYS = {"__proto__", "prototype", "constructor"}
-_FINANCIAL_IDENTIFIERS = (
+FINANCIAL_IDENTIFIER_PATTERNS = (
     re.compile(r"\b(?:IBAN\s*)?[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b", re.IGNORECASE),
     re.compile(r"\b(?:cvv|cvc|security\s*code)\s*[:#-]?\s*\d{3,4}\b", re.IGNORECASE),
     re.compile(r"\b(?:\d[ -]?){12,18}\d\b"),
@@ -28,7 +28,7 @@ _FINANCIAL_IDENTIFIERS = (
 
 
 def _contains_financial_identifier(value: str) -> bool:
-    return any(pattern.search(value) for pattern in _FINANCIAL_IDENTIFIERS)
+    return any(pattern.search(value) for pattern in FINANCIAL_IDENTIFIER_PATTERNS)
 
 
 class Transaction(BaseModel):
@@ -162,7 +162,7 @@ class UserProfile(BaseModel):
 
 class ConsentAcceptance(BaseModel):
     user_id: str
-    purpose: Literal["cloud_sync"]
+    purpose: Literal["cloud_sync", "open_banking"]
     statement_version: str = Field(max_length=80)
     locale: Locale
     accepted_at: datetime

@@ -99,4 +99,18 @@ describe('account identifiers the privacy notice promises not to keep', () => {
     expect('cardKind' in sanitized).toBe(false);
     expect(isPrivacySafeTransaction(sanitized)).toBe(true);
   });
+
+  it('preserves the open-banking provenance rather than relabelling it as a bank report', () => {
+    const sanitized = sanitizeTransaction({
+      date: '2026-10-04', vdate: '2026-10-04', desc: 'Groceries', out: 42, in: 0,
+      bal: null, pending: false, source: 'bank', src: 'open-banking', id: 'txn-1',
+    });
+    expect(sanitized.src).toBe('open-banking');
+  });
+
+  it('accepts open-banking as a safe source for the cloud snapshot', () => {
+    expect(isPrivacySafeTransaction({
+      date: '2026-10-04', vdate: '2026-10-04', ref: '', src: 'open-banking', desc: 'Groceries', out: 42, in: 0, bal: null, pending: false,
+    })).toBe(true);
+  });
 });

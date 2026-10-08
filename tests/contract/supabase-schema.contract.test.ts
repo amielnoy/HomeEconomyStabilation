@@ -8,6 +8,7 @@ const migration = readFileSync(resolve(root, 'supabase/migrations/202608230001_c
 const versionMigration = readFileSync(resolve(root, 'supabase/migrations/202608240001_upgrade_snapshot_schema_v2.sql'), 'utf8');
 const config = readFileSync(resolve(root, 'server/config.py'), 'utf8');
 const store = readFileSync(resolve(root, 'server/supabase_store.py'), 'utf8');
+const openBankingStore = readFileSync(resolve(root, 'server/open_banking_store.py'), 'utf8');
 const supportMigration = readFileSync(resolve(root, 'supabase/migrations/202608240002_server_repository_support.sql'), 'utf8');
 
 describe('Supabase persistence contract', () => {
@@ -44,7 +45,9 @@ describe('Supabase persistence contract', () => {
       user_profiles: ['user_id', 'preferred_locale'],
       app_snapshots: ['user_id', 'payload', 'schema_version'],
       consent_acceptances: ['user_id', 'purpose', 'statement_version', 'locale', 'accepted_at', 'withdrawn_at'],
+      open_banking_tokens: ['connection_id', 'encrypted_refresh_token'],
     };
+    const stores = `${store}\n${openBankingStore}`;
     const migrationsDir = resolve(root, 'supabase/migrations');
     const sql = readdirSync(migrationsDir)
       .filter((name) => name.endsWith('.sql'))
@@ -59,7 +62,7 @@ describe('Supabase persistence contract', () => {
     }
 
     for (const [table, columns] of Object.entries(upserted)) {
-      expect(store).toContain(table);
+      expect(stores).toContain(table);
       for (const column of columns) {
         expect({ table, column, granted: [...(granted.get(table) ?? [])] })
           .toMatchObject({ granted: expect.arrayContaining([column]) });

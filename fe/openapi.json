@@ -12,7 +12,8 @@
     { "name": "Health", "description": "Public deployment readiness" },
     { "name": "Snapshots", "description": "One versioned application snapshot per authenticated user" },
     { "name": "Profile", "description": "Minimal authenticated user preferences" },
-    { "name": "Consent", "description": "Versioned cloud-sync consent records" }
+    { "name": "Consent", "description": "Versioned cloud-sync consent records" },
+    { "name": "OpenBanking", "description": "Open Banking (AIS) source discovery, connection lifecycle and transaction sync" }
   ],
   "paths": {
     "/api/health": {
@@ -179,6 +180,132 @@
           "503": { "$ref": "#/components/responses/NotConfigured" }
         }
       }
+    },
+    "/api/open-banking/sources": {
+      "get": {
+        "tags": ["OpenBanking"],
+        "summary": "List the configured Open Banking sources",
+        "operationId": "listOpenBankingSources",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Configured sources, with the mode each would connect in",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpenBankingSourcesResponse" } } }
+          }
+        }
+      }
+    },
+    "/api/open-banking/connect/{sourceId}": {
+      "get": {
+        "tags": ["OpenBanking"],
+        "summary": "Start the consent redirect to a source for the current user",
+        "operationId": "startOpenBankingConnect",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "sourceId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "302": { "description": "Redirect to the source's consent screen" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/OpenBankingConsentRequired" },
+          "404": { "$ref": "#/components/responses/OpenBankingNotFound" },
+          "502": { "$ref": "#/components/responses/OpenBankingFailure" },
+          "503": { "$ref": "#/components/responses/OpenBankingNotConfigured" }
+        }
+      }
+    },
+    "/api/open-banking/callback": {
+      "get": {
+        "tags": ["OpenBanking"],
+        "summary": "Exchange the authorization code and store the new connection",
+        "operationId": "finishOpenBankingCallback",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "code", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "302": { "description": "Redirect back to the application landing page" },
+          "400": { "$ref": "#/components/responses/OpenBankingStateMismatch" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/OpenBankingFailure" },
+          "503": { "$ref": "#/components/responses/OpenBankingNotConfigured" }
+        }
+      }
+    },
+    "/api/open-banking/connections": {
+      "get": {
+        "tags": ["OpenBanking"],
+        "summary": "List the current user's Open Banking connections",
+        "operationId": "listOpenBankingConnections",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "The current user's connections",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpenBankingConnectionsResponse" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/OpenBankingFailure" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      }
+    },
+    "/api/open-banking/sync/{connectionId}": {
+      "post": {
+        "tags": ["OpenBanking"],
+        "summary": "Refresh a connection's access and pull its transactions",
+        "operationId": "syncOpenBankingConnection",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "connectionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mapped transactions pulled from the source for this sync",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpenBankingSyncResponse" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/OpenBankingConsentRequired" },
+          "404": { "$ref": "#/components/responses/OpenBankingNotFound" },
+          "502": { "$ref": "#/components/responses/OpenBankingFailure" },
+          "503": { "$ref": "#/components/responses/OpenBankingNotConfigured" }
+        }
+      }
+    },
+    "/api/open-banking/connections/{connectionId}": {
+      "delete": {
+        "tags": ["OpenBanking"],
+        "summary": "Revoke an Open Banking connection",
+        "operationId": "revokeOpenBankingConnection",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "connectionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "Connection revoked, or already not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "502": { "$ref": "#/components/responses/OpenBankingFailure" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      }
+    },
+    "/api/consents/open-banking": {
+      "put": {
+        "tags": ["OpenBanking", "Consent"],
+        "summary": "Accept the current open-banking consent statement",
+        "operationId": "acceptOpenBankingConsent",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConsentInput" } } } },
+        "responses": {
+          "200": { "description": "Stored consent", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpenBankingConsentResponse" } } } },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "413": { "$ref": "#/components/responses/RequestTooLarge" },
+          "415": { "$ref": "#/components/responses/JsonRequired" },
+          "502": { "$ref": "#/components/responses/OpenBankingFailure" },
+          "503": { "$ref": "#/components/responses/NotConfigured" }
+        }
+      }
     }
   },
   "components": {
@@ -220,7 +347,7 @@
           "date": { "type": "string", "maxLength": 32 },
           "vdate": { "type": "string", "maxLength": 32 },
           "ref": { "type": "string", "const": "" },
-          "src": { "type": "string", "enum": ["bank-report", "card-report", "manual-entry"] },
+          "src": { "type": "string", "enum": ["bank-report", "card-report", "manual-entry", "open-banking"] },
           "desc": { "type": "string", "maxLength": 500 },
           "out": { "type": "number" },
           "in": { "type": "number" },
@@ -327,6 +454,79 @@
         "type": "object",
         "required": ["code"],
         "properties": { "code": { "type": "string" } }
+      },
+      "OpenBankingSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "kind", "mode"],
+        "properties": {
+          "id": { "type": "string", "maxLength": 100 },
+          "name": { "type": "string", "maxLength": 200 },
+          "kind": { "type": "string", "enum": ["bank", "card_issuer"] },
+          "mode": { "type": "string", "enum": ["sandbox", "production", "unavailable"], "description": "sandbox when sandbox mode is on, production when a licence id is set, unavailable otherwise" }
+        }
+      },
+      "OpenBankingSourcesResponse": {
+        "type": "object",
+        "required": ["sources"],
+        "properties": { "sources": { "type": "array", "items": { "$ref": "#/components/schemas/OpenBankingSource" } } }
+      },
+      "OpenBankingConnection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "sourceId", "status", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "maxLength": 100 },
+          "sourceId": { "type": "string", "maxLength": 100 },
+          "status": { "type": "string", "enum": ["active", "revoked"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OpenBankingConnectionsResponse": {
+        "type": "object",
+        "required": ["connections"],
+        "properties": { "connections": { "type": "array", "items": { "$ref": "#/components/schemas/OpenBankingConnection" } } }
+      },
+      "MappedTransaction": {
+        "type": "object",
+        "description": "A transaction mapped from an open-banking source's response. Account/card identifiers and any token material are excluded.",
+        "additionalProperties": false,
+        "required": ["date", "vdate", "ref", "desc", "out", "in", "pending", "source", "src"],
+        "properties": {
+          "date": { "type": "string", "maxLength": 32 },
+          "vdate": { "type": "string", "maxLength": 32 },
+          "ref": { "type": "string", "const": "" },
+          "desc": { "type": "string", "maxLength": 500 },
+          "out": { "type": "number" },
+          "in": { "type": "number" },
+          "bal": { "oneOf": [{ "type": "number" }, { "type": "null" }] },
+          "pending": { "type": "boolean" },
+          "source": { "type": "string", "enum": ["bank", "card"] },
+          "src": { "type": "string", "const": "open-banking" },
+          "id": { "type": "string", "maxLength": 200 }
+        }
+      },
+      "OpenBankingSyncResponse": {
+        "type": "object",
+        "required": ["transactions"],
+        "properties": { "transactions": { "type": "array", "maxItems": 50000, "items": { "$ref": "#/components/schemas/MappedTransaction" } } }
+      },
+      "OpenBankingConsent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["purpose", "statementVersion", "locale", "acceptedAt", "withdrawnAt"],
+        "properties": {
+          "purpose": { "type": "string", "const": "open_banking" },
+          "statementVersion": { "type": "string", "const": "open-banking-v1-read-only-2026-10-07" },
+          "locale": { "type": "string", "enum": ["he", "en", "am", "fr"] },
+          "acceptedAt": { "type": "string", "format": "date-time" },
+          "withdrawnAt": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] }
+        }
+      },
+      "OpenBankingConsentResponse": {
+        "type": "object",
+        "required": ["consent"],
+        "properties": { "consent": { "oneOf": [{ "$ref": "#/components/schemas/OpenBankingConsent" }, { "type": "null" }] } }
       }
     },
     "responses": {
@@ -369,6 +569,26 @@
       },
       "NotConfigured": {
         "description": "Supabase environment variables are not configured",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "OpenBankingNotConfigured": {
+        "description": "Supabase is not configured, or Open Banking sandbox mode and licence are both unset",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "OpenBankingConsentRequired": {
+        "description": "The current open-banking consent statement must be actively accepted",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "OpenBankingNotFound": {
+        "description": "No matching source or connection was found",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "OpenBankingStateMismatch": {
+        "description": "The OAuth state, PKCE verifier, source or authorization code is missing or does not match",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "OpenBankingFailure": {
+        "description": "The open-banking provider or Supabase persistence failed without exposing provider details",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
       }
     }

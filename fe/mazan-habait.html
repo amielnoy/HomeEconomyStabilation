@@ -961,6 +961,11 @@ body.drawer-open{ overflow:hidden; }
         <span data-i18n="cardUpload">טעינת דוח כרטיס</span>
       </button>
       <input type="file" id="card-file" accept=".xls,.xlsx,.csv,.html,.htm" multiple hidden data-testid="card-file">
+      <button class="btn" id="btn-open-banking" type="button" aria-haspopup="dialog" hidden data-testid="open-banking-trigger">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 8l7-5 7 5M4 8v7h12V8M8 15v-4h4v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span data-i18n="openBankingConnect">חיבור לבנק</span>
+      </button>
+      <div id="open-banking-panel" class="open-banking-panel" hidden data-testid="open-banking-panel"></div>
       <button class="btn mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="secondary-actions" data-i18n-aria-label="moreActions" data-testid="mobile-menu-toggle">•••</button>
       <div class="secondary-actions" id="secondary-actions" data-testid="secondary-actions">
         <label class="locale-picker" data-testid="language-picker">

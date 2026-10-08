@@ -78,6 +78,34 @@ def test_consent_repository_accepts_reads_and_withdraws_a_version() -> None:
     assert "resolution=merge-duplicates" in client.calls[0]["prefer"]
 
 
+def test_consent_repository_scopes_every_call_to_its_own_purpose() -> None:
+    consent = {
+        "user_id": "user-1", "purpose": "open_banking", "statement_version": "v1", "locale": "he",
+        "accepted_at": "2026-10-07T00:00:00Z", "withdrawn_at": None,
+    }
+    client = FakeRestClient([[consent], [consent]])
+    repository = ConsentRepository(client, "user-1", purpose="open_banking")  # type: ignore[arg-type]
+
+    assert repository.read("v1").purpose == "open_banking"  # type: ignore[union-attr]
+    repository.accept("v1", "he")
+
+    read_call, write_call = client.calls
+    assert read_call["params"]["purpose"] == "eq.open_banking"
+    assert write_call["json"]["purpose"] == "open_banking"
+
+
+def test_consent_repository_still_defaults_to_cloud_sync() -> None:
+    consent = {
+        "user_id": "user-1", "purpose": "cloud_sync", "statement_version": "v2", "locale": "he",
+        "accepted_at": "2026-08-24T20:00:00Z", "withdrawn_at": None,
+    }
+    client = FakeRestClient([[consent]])
+    repository = ConsentRepository(client, "user-1")  # type: ignore[arg-type]
+
+    assert repository.read("v2").purpose == "cloud_sync"  # type: ignore[union-attr]
+    assert client.calls[0]["params"]["purpose"] == "eq.cloud_sync"
+
+
 def test_repository_error_does_not_include_provider_details() -> None:
     client = FakeRestClient([SupabaseDataError("snapshot_read")])
     with pytest.raises(SupabaseDataError, match="snapshot_read") as raised:

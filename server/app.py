@@ -26,6 +26,7 @@ from .config import bearer_token, read_supabase_config
 from .logging_config import log_event, route_name
 from .metrics import record_response, render_metrics
 from .models import CloudConsentInput, ConsentAcceptance, ProfileInput, SnapshotInput, UserProfile
+from .open_banking_routes import router as open_banking_router
 from .request_guard import GuardFailure, SnapshotRequestGuard
 from .supabase_store import (
     ConsentRepository,
@@ -36,6 +37,7 @@ from .supabase_store import (
 )
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+app.include_router(open_banking_router)
 _guard = SnapshotRequestGuard()
 _rate_salt = token_bytes(32)
 CLOUD_CONSENT_VERSION = "cloud-sync-v2-privacy-minimised-2026-08-24"
